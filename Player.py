@@ -3,6 +3,7 @@ from math import floor
 import random, time
 from Components import *
 
+"""16, 15, 10, """
 class Fire(arcade.Sprite):
     def __init__(self, game, x:float, y:float, strength):
         super().__init__("resources/Sprites/tree_farm.png", center_x=x, center_y=y, scale=1, hit_box_algorithm="None")
@@ -112,14 +113,14 @@ class BaseBoat(arcade.Sprite):
             game.last = None
             return 
         game.last = self
-        button = CustomUIFlatButton(game.Alphabet_Textures, text="Move", width=140, height=50, scale=.3, x=0, y=50, text_offset_x = 24, text_offset_y=35, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(game.Alphabet_Textures, text="Move", width=140, height=50, x=0, y=50, text_offset_x = 24, text_offset_y=35, offset_x=75, offset_y=25)
         button.on_click = game.Move
         wrapper = arcade.gui.UIAnchorWidget(anchor_x="left", anchor_y="bottom",
             child=button, align_x=0, align_y=0)
         game.uimanager.add(wrapper)
         game.extra_buttons.append(wrapper)
 
-        button = CustomUIFlatButton(game.Alphabet_Textures, text="Leave", width=140, height=50, scale=.3, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(game.Alphabet_Textures, text="Leave", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
         button.on_click = game.leave
         button.obj = self
         wrapper = arcade.gui.UIAnchorWidget(anchor_x="left", anchor_y="bottom",

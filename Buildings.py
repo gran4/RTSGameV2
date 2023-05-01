@@ -1,8 +1,7 @@
 import arcade
 from Components import *
 from Player import *
-
-
+    
 things = {"Bad Gifter":BadGifter, "Bad Reporter":BadReporter}
 
 class BaseBuilding(arcade.Sprite):

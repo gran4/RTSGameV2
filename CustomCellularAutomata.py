@@ -69,11 +69,11 @@ def count_alive_neighbors(grid, x, y):
     return alive_count
 
 
-def do_simulation_step(old_grid):
+def do_simulation_step(old_grid, new_grid):
     """ Run a step of the cellular automaton. """
     height = len(old_grid)
     width = len(old_grid[0])
-    new_grid = create_grid(width, height)
+    #new_grid = create_grid(width, height)
     for x in range(width):
         for y in range(height):
             alive_neighbors = count_alive_neighbors(old_grid, x, y)
@@ -87,7 +87,7 @@ def do_simulation_step(old_grid):
                     new_grid[y][x] = 1
                 else:
                     new_grid[y][x] = 0
-    return new_grid
+    return new_grid, old_grid
 
 
 class MyGame(arcade.Window):
@@ -124,14 +124,16 @@ class MyGame(arcade.Window):
         # Create cave system using a 2D grid
         self.grid = create_grid(GRID_WIDTH, GRID_HEIGHT)
         initialize_grid(self.grid)
+
+        grid_template = create_grid(GRID_WIDTH, GRID_HEIGHT)
         for step in range(NUMBER_OF_STEPS):
-            self.grid = do_simulation_step(self.grid)
+            self.grid, grid_template = do_simulation_step(self.grid, grid_template)
 
 
         self.grid2 = create_grid(GRID_WIDTH, GRID_HEIGHT)
         initialize_grid(self.grid2)
         for step in range(NUMBER_OF_STEPS):
-            self.grid2 = do_simulation_step(self.grid2)
+            self.grid2, grid_template = do_simulation_step(self.grid2, grid_template)
 
         # Create sprites based on 2D grid
         if not MERGE_SPRITES:

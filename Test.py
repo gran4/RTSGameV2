@@ -1,58 +1,78 @@
-from time import time
-import arcade, random
-from Components import *
-from arcade.gui import UIWidget, Surface, UIEvent, UILabel, UIAnchorWidget
+from pathlib import Path
+from typing import Any, Optional, Tuple, Union
 
-import math
-#1/60
+import pyglet
 
-class Menu(arcade.View):
-    def __init__(self, texture, time_in_between, max_index):
+import arcade
+from mytypes import Color, Point, RGBA255
 
-        super().__init__()
-        """ This is run once when we switch to this view """
-        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
+FontNameOrNames = Union[str, Tuple[str, ...]]
 
-        # Reset the viewport, necessary if we have a scrolling game and we need
-        # to reset the viewport back to the start so we can see what we draw.
-        #arcade.set_viewport(0, self.window.width, 0, self.window.height)
-        #self.textures = arcade.load_spritesheet(texture, 15, 25, 4, 16, margin=9)
+def _draw_pyglet_label(label: pyglet.text.Label) -> None:
+    """
 
-        #self.textures = arcade.load_spritesheet(texture, 64, 64, 16, 16, margin=0)
-        wood_button = CustomUIFlatButton({}, text="", width=140, height=50, scale=1, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
-        silver_button = CustomUIFlatButton({}, text="", width=140, height=50, scale=1, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25, Texture="resources/gui/Silver Button.png")
-        gold_button = CustomUIFlatButton({}, text="", width=140, height=50, scale=1, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25, Texture="resources/gui/Gold Button.png")
-        self.textures = [wood_button, silver_button, gold_button]
+    Helper for drawing pyglet labels with rotation within arcade.
 
-        self.time_in_bettween = time_in_between
-        self.timer = 0
-        self.index = 0
-        self.max_index = max_index
+    Originally part of draw_text in this module, now abstracted and improved
+    so that both arcade.Text and arcade.draw_text can make use of it.
 
-        self.sprite = arcade.Sprite(center_x=200, center_y=200)
-        self.sprite.texture = self.textures[0].sprite.texture
+    :param pyglet.text.Label label: a pyglet label to wrap and draw
+    """
+    assert isinstance(label, pyglet.text.Label)
+    window = arcade.get_window()
 
-        
+    # window.ctx.reset()
+    with window.ctx.pyglet_rendering():
+        label.draw()
 
-    def on_update(self, delta_time: float):
-        self.timer += delta_time
-        if self.timer > self.time_in_bettween:
-            self.timer -= self.time_in_bettween
-            self.index += 1
-            if self.index >= self.max_index:
-                self.index = 0
-            self.sprite = self.textures[self.index].sprite
 
-    def on_draw(self):
-        """ Draw this view """
-        arcade.start_render()
-        self.sprite.draw()
-def main():
-    """Main method"""
-    window = arcade.Window(750, 500, "BEEEN")
-    StartMenu = Menu("", 5, 3)#MyGame()#StartMenu()
-    window.show_view(StartMenu)
-    arcade.run()
 
-if __name__ == "__main__":
-    main()
+def create_text_texture(text: str,
+    color: RGBA255 = arcade.color.WHITE,
+    font_size: float = 12,
+    width: int = 0,
+    align: str = "left",
+    font_name: FontNameOrNames = ("calibri", "arial"),
+    bold: bool = False,
+    italic: bool = False,
+    anchor_x: str = "left",
+    multiline: bool = False,
+    texture_atlas: Optional[arcade.TextureAtlas] = None):
+
+    if align != "center" and align != "left" and align != "right":
+        raise ValueError("The 'align' parameter must be equal to 'left', 'right', or 'center'.")
+
+    adjusted_font = _attempt_font_name_resolution(font_name)
+    _label = pyglet.text.Label(
+        text=text,
+        font_name=adjusted_font,
+        font_size=font_size,
+        anchor_x=anchor_x,
+        color=Color.from_iterable(color),
+        width=width,
+        align=align,
+        bold=bold,
+        italic=italic,
+        multiline=multiline,
+        )
+
+    size = (
+        int(_label.width),
+        int(_label.height),
+    )
+    
+    texture = arcade.Texture.create_empty(text, size)
+
+    if not texture_atlas:
+        texture_atlas = arcade.get_window().ctx.default_atlas
+    texture_atlas.add(texture)
+    with texture_atlas.render_into(texture) as fbo:
+        fbo.clear((0, 0, 0, 255))
+        _draw_pyglet_label(_label)
+    return texture
+
+
+texture = arcade.create_text_texture("BRRRRRRR")
+print(type(texture))
+print(texture.width)
+print(texture.height)

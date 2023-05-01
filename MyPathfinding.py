@@ -1,13 +1,28 @@
 import arcade, math
 
-class LivingMap(object):
-    def __init__(self, game, x_length:int, y_length:int,  size:int, *args, tilesize:int=50):
-        self.size = size
 
+class CustomList(list):
+    def __setitem__(self, index, item):
+        super().__setitem__(int(index), int(item))
+    #def __getattribute__(self, __name):
+    #    if type(__name) == float:
+    #        __name = int(__name)
+    #    return super().__getattribute__(__name)
+    def __getitem__(self, __name):
+        return super().__getitem__(int(__name))
+    #def __setattr__(self, __name: str, __value) -> None:
+    #    return super().__setattr__(int(__name), int(__value))
+
+class LivingMap(object):
+    def __init__(self, x_length:int, y_length:int,  size:int, *args, tilesize:int=50):
+        self.size = size
         self.tilesize = tilesize
 
-        self.graph = [[0 for tile in range(y_length)] for tiles in range(x_length)]
-        
+        self.graph = CustomList()#[[0 for tile in range(y_length)] for tiles in range(x_length)]
+        for tiles in range(x_length):
+            self.graph.append(CustomList())
+            for tile in range(y_length):
+                self.graph[tiles].append(0)
         count = 1
         for barrierlist in args:
             for barrier in barrierlist:
@@ -15,6 +30,7 @@ class LivingMap(object):
                 y = int(barrier.center_y/50)
                 self.graph[x][y] = count
             count += 1
+
 
 
     def change(self, x:int, y:int, barrier:bool):
@@ -29,7 +45,6 @@ class LivingMap(object):
         return self.graph[i]
     def __setitem__(self, x, y, val):
         self.graph[x][y] = val
-
 
 
 def heuristic(start:tuple, goal:tuple):

@@ -525,7 +525,7 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
     def set_text(self, text, Alphabet_Textures):
         self.text_sprites.clear()
         #self.text_scale = 1
-        if not self.text:
+        if not text:
             return 
         words = text.split(" ")
         pos_x = -45+self.text_offset_x
@@ -723,6 +723,86 @@ class CustomUISlider(UIWidget):
     def on_change(self, event: UIOnChangeEvent):
         pass
 
+
+class CustomTextSprite2(object):
+    def __init__(self, string, Alphabet_Textures, scale=1, 
+                 center_x=0, center_y = 0, 
+                 text_scale=1, text_margin=16, width=100, height = 40,  Background_offset_x=0, Background_offset_y=0, Background_scale=1, Background_Texture=None) -> None:
+        super().__init__()
+        self.Sprite_List = arcade.SpriteList()
+        self.Background_Sprite = arcade.Sprite(Background_Texture, center_x=center_x+width/2+Background_offset_x, center_y=center_y-height*2+Background_offset_y, scale=Background_scale)
+        
+        self.text_scale = text_scale
+        self.width = width
+        self.height = height
+        self.update_text(string, Alphabet_Textures, scale=scale, text_scale=text_scale,
+                 center_x=center_x, center_y=center_y, 
+                 text_margin=text_margin, width=width, height = height)
+        
+    def update_text(self, text, Alphabet_Textures, scale=1, text_scale=1,
+                 center_x=0, center_y = 0, 
+                 text_margin=16, width=100, height = 40):
+        self.text = text
+        self.Sprite_List.clear()
+        if not text:
+            return
+        words = text.split(' ')
+        x = 0
+        y = 0
+
+        for word in words:
+            if x > width/2+center_x:
+                y -= text_margin
+                x = -width/2
+
+
+            for string in word:
+                sprite = arcade.Sprite(center_x=center_x+x, center_y=center_y+y, scale=scale*text_scale)
+                sprite.texture = Alphabet_Textures[string]
+                self.Sprite_List.append(sprite)
+                x += text_margin*scale
+            x += text_margin*scale
+    def draw(self):
+        self.Background_Sprite.draw()
+        self.Sprite_List.draw()
+
+
+textures = arcade.load_spritesheet("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+Alphabet_Textures = {" ":None}
+string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
+for i in range(len(string)):
+    Alphabet_Textures[string[i]] = textures[i]
+            
+            
+class MyGame(arcade.Window):
+    """
+    Main application class.
+    """
+
+    def __init__(self):
+        super().__init__(800, 600, "WINDOW_TITLE", resizable=True)
+
+        # Set the working directory (where we expect to find files) to the same
+        # directory this .py file is in. You can leave this out of your own
+        # code, but it is needed to easily run the examples using "python -m"
+        # as mentioned at the top of this program.
+        arcade.set_background_color(arcade.color.BLACK)
+    def setup(self):
+        self.bttn = CustomTextSprite2("BRRRRRRR", Alphabet_Textures, center_x=400, center_y=300, scale=2)
+
+    def on_draw(self):
+        self.bttn.draw()
+        return super().on_draw()
+
+
+def main():
+    game = MyGame()
+    game.setup()
+    arcade.run()
+
+
+if __name__ == "__main__":
+    main()
 
 class UpdatingText(CustomTextSprite):
     def __init__(self, string, Alphabet_Textures, max_time, scale=1, center_x=0, center_y=0, text_scale=1, text_margin=16, width=100, height=40, Background_offset_x=0, Background_offset_y=0, Background_scale=1, Background_Texture=None) -> None:

@@ -9,6 +9,7 @@ x2
 use unlocked to expand enemies and ui
 """
 
+
 class BaseEnemy(arcade.Sprite):
     def __init__(self, file_name:str, x:float, y:float, health:float, damage:float, range:int, scale:float=1):
         super().__init__(file_name, center_x=x, center_y=y, scale=scale)
@@ -805,9 +806,3 @@ class Privateer(BaseEnemy):
         self.arrows = self.arrows2
         [game.overParticles.append(arrow) for arrow in self.arrows]
         return super().load(game)
-
-    
-    
-
-
-

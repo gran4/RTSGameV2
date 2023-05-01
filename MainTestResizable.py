@@ -1,21 +1,14 @@
 """
-TODO: asset credit Menu
-TODO: Pop Ups in science, upgrade, and rites menus
-TODO: 
-pictures for 
-Fire Station
-Boat
-Road
-Mountian Pass
-
-
 TODO: Shaders
 TODO: add sound based on distince
 
-Boats can go into off limits area
-freeze bug
+BUG: FIX RESIZE BUG
+You can see out of bounds in full screen
 Doesn't load saves
-Snow scuffed
+
+Perlin noise for map generation
+Buildings span more than 1 tile
+Make Tiles smaller?
 """
 
 """
@@ -26,6 +19,8 @@ len in dict
 
 >0 is spawnable
 
+NOTE: __getattr__ is obj.item
+NOTE: __getitem is obj[item]
 """
 
 #python3.10 -m PyInstaller MainTestResizable.py --noconsole --onefile --add-data "resources:resources"
@@ -50,7 +45,7 @@ from Components import *
 from copy import copy
 
 from MyPathfinding import LivingMap, _AStarSearch, SearchTilesAround
-
+arcade.PymunkPhysicsEngine
 #loading gets stuck somewhere
 Font = "Wooden Font(1).png"
 class MyGame(arcade.View):
@@ -70,12 +65,11 @@ class MyGame(arcade.View):
         self.file_num = file_num
         self.difficulty = difficulty
         self.menu = menu
+        self.science_list = None
         
         self.setup(file_num, world_gen)
         self.create_audio()
         self.updateStorage()
-        print("Bug0")
-
 
         self.speed = 1
         ui_slider = CustomUISlider(max_value=20, value=2, width=302, height=35, x=0, offset_x=150, offset_y=-10, button_offset_y=-6)#arcade.load_texture("resources/gui/Slider_Button.png")#self.textures[0]
@@ -118,9 +112,7 @@ class MyGame(arcade.View):
 
         window = arcade.get_window()
         self.on_resize(window.width, window.height)
-        
 
-        print("Bug1")
     def setup(self, file_num, world_gen):
         self.extra_buttons = []
         self.camera = arcade.Camera(750, 500)
@@ -128,7 +120,7 @@ class MyGame(arcade.View):
 
         self.lacks = []
 
-        self.science = 0
+        self.science = 100
         self.overall_multiplier = 1
         self.training_speed_multiplier = 1
         self.dissent_multiplier = 1
@@ -142,16 +134,16 @@ class MyGame(arcade.View):
         self.toys_multiplier = 1
         self.building_multiplier = 1
 
-        self.food = 1000
-        self.food_storage = 300
+        self.food = 2000
+        self.food_storage = 3000
         self.population = 2
         self.stone = 0
         self.metal = 0
-        self.wood = 0
+        self.wood = 50
         self.toys = 0
         self.toy_amount = 100
 
-        self.mcsStorage = 20
+        self.mcsStorage = 200
         self.max_pop = 5
 
         self.timer = 0
@@ -258,6 +250,7 @@ class MyGame(arcade.View):
 
         self.text_timer = 0
         self.text_sprites = []
+        self.lack_text = None
         self.text_visible = True
         self.under_sprite = arcade.Sprite("resources/gui/Medium Bulletin.png", scale=2.2, center_x=200, center_y=280)
         self.update_text(1)
@@ -405,8 +398,7 @@ class MyGame(arcade.View):
         return super().on_resize(width, height)
 
     def End(self):
-
-        
+        self.science_list = None
         self.uimanager.disable()
 
         if self.file_num:
@@ -455,6 +447,7 @@ class MyGame(arcade.View):
 
         self.uimanager.disable()
         self.menu.uimanager.enable()
+        self.science_list = None
         self.window.show_view(self.menu)
     def main_button_click(self, event):
         if event.source.open:
@@ -658,13 +651,7 @@ class MyGame(arcade.View):
         self.Fires.draw()
         self.overParticles.draw()
 
-        if False: #self.christmas_background.visible: 
-            window = arcade.get_window()
-            surface = Surface(
-                size=window.get_size(),
-                pixel_ratio=window.get_pixel_ratio(),
-            )
-            surface.draw_sprite(self.christmas_background.center_x, self.christmas_background.center_y, self.christmas_background.width, self.christmas_background.height, self.christmas_background)
+
         self.not_scrolling_camera.use()
         self.christmas_background.draw()
     
@@ -675,6 +662,7 @@ class MyGame(arcade.View):
             self.under_sprite.draw()
             for text in self.text_sprites:
                 text.draw()
+            if self.lack_text: self.lack_text.draw()
         self.ui_sprite_background.draw()
         self.ui_sprite_text.draw()
         for PopUp in self.PopUps: PopUp.draw()
@@ -713,7 +701,7 @@ class MyGame(arcade.View):
         self.center_camera()
     def can_move(self, pos):
         x, y = self.camera.viewport_width/2-50, self.camera.viewport_height/2
-        if 500<pos[0]<self.x_line*50-500 and 500<pos[1]<self.y_line*50-500:
+        if 750<pos[0]<self.x_line*50-750 and 750<pos[1]<self.y_line*50-750:
 
             pass
         else:
@@ -785,19 +773,23 @@ class MyGame(arcade.View):
         if button == arcade.MOUSE_BUTTON_LEFT: 
             if self.move:
                 source = self.last
-
+                
+                if not 750<x<self.x_line*50-750 or not 750<y<self.y_line*50-750:
+                    if isinstance(source, BaseBoat):
+                        info_sprite = UpdatingText("Out of Bounds", self.Alphabet_Textures, .5, width = 300, center_x=org_x, center_y=org_y)
+                        self.PopUps.append(info_sprite)
+                        return
                 if len(arcade.get_sprites_at_point((x, y), self.Boats)) > 0:
-                    self.graph[int(x/50)][int(y/50)] = 0
+                    self.graph[x2][y2] = 0
                 elif len(arcade.get_sprites_at_point((x, y), self.Buildings)) > 0:
-                    i = self.graph[int(x/50)][int(y/50)]
-                    self.graph[int(x/50)][int(y/50)] = 0
-
+                    i = self.graph[x2][y2]
+                    self.graph[x2][y2] = 0
                 source.path = _AStarSearch(self.graph, source.position, (x, y), allow_diagonal_movement=True, movelist=source.movelist, min_dist=1)
                 if len(arcade.get_sprites_at_point((x, y), self.Boats)) > 0:
-                    self.graph[int(x/50)][int(y/50)] = 2
+                    self.graph[x2][y2] = 2
                 elif len(arcade.get_sprites_at_point((x, y), self.Buildings)) > 0:
-                    self.graph[int(x/50)][int(y/50)] = i
-            
+                    self.graph[x2][y2] = i
+
                 self.move = False
                 if source.path:
                     source.skill = None
@@ -873,19 +865,16 @@ class MyGame(arcade.View):
                 for _type, requirement in self.requirements.items():
                     vars(self)[_type] -= requirement
                 
-                created = self.objects[self.object](self, x, y)
                 
-                if isinstance(created, BaseBuilding):
-                    self.Buildings.append(UNbuiltBuilding(self, x, y, max_len=created.max_length, time=times[self.object], building=self.object))
+                if issubclass(self.objects[self.object], BaseBuilding):
+                    self.Buildings.append(UNbuiltBuilding(self, x, y, max_len=max_length[self.object], time=times[self.object], building=self.object))
                     self.BuildingChangeEnemySpawner(x, y, placing=1, min_dist=150, max_dist=200)
-                    created.remove_from_sprite_lists()
-                    created.health_bar.remove_from_sprite_lists()
-                    del created
                     #2 bc created lowers it
-                elif isinstance(created, BaseBoat):
-                    created.capacity
+                elif issubclass(self.objects[self.object], BaseBoat):
+                    created = self.objects[self.object](self, x, y)
                     self.Boats.append(created)
-                elif isinstance(created, Person):
+                elif issubclass(self.objects[self.object], Person):
+                    created = self.objects[self.object](self, x, y)
                     created.path = [created.position]
                     created.update_self(self)
                     self.People.append(created)
@@ -1011,7 +1000,7 @@ class MyGame(arcade.View):
         if len(self.OpenToEnemies) == 0:
             max_i = 1
         i = 0
-        while not self.graph[int(x/50)][int(y/50)] in enemy.movelist:
+        while not self.graph[x/50][y/50] in enemy.movelist:
             pos = self.EnemySpawnPos()
             if pos is not None:
                 x, y = pos
@@ -1037,7 +1026,6 @@ class MyGame(arcade.View):
         
         for person in self.People:
             person.check = True
-
 
     def calculate_enemy_path(self, enemy):
         enemy.check = False
@@ -1146,8 +1134,6 @@ class MyGame(arcade.View):
     def print_attr(self, event):
         print(vars(event.source.obj))
     def center_camera(self):
-
-
         screen_center_x = self.player.center_x - (self.camera.viewport_width / 2)
         screen_center_y = self.player.center_y - (self.camera.viewport_height / 2)
         
@@ -1155,7 +1141,7 @@ class MyGame(arcade.View):
         self.camera.move_to(_centered)
     
     def on_update(self, delta_time):
-        print("Bug2")
+        #print(1/delta_time)
         self.lacks = []
         if self.speed > 0:
             self.update_text(delta_time)
@@ -1207,7 +1193,6 @@ class MyGame(arcade.View):
             index = self.overParticles.index(self.christmas_background)
             self.overParticles.swap(index, -1)
             self.christmas_background.position = self.player.center_x, self.player.center_y
-        print("Bug3")
 
         self.player.on_update(delta_time)
         t = time.time()
@@ -1228,7 +1213,6 @@ class MyGame(arcade.View):
             
         if self.population <= 1:
             self.End()
-        
         #Update
         self.updateStorage()
         [fire.update(self, delta_time) for fire in self.Fires]
@@ -1241,7 +1225,7 @@ class MyGame(arcade.View):
         self.center_camera()
     
         self.spawnEnemy += delta_time
-        if self.spawnEnemy >= -300:
+        if self.spawnEnemy >= 0:
             self.spawnEnemy -= 25
             self.spawn_enemy()  
             self.difficulty *= 1.02
@@ -1260,6 +1244,7 @@ class MyGame(arcade.View):
         if self.population >= self.max_pop:
             self.lacks.append("housing")
         if not self.lacks:
+            self.lack_text = None
             return
         window = arcade.get_window()
         x, y = window.width/2, window.height-20
@@ -1268,7 +1253,7 @@ class MyGame(arcade.View):
             if string: string += ", "
             else: string += "You lack: "
             string += lack
-        self.text_sprites.append(CustomTextSprite(string, self.Alphabet_Textures, center_x=x-200, center_y = y, width = 200, text_margin=14, Background_offset_x=100, Background_offset_y=-50, Background_Texture="resources/gui/Small Text Background.png", Background_scale=2))
+        self.lack_text = CustomTextSprite(string, self.Alphabet_Textures, center_x=x-200, center_y = y, width = 200, text_margin=14, Background_offset_x=100, Background_offset_y=-50, Background_Texture="resources/gui/Small Text Background.png", Background_scale=2)
     def update_text(self, delta_time):
         self.text_timer += delta_time
 
@@ -1352,13 +1337,16 @@ class MyGame(arcade.View):
         # Create cave system using a 2D grid
         grid = create_grid(x_line, y_line)
         initialize_grid(grid)
-        for step in range(10):
-            grid = do_simulation_step(grid)
+
+        template_grid = create_grid(x_line, y_line)
+        
+        for step in range(100):
+            grid, template_grid = do_simulation_step(grid, template_grid)
         
         grid2 = create_grid(x_line, y_line)
         initialize_grid(grid2)
-        for step in range(10):
-            grid2 = do_simulation_step(grid2)
+        for step in range(4):
+            grid2, template_grid = do_simulation_step(grid2, template_grid)
 
 
         # Create sprites based on 2D grid
@@ -1379,7 +1367,7 @@ class MyGame(arcade.View):
             berry_bush_factor = .75
             tree_factor = .3
 
-        self.graph = LivingMap(x_line, y_line, x_line*y_line, self.Stones, self.Seas, tilesize=50)
+        self.graph = LivingMap(x_line, y_line, x_line*y_line, tilesize=50)
         self.graphlength = x_line+1
 
         for row in range(y_line):
@@ -1397,8 +1385,8 @@ class MyGame(arcade.View):
         for land in self.Lands:
             if not 0 < land.center_x < 4950 or not 0 < land.center_y < 4950: continue
             
-            x = int(land.center_x/50)
-            y = int(land.center_y/50)
+            x = land.center_x/50
+            y = land.center_y/50
 
             sand = False
             for i in ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)):
@@ -1428,6 +1416,11 @@ class MyGame(arcade.View):
 
             if self.graph[x][y] != 0:
                 continue
+            i = 0
+            for point in ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)):
+                if self.graph[x+point[0]][y+point[1]] == 0: i += 1
+            if i < 4:
+                continue
             x *= 50
             y *= 50
 
@@ -1437,13 +1430,18 @@ class MyGame(arcade.View):
 
         
         self.player = Player(center_x=x, center_y=y)#arcade.Sprite("resources/Sprites/Player.png", scale=.5, center_x=x, center_y=y)
-            
-
-        person = Person(self, x+50, y+50)
-        self.People.append(person)
-
-        person = Person(self, x-50, y-50)
-        self.People.append(person)
+        
+        num = 0
+        for point in ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)):
+            x2 = x/50+point[0]
+            y2 = y/50+point[1]
+            if self.graph[x2][y2] != 0:
+                continue
+            person = Person(self, x2*50, y2*50)
+            self.People.append(person)
+            num += 1
+            if num == 2:
+                return
     def test_enemies(self, x_line, y_line):
         t = time.time()
         for row in range(y_line):
@@ -1474,11 +1472,11 @@ class MyGame(arcade.View):
     def addSea(self, x, y):
         sea = Sea(self, x, y)
         self.Seas.append(sea)
-        self.graph[int(x/50)][int(y/50)] = 2
+        self.graph[x/50][y/50] = 2
     def addStone(self, x, y):
         stone = Stone(self, x, y)
         self.Stones.append(stone)
-        self.graph[int(x/50)][int(y/50)] = 1
+        self.graph[x/50][y/50] = 1
 
     def generateEnemySpawner(self, width, length):
 
@@ -1595,11 +1593,9 @@ class MyGame(arcade.View):
                     continue
                 case "health_bars":
                     continue
-
             if isinstance(value, arcade.SpriteList):
                 variables[key] = self.copy_SpriteList(value)
                 outfile = open(f"{self.file_num}",'wb')
-                pickle.dump(variables[key], outfile)
             elif isinstance(value, (int, float, dict, list)):
                 variables[key] = value
             
@@ -1611,18 +1607,31 @@ class MyGame(arcade.View):
         variables["EnemyMap"] = self.EnemyMap
         variables["OpenToEnemies"] = self.OpenToEnemies
         variables["graph"] = self.graph.graph
+        print(type(self.graph.graph))
         
         outfile = open(f"{self.file_num}",'wb')
         pickle.dump(variables, outfile)
         outfile.close()
-    def copy_SpriteList(self, sprite_list):
-        #variables[f"{key}"] = value.sprite_list.copy()
+    def copy_SpriteList(self, sprite_list: arcade.SpriteList):
+        """
+        Copy(and convert) the spritelist into a list
+
+        So it won't break pickle
+        
+        :Parameters:
+            :sprite_list: arcade.SpriteList
+                SpriteList to convert
+
+        :rtype: list
+        :return: Converted SpriteList
+        """
         sprite_list_copy = []
         for sprite in sprite_list:
-            sprite2 = type(sprite)(self, sprite.center_x, sprite.center_y)#.__new__(type(sprite))
+            sprite2 = type(sprite)(self, sprite.center_x, sprite.center_y)
             variables = vars(sprite2)
             for key, val in vars(sprite).items():
-                if isinstance(val, (dict, int, float, str)): 
+                #pythonic apperently
+                if val.__class__.__module__ == '__builtin__': 
                     variables[key] = val
             sprite2.save(self)
             sprite_list_copy.append(sprite2)
@@ -1637,9 +1646,11 @@ class MyGame(arcade.View):
                     vars(self)[key] = val
                     continue
                 elif key == "graph":
-                    self.graph = LivingMap(self, 0, 0, 0)
-                    self.graph.graph = val
-                    continue
+                    print("DEJNNJED")
+                    print(type(vars(self)[key]))
+                    print(vars(self)[key][10][12])
+                    graph = LivingMap(file["x_line"], file["y_line"], file["x_line"]*file["y_line"])
+                    vars(self)[key] = val
                 for sprite in val:
                     vars(self)[key].append(sprite)
             elif isinstance(val, arcade.SpriteList):
@@ -1660,10 +1671,10 @@ class MyGame(arcade.View):
 
         #graph = create_Map(self.graphlength, self.graphlength)
         for stone in self.Stones:
-            x, y = int(stone.center_x/50), int(stone.center_y/50)
+            x, y = stone.center_x/50, stone.center_y/50
             self.graph[x][y] = 1
         for seas in self.Seas:
-            x, y = int(seas.center_x/50), int(seas.center_y/50)
+            x, y = seas.center_x/50, seas.center_y/50
             self.graph[x][y] = 2 """
 class MyTutorial(MyGame):
     def __init__(self, menu, file_num=0, world_gen="Normal", difficulty=1):
@@ -1842,7 +1853,7 @@ class MyTutorial(MyGame):
         if len(self.OpenToEnemies) == 0:
             max_i = 1
         i = 0
-        while not self.graph[int(x/50)][int(y/50)] in enemy.movelist:
+        while not self.graph[x/50][y/50] in enemy.movelist:
             pos = self.EnemySpawnPos()
             if pos is not None:
                 x, y = pos
@@ -2948,11 +2959,7 @@ class ScienceMenu(arcade.View):
 
         self.menu_button = wrapper
     def load(self):
-        try:
-            self.game_view.science_list
-            saved = True
-        except:
-            saved = False
+        saved = self.game_view.science_list != None
 
         with open("resources/game.json", "r") as read_file:
             game = json.load(read_file)['science_menu']
