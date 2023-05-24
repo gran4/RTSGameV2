@@ -2,19 +2,28 @@ import arcade, math
 
 
 class CustomList(list):
+    """
+    A List that allows floats when getting or setting something
+    """
     def __setitem__(self, index, item):
         super().__setitem__(int(index), int(item))
-    #def __getattribute__(self, __name):
-    #    if type(__name) == float:
-    #        __name = int(__name)
-    #    return super().__getattribute__(__name)
     def __getitem__(self, __name):
         return super().__getitem__(int(__name))
-    #def __setattr__(self, __name: str, __value) -> None:
-    #    return super().__setattr__(int(__name), int(__value))
+
 
 class LivingMap(object):
-    def __init__(self, x_length:int, y_length:int,  size:int, *args, tilesize:int=50):
+    """Custom Map"""
+
+    __slots__ = (
+        "size",
+        "tilesize",
+        "graph",
+        "__weakref__"
+    )
+
+    def __init__(self, x_length:int, y_length:int,  
+                    size:int, *args, tilesize:int=50
+                    ) -> None:
         self.size = size
         self.tilesize = tilesize
 
@@ -23,6 +32,7 @@ class LivingMap(object):
             self.graph.append(CustomList())
             for tile in range(y_length):
                 self.graph[tiles].append(0)
+
         count = 1
         for barrierlist in args:
             for barrier in barrierlist:
@@ -31,9 +41,7 @@ class LivingMap(object):
                 self.graph[x][y] = count
             count += 1
 
-
-
-    def change(self, x:int, y:int, barrier:bool):
+    def change(self, x:int, y:int, barrier:bool) -> None:
         x = int(x/50)
         y = int(y/50)
 
@@ -41,21 +49,17 @@ class LivingMap(object):
             self.graph[x][y] = 1
         else:
             self.graph[x][y] = 0
+
     def __getitem__(self, i):
         return self.graph[i]
+
     def __setitem__(self, x, y, val):
         self.graph[x][y] = val
 
 
 def heuristic(start:tuple, goal:tuple):
         """
-
-        Args:
-            start:
-            goal:
-
-        Returns:
-
+        Gets the Heuristic of the 2 points
         """
         # Use Chebyshev distance heuristic if we can move one square either
         # adjacent or diagonal
@@ -65,12 +69,15 @@ def heuristic(start:tuple, goal:tuple):
         dy = abs(start[1] - goal[1])
         return d * (dx + dy) + (d2 - 2 * d) * min(dx, dy)
 
+
 def move_cost(a:int, b:int):
 
     if a[0] == b[0] or a[1] == b[1]:
         return 1*5
     else:
         return 1.42*5
+
+
 def get_dist(pos, pos2):
     return math.sqrt((pos[0]-pos2[0])**2+(pos[1]- pos2[1])**2)
 
