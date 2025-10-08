@@ -1,4 +1,4 @@
-import arcade, math, numba
+import arcade, math#, numpy
 
 from collections import ChainMap
 from typing import Optional, Tuple, Union

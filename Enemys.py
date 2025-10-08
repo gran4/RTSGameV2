@@ -107,6 +107,7 @@ class BaseEnemy(arcade.Sprite):
     def load(self, game):
         if self.focused_on:
             self.focused_on = game[self.focused_on[0]][self.focused_on[1]]
+
 class Child(BaseEnemy):
     def __init__(self, game, x, y, difficulty=1):
         super().__init__("resources/Sprites/enemy.png", x, y, 5*difficulty, 10*difficulty, 5, scale=1)

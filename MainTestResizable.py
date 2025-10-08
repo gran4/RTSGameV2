@@ -31,6 +31,7 @@ import sys, os
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
     os.chdir(sys._MEIPASS)
 
+
 from math import sqrt, floor
 import arcade, json, random, arcade.gui, time, pickle, atexit
 
@@ -1555,44 +1556,16 @@ class MyGame(arcade.View):
     def save(self, event): 
         variables = {}
         self.ui_sprites.clear()
+
+        skip_keys = {
+            "window", "camera", "key", "secondary_wrappers", "menu_buttons",
+            "selectables", "ui_sprites", "player", "main_button", "menus_button",
+            "selectables_button", "under_sprite", "extra_buttons", "text_sprites",
+            "audios", "underParticals", "overParticles", "health_bars"
+        }
         for key, value in vars(self).items():
-            match key:
-                case "window":
-                    continue
-                case "camera":
-                    continue
-                case "key":
-                    continue
-                case "secondary_wrappers":
-                    continue
-                case "menu_buttons":
-                    continue
-                case "selectables":
-                    continue
-                case "ui_sprites":
-                    continue
-                case "player":
-                    continue
-                case "main_button":
-                    continue
-                case "menus_button":
-                    continue
-                case "selectables_button":
-                    continue
-                case "under_sprite":
-                    continue
-                case "extra_buttons":
-                    continue
-                case "text_sprites":
-                    continue
-                case "audios":
-                    continue
-                case "underParticals":
-                    continue
-                case "overParticles":
-                    continue
-                case "health_bars":
-                    continue
+            if key in skip_keys:
+                continue
             if isinstance(value, arcade.SpriteList):
                 variables[key] = self.copy_SpriteList(value)
                 outfile = open(f"{self.file_num}",'wb')
@@ -1660,9 +1633,8 @@ class MyGame(arcade.View):
                 vars(self)[key] = val
         for key, val in vars(self).items():
             if isinstance(val, arcade.SpriteList): 
-                match key:
-                    case "health_bars":
-                        continue
+                if key == "health_bars":
+                    continue
                 for sprite in val:
                     sprite.load(self)
         self.player = Player(center_x=file["player"].center_x, center_y=file["player"].center_y)#arcade.Sprite("resources/Sprites/Player.png", scale=.5, center_x=file["player"].center_x, center_y=file["player"].center_y)
@@ -1867,8 +1839,6 @@ class MyTutorial(MyGame):
                 enemy = enemy_class(self, x, y, difficulty=self.hardness_multiplier)
                 enemy.focused_on = None
                 i = 0
-
-
 
         enemy.center_x = x
         enemy.center_y = y
