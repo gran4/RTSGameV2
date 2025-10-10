@@ -16,7 +16,6 @@ class BaseEnemy(arcade.Sprite):
         self.texture = arcade.load_texture(file_name)
         self.center_x = x
         self.center_y = y
-        self.hit_box = self.texture.hit_box_points
 
         self.damage = damage
         self.health = health

@@ -156,17 +156,17 @@ class MyGame(arcade.View):
 
         #sprite lists
         #BackGround
-        self.Lands = arcade.SpriteList(use_spatial_hash=True, is_static=True)
-        self.Stones = arcade.SpriteList(use_spatial_hash=True, is_static=True)
-        self.Seas = arcade.SpriteList(use_spatial_hash=True, is_static=True)
-        self.Trees = arcade.SpriteList(use_spatial_hash=True, is_static=True)
-        self.BerryBushes = arcade.SpriteList(use_spatial_hash=True, is_static=True)
+        self.Lands = arcade.SpriteList(use_spatial_hash=True)
+        self.Stones = arcade.SpriteList(use_spatial_hash=True)
+        self.Seas = arcade.SpriteList(use_spatial_hash=True)
+        self.Trees = arcade.SpriteList(use_spatial_hash=True)
+        self.BerryBushes = arcade.SpriteList(use_spatial_hash=True)
 
-        self.Fires = arcade.SpriteList(use_spatial_hash=True, is_static=True)
+        self.Fires = arcade.SpriteList(use_spatial_hash=True)
         self.overParticles = arcade.SpriteList()
         self.underParticals = arcade.SpriteList()
 
-        self.Buildings = arcade.SpriteList(use_spatial_hash=True, is_static=True)
+        self.Buildings = arcade.SpriteList(use_spatial_hash=True)
         self.Boats = arcade.SpriteList()
         self.boatUpdate = 0
 
@@ -188,7 +188,7 @@ class MyGame(arcade.View):
         self.enemyUpdate = .2
         self.fireUpdate = .3
 
-        self.ui_sprites = arcade.SpriteList(is_static=True)
+        self.ui_sprites = arcade.SpriteList()
         self.ui_sprite_background = arcade.Sprite("resources/gui/Small Text Background.png", scale = 1.1, center_x=-2000)
         self.ui_sprite_text = CustomTextSprite(None, {})#arcade.create_text_sprite("Selected None", 50, 25, arcade.color.BLACK)
 
@@ -1135,11 +1135,10 @@ class MyGame(arcade.View):
     def print_attr(self, event):
         print(vars(event.source.obj))
     def center_camera(self):
-        screen_center_x = self.player.center_x - (self.camera.viewport_width / 2)
-        screen_center_y = self.player.center_y - (self.camera.viewport_height / 2)
-        
-        _centered = screen_center_x, screen_center_y
-        self.camera.move_to(_centered)
+        target_x = self.player.center_x
+        target_y = self.player.center_y
+
+        self.camera.position = (target_x, target_y)
     
     def on_update(self, delta_time):
         #print(1/delta_time)
@@ -3455,7 +3454,7 @@ class ShowMenu(arcade.View):
 
         game = vars(self.game_view)
         y = 450
-        self.texts = arcade.SpriteList(use_spatial_hash=True, is_static=True)
+        self.texts = arcade.SpriteList(use_spatial_hash=True)
         for item in items_to_show:
             self.texts.append(arcade.create_text_sprite(f"{game[item]} {item}", 0, y, arcade.color.WHITE, font_size=36))
             y -= 50

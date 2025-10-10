@@ -1,13 +1,12 @@
 import arcade
 
 
-class BaseBackground(arcade.Sprite):
+class BaseBackground(arcade.sprite.Sprite):
     def __init__(self, x:float, y:float, file_name:str, scale:float):
         super().__init__(file_name, center_x=x, center_y=y, scale=scale)
         self.texture = arcade.load_texture(file_name)
         self.center_x = x
         self.center_y = y
-        self.hit_box = self.texture.hit_box_points
     def save(self, game):
         pass
     def load(self, game):

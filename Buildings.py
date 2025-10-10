@@ -12,7 +12,6 @@ class BaseBuilding(arcade.Sprite):
         self.texture = arcade.load_texture(texture)
         self.center_x = x
         self.center_y = y
-        self.hit_box = self.texture.hit_box_points
         self.path = False
 
         self.dmg = dmg

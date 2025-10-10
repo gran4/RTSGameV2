@@ -231,8 +231,8 @@ class Player(arcade.Sprite):
                     self.texture = self.A_Texture[self.index]
                 case "D":
                     self.texture = self.D_Texture[self.index]
-            
-        return super().on_update(delta_time)
+        self.update_animation(delta_time)
+        super().update(delta_time)
 #odd movement
 class Person(arcade.Sprite):
     def __init__(self, game, x:float, y:float, scale = 1):
@@ -252,7 +252,6 @@ class Person(arcade.Sprite):
 
         self.center_x = x
         self.center_y = y
-        self.hit_box = self.texture.hit_box_points
 
         self.health = 100
         self.max_health = 100

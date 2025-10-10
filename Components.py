@@ -16,7 +16,7 @@ from arcade.gui import (
     UIMouseReleaseEvent,
 )
 from arcade.gui.events import UIOnChangeEvent, UIOnClickEvent
-from arcade.gui.property import Property, bind
+from arcade.gui import Property, bind
 from arcade.types import Color, LBWH
 
 from pathlib import Path
@@ -310,12 +310,12 @@ class HealthBar:
         self._background_box: arcade.SpriteSolidColor = arcade.SpriteSolidColor(
             self._box_width + border_size,
             self._box_height + border_size,
-            background_color,
+            color=background_color,
         )
         self._full_box: arcade.SpriteSolidColor = arcade.SpriteSolidColor(
             self._box_width,
             self._box_height,
-            full_color,
+            color=full_color,
         )
         game.health_bars.append(self._background_box)
         game.health_bars.append(self._full_box)
@@ -361,11 +361,12 @@ class HealthBar:
     @property
     def visible(self) -> float:
         """Returns the visibility"""
-        return self.visible
+        return getattr(self, "_visible", True)
     @visible.setter
     def visible(self, visible) -> None:
-        self._full_box.visible = visible
-        self._background_box.visible = visible
+        self._visible = bool(visible)
+        self._full_box.visible = self._visible
+        self._background_box.visible = self._visible
 
     @property
     def position(self) -> Tuple[float, float]:
