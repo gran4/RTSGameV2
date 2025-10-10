@@ -2,13 +2,14 @@ import arcade
 from math import floor
 import random, time
 from Components import *
+from gui_compat import UIAnchorWidget
 
 """16, 15, 10, """
 class Fire(arcade.Sprite):
     def __init__(self, game, x:float, y:float, strength):
         super().__init__("resources/Sprites/tree_farm.png", center_x=x, center_y=y, scale=1, hit_box_algorithm="None")
         
-        self.textures = arcade.load_spritesheet("resources/Sprites/Fire Pixilart Sprite Sheet.png", 50, 50, 8, 8)
+        self.textures = load_texture_grid("resources/Sprites/Fire Pixilart Sprite Sheet.png", 50, 50, 8, 8)
         self.texture = self.textures[floor(strength)]
         
         self.center_x = x
@@ -115,7 +116,7 @@ class BaseBoat(arcade.Sprite):
         game.last = self
         button = CustomUIFlatButton(game.Alphabet_Textures, text="Move", width=140, height=50, x=0, y=50, text_offset_x = 24, text_offset_y=35, offset_x=75, offset_y=25)
         button.on_click = game.Move
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="left", anchor_y="bottom",
+        wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
             child=button, align_x=0, align_y=0)
         game.uimanager.add(wrapper)
         game.extra_buttons.append(wrapper)
@@ -123,7 +124,7 @@ class BaseBoat(arcade.Sprite):
         button = CustomUIFlatButton(game.Alphabet_Textures, text="Leave", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
         button.on_click = game.leave
         button.obj = self
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="left", anchor_y="bottom",
+        wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
             child=button, align_x=150, align_y=0)
         game.uimanager.add(wrapper)
         game.extra_buttons.append(wrapper)
@@ -131,7 +132,7 @@ class BaseBoat(arcade.Sprite):
         button = CustomUIFlatButton(game.Alphabet_Textures, text="Destoy", width=140, height=50, scale=.3, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
         button.on_click = game.leave
         button.obj = self
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="left", anchor_y="bottom",
+        wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
             child=button, align_x=300, align_y=0)
         game.uimanager.add(wrapper)
         game.extra_buttons.append(wrapper)
@@ -160,7 +161,7 @@ class Cannoe(BaseBoat):
 class VikingLongShip(BaseBoat):
     def __init__(self, game, x:float, y:float):
         super().__init__("resources/Sprites/Arrow.png", game, x, y, 20, 0, 0, 2, scale=0.78125)
-        self.textures = arcade.load_spritesheet("resources/Sprites/Viking Ship/sprPlayer_strip16.png", 64, 64, 16, 16, margin=0)
+        self.textures = load_texture_grid("resources/Sprites/Viking Ship/sprPlayer_strip16.png", 64, 64, 16, 16, margin=0)
         self.texture = self.textures[0]
 
         self.rot = 0
@@ -192,7 +193,7 @@ class Carrier(BaseBoat):
 class Player(arcade.Sprite):
     def __init__(self, center_x: float = 0, center_y: float = 0):
         super().__init__(None, scale=2, center_x=center_x, center_y=center_y)
-        textures = arcade.load_spritesheet("resources/Sprites/Player Sprite Sheet.png", 24, 33, 4, 16)
+        textures = load_texture_grid("resources/Sprites/Player Sprite Sheet.png", 24, 33, 4, 16)
         self.timer = 0
         self.index = 0
         self.key = "S"
@@ -236,7 +237,7 @@ class Player(arcade.Sprite):
 class Person(arcade.Sprite):
     def __init__(self, game, x:float, y:float, scale = 1):
         super().__init__(center_x=x, center_y=y, scale=scale)
-        textures = arcade.load_spritesheet("resources/Sprites/Elf Sprite Sheet.png", 24, 33, 4, 16)
+        textures = load_texture_grid("resources/Sprites/Elf Sprite Sheet.png", 24, 33, 4, 16)
         self._width = 24
         self._height = 33
 
@@ -286,7 +287,7 @@ class Person(arcade.Sprite):
         button = CustomUIFlatButton(game.Alphabet_Textures, text="Move", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
         
         button.on_click = game.Move
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="left", anchor_y="bottom",
+        wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
             child=button, align_x=0, align_y=0)
         game.uimanager.add(wrapper)
         game.extra_buttons.append(wrapper)
@@ -433,7 +434,7 @@ class People_that_attack(Person):
         button = CustomUIFlatButton(game.Alphabet_Textures, text=self.state2, width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
         button.on_click = game.person_switch
         button.obj = self
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="left", anchor_y="bottom",
+        wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
                     child=button, align_x=150, align_y=0)
         game.extra_buttons.append(wrapper)
         game.uimanager.add(wrapper)
@@ -457,7 +458,7 @@ class BadGifter(People_that_attack):
         self.people_bias = .3
         
 
-        textures = arcade.load_spritesheet("resources/Sprites/Elf Sprite Sheet.png", 24, 33, 4, 16)
+        textures = load_texture_grid("resources/Sprites/Elf Sprite Sheet.png", 24, 33, 4, 16)
         self._width = 24
         self._height = 33
 
@@ -650,7 +651,7 @@ class BadReporter(People_that_attack):
         self.people_bias = .3
         
 
-        textures = arcade.load_spritesheet("resources/Sprites/Elf Sprite Sheet.png", 24, 33, 4, 16)
+        textures = load_texture_grid("resources/Sprites/Elf Sprite Sheet.png", 24, 33, 4, 16)
         self._width = 24
         self._height = 33
 

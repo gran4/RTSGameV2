@@ -3,6 +3,8 @@ import arcade
 import timeit
 import os
 
+from Components import set_scroll_viewport
+
 # Sprite scaling. Make this larger, like 0.5 to zoom in and add
 # 'mystery' to what you can see. Make it smaller, like 0.1 to see
 # more of the map.
@@ -214,7 +216,7 @@ class MyGame(arcade.Window):
 
         # This command should happen before we start drawing. It will clear
         # the screen to the background color, and erase what we drew last frame.
-        arcade.start_render()
+        self.clear()
 
         # Draw the sprites
         self.wall_list.draw()
@@ -265,10 +267,7 @@ class MyGame(arcade.Window):
 
     def on_resize(self, width, height):
 
-        arcade.set_viewport(self.view_left,
-                            self.width + self.view_left,
-                            self.view_bottom,
-                            self.height + self.view_bottom)
+        set_scroll_viewport(self.view_left, self.view_bottom, self.width, self.height)
 
     def on_update(self, delta_time):
         """ Movement and game logic """
@@ -310,10 +309,7 @@ class MyGame(arcade.Window):
             changed = True
 
         if changed:
-            arcade.set_viewport(self.view_left,
-                                self.width + self.view_left,
-                                self.view_bottom,
-                                self.height + self.view_bottom)
+            set_scroll_viewport(self.view_left, self.view_bottom, self.width, self.height)
 
         # Save the time it took to do this.
         self.processing_time = timeit.default_timer() - start_time

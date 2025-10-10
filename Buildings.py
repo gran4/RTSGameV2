@@ -1,6 +1,7 @@
 import arcade
 from Components import *
 from Player import *
+from gui_compat import UIAnchorWidget
     
 things = {"Bad Gifter":BadGifter, "Bad Reporter":BadReporter}
 
@@ -77,7 +78,7 @@ class BaseBuilding(arcade.Sprite):
         button = CustomUIFlatButton(game.Alphabet_Textures, text="Leave", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
         button.on_click = game.leave
         button.obj = self
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+        wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
             child=button, align_x=-300, align_y=-200)
         game.uimanager.add(wrapper)
         game.extra_buttons.append(wrapper)
@@ -85,7 +86,7 @@ class BaseBuilding(arcade.Sprite):
         button = CustomUIFlatButton(game.Alphabet_Textures, text="Print  Attrs", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
         button.on_click = game.print_attr
         button.obj = self
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+        wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
             child=button, align_x=-100, align_y=-200)
         game.uimanager.add(wrapper)
         game.extra_buttons.append(wrapper)
@@ -93,7 +94,7 @@ class BaseBuilding(arcade.Sprite):
         button = CustomUIFlatButton(game.Alphabet_Textures, text="Destroy", width=140, height=50, x=0, y=50, text_offset_x = 10, text_offset_y=35, offset_x=65, offset_y=25)
         button.on_click = game.destroy
         button.obj = self
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+        wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
             child=button, align_x=100, align_y=-200)
         game.uimanager.add(wrapper)
         game.extra_buttons.append(wrapper)
@@ -171,7 +172,7 @@ class UNbuiltBuilding(BaseBuilding):
         button = CustomUIFlatButton(game.Alphabet_Textures, text="Destroy", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
         button.on_click = game.clean_destroy
         button.obj = self
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+        wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
             child=button, align_x=100, align_y=-200)
         game.extra_buttons.append(wrapper)
 
@@ -307,7 +308,7 @@ class Farm(BaseBuilding):
         self.vars = {"food":1.6}
 
         self.AnimationPlayer = AnimationPlayer(1)
-        self.textures = arcade.load_spritesheet("resources/Sprites/Farm Pixilart Sprite Sheet.png", 50, 50, 50, 2)
+        self.textures = load_texture_grid("resources/Sprites/Farm Pixilart Sprite Sheet.png", 50, 50, 50, 2)
         self.texture = self.textures[0]
     def update(self, delta_time, game):
         super().update()
@@ -472,7 +473,7 @@ class Encampment(BaseBuilding):
         button = CustomUIFlatButton(game.Alphabet_Textures, text="Train", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
         button.on_click = game.training_menu
         button.obj = self
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+        wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
                     child=button, align_x=300, align_y=-200)
         button.building = self
         game.uimanager.add(wrapper)
@@ -493,4 +494,3 @@ class Encampment(BaseBuilding):
             person.destroy(game)
             game.population += 1
         
-

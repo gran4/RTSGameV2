@@ -153,7 +153,7 @@ class Child(BaseEnemy):
 class Enemy_Swordsman(BaseEnemy):
     def __init__(self, x: float, y: float, difficulty = 1):
         super().__init__("resources/Sprites/NightBorneWarrior/NightBorne.png", x, y, 10*difficulty, 5*difficulty, 40, scale=1)
-        self.textures = arcade.load_spritesheet("resources/Sprites/NightBorneWarrior/NightBorne.png", 80, 80, 22, 111, margin = 0)
+        self.textures = load_texture_grid("resources/Sprites/NightBorneWarrior/NightBorne.png", 80, 80, 22, 111, margin = 0)
         self.texture = self.textures[0]
         
         self.Idle = self.textures[:7]
@@ -223,7 +223,7 @@ class Enemy_Slinger(BaseEnemy):
 
         self.bow = arcade.Sprite(center_x=self.center_x, center_y=self.center_y, image_width=50, image_height=50)#Entity()
         self.bow.Attack_animation = AnimationPlayer(.1)
-        self.bow.Attack_textures = arcade.load_spritesheet("resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
+        self.bow.Attack_textures = load_texture_grid("resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
         self.bow.texture = self.bow.Attack_textures[0]
         self.bow.AttackAnimTimes = [.25, .125, .125, .125, .2, .1, .05, .025, .025]
         self.bow.WaitToAttack = .2
@@ -344,7 +344,7 @@ class Enemy_Slinger(BaseEnemy):
         
         self.bow = arcade.Sprite(center_x=self.center_x, center_y=self.center_y, image_width=50, image_height=50)#Entity()
         self.bow.Attack_animation = AnimationPlayer(.1)
-        self.bow.Attack_textures = arcade.load_spritesheet("resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
+        self.bow.Attack_textures = load_texture_grid("resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
         self.bow.texture = self.bow.Attack_textures[0]
         self.bow.AttackAnimTimes = [.25, .125, .125, .125, .2, .1, .05, .025, .025]
         self.bow.WaitToAttack = .2
@@ -382,7 +382,7 @@ class Arsonist(BaseEnemy):
         self.fire_strength = 1
 
         self.Explosian = arcade.Sprite(center_x=x-10, center_y = y+10, scale = .25)
-        self.Explosian.textures = arcade.load_spritesheet("resources/Sprites/Fire_Totem/Fire_Totem-full_Sheet.png", 64, 100, 14, 70)
+        self.Explosian.textures = load_texture_grid("resources/Sprites/Fire_Totem/Fire_Totem-full_Sheet.png", 64, 100, 14, 70)
         self.Explosian.texture = self.Explosian.textures[4]
         self.Explosian.AnimationPlayer = AnimationPlayer(.1)
         game.overParticles.append(self.Explosian)
@@ -451,7 +451,7 @@ class Arsonist(BaseEnemy):
     def save(self, game):
         x, y = self.position
         self.Explosian2 = arcade.Sprite(center_x=x-10, center_y = y+10, scale = .25)
-        self.Explosian2.textures = arcade.load_spritesheet("resources/Sprites/Fire_Totem/Fire_Totem-full_Sheet.png", 64, 100, 14, 70)
+        self.Explosian2.textures = load_texture_grid("resources/Sprites/Fire_Totem/Fire_Totem-full_Sheet.png", 64, 100, 14, 70)
         self.Explosian2.texture = self.Explosian.textures[4]
         self.Explosian2.AnimationPlayer = AnimationPlayer(.1)
         self.Explosian2.AnimationPlayer.index = self.Explosian.AnimationPlayer.index
@@ -464,7 +464,7 @@ class Arsonist(BaseEnemy):
 class Golem(BaseEnemy):
     def __init__(self, game, x: float, y: float, difficulty=1):
         super().__init__("resources/Sprites/Stone Golem/Character_sheet.png", x, y, 10*difficulty, 10*difficulty, 40, scale=.8)
-        textures = arcade.load_spritesheet("resources/Sprites/Stone Golem/Character_sheet.png", 100, 100, 10, 100, margin = 0)
+        textures = load_texture_grid("resources/Sprites/Stone Golem/Character_sheet.png", 100, 100, 10, 100, margin = 0)
         self.texture = textures[0]
         self.Idle = textures[:4]
         self.Idle_animation = AnimationPlayer(.1)
@@ -491,7 +491,7 @@ class Golem(BaseEnemy):
         self.movelist = [0]
 
         self.affect = arcade.Sprite("resources/Sprites/Selection.png", center_x=100000, center_y=100000)
-        self.affect.textures = arcade.load_spritesheet("resources/Sprites/Free Pixel Effects Pack/10_weaponhit_spritesheet.png", 100, 100, 6, 31)[1:]
+        self.affect.textures = load_texture_grid("resources/Sprites/Free Pixel Effects Pack/10_weaponhit_spritesheet.png", 100, 100, 6, 31)[1:]
         self.affect.animation_player = AnimationPlayer(.03)
         game.underParticals.append(self.affect)
     def destroy(self, game):
@@ -526,7 +526,7 @@ class Golem(BaseEnemy):
         self.affect.center_x = self.center_x
         self.affect.center_y = self.center_y
 
-        self.affect._set_scale(self.affect._get_scale()+.15*random.random())
+        self.affect.scale += 0.15 * random.random()
         anim = self.affect.animation_player.updateAnim(delta_time, len(self.affect.textures))
         if anim is not None:
             self.affect.texture = self.affect.textures[anim]
@@ -537,9 +537,9 @@ class Golem(BaseEnemy):
             for thing in hit:
                 thing.health -= self.damage
                 if thing.health <= 0: thing.destroy(game)
-            self.affect._set_width(64)
-            self.affect._set_height(64)
-            self.affect._set_scale(1)
+            self.affect.width = 64
+            self.affect.height = 64
+            self.affect.scale = 1
             self.affect.center_x = 100000
             self.affect.center_y = 100000
             self.affect.animation_player.index = 0
@@ -553,7 +553,7 @@ class Golem(BaseEnemy):
     def save(self, game):
         super().save(game)
         self.affect = arcade.Sprite("resources/Sprites/Selection.png", center_x=100000, center_y=100000)
-        self.affect.textures = arcade.load_spritesheet("resources/Sprites/Free Pixel Effects Pack/10_weaponhit_spritesheet.png", 100, 100, 6, 31)[1:]
+        self.affect.textures = load_texture_grid("resources/Sprites/Free Pixel Effects Pack/10_weaponhit_spritesheet.png", 100, 100, 6, 31)[1:]
         self.affect.animation_player = AnimationPlayer(.03)
     def load(self, game):
         super().save(game)
@@ -617,7 +617,7 @@ class Wizard(BaseEnemy):
             else:
                 anim = projectile.destructionAnim.updateAnim(delta_time, len(projectile.destruction))
                 scalevar = .15*random.random()*delta_time
-                projectile._set_scale(projectile._get_scale()+scalevar)
+                projectile.scale += scalevar
                 if anim == 0:
                     hit = arcade.check_for_collision_with_lists(projectile, [game.Buildings, game.People, game.Boats], method=3)
                     for obj in hit:
@@ -705,7 +705,7 @@ class Privateer(BaseEnemy):
 
         self.bow = arcade.Sprite(center_x=self.center_x, center_y=self.center_y, image_width=50, image_height=50)#Entity()
         self.bow.Attack_animation = AnimationPlayer(.1)
-        self.bow.Attack_textures = arcade.load_spritesheet("resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
+        self.bow.Attack_textures = load_texture_grid("resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
         self.bow.texture = self.bow.Attack_textures[0]
         self.bow.AttackAnimTimes = [.25, .125, .125, .125, .2, .1, .05, .025, .025]
         self.bow.WaitToAttack = .2
@@ -788,7 +788,7 @@ class Privateer(BaseEnemy):
         
         self.bow = arcade.Sprite(center_x=self.center_x, center_y=self.center_y, image_width=50, image_height=50)#Entity()
         self.bow.Attack_animation = AnimationPlayer(.1)
-        self.bow.Attack_textures = arcade.load_spritesheet("resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
+        self.bow.Attack_textures = load_texture_grid("resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
         self.bow.texture = self.bow.Attack_textures[0]
         self.bow.AttackAnimTimes = [.25, .125, .125, .125, .2, .1, .05, .025, .025]
         self.bow.WaitToAttack = .2

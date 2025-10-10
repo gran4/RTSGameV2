@@ -1,24 +1,122 @@
-import arcade, math#, numpy
+import arcade, math, itertools
 
-from collections import ChainMap
 from typing import Optional, Tuple, Union
 
-from pyglet.event import EVENT_UNHANDLED
+from pyglet.event import EVENT_HANDLED, EVENT_UNHANDLED
 
-import arcade
-from arcade.experimental.uistyle import UISliderStyle
-from arcade.gui import UIWidget, Surface, UIEvent, UIMouseMovementEvent, UIMouseDragEvent, UIMousePressEvent, \
-    UIMouseReleaseEvent
-from arcade.gui._property import _Property, _bind
-from arcade.gui.events import UIOnChangeEvent
+from arcade import load_spritesheet as _arcade_load_spritesheet, Rect
+from arcade.texture import Texture
+from arcade.gui import (
+    UIWidget,
+    Surface,
+    UIEvent,
+    UIMouseMovementEvent,
+    UIMouseDragEvent,
+    UIMousePressEvent,
+    UIMouseReleaseEvent,
+)
+from arcade.gui.events import UIOnChangeEvent, UIOnClickEvent
+from arcade.gui.property import Property, bind
+from arcade.types import Color, LBWH
 
 from pathlib import Path
-from typing import Optional, Union
 import pyglet.media as media
 
 
 trainingtimes = {"Bad Gifter":5, "Bad Reporter":10}
 movement = {0:1, 1:2, 2:1}
+
+if not hasattr(arcade.Sprite, "draw"):
+    def _compat_sprite_draw(self):
+        draw_list = getattr(self, "_compat_draw_list", None)
+        if draw_list is None:
+            draw_list = arcade.SpriteList()
+            draw_list.append(self)
+            self._compat_draw_list = draw_list
+        draw_list.draw()
+
+    arcade.Sprite.draw = _compat_sprite_draw  # type: ignore[attr-defined]
+
+def reset_window_viewport(
+    window: Optional[arcade.Window] = None,
+    *,
+    left: float = 0.0,
+    bottom: float = 0.0,
+    width: Optional[float] = None,
+    height: Optional[float] = None,
+) -> None:
+    win = window or arcade.get_window()
+    default_width = getattr(win, "width", 0) or getattr(win, "size", (0, 0))[0] or 1
+    default_height = getattr(win, "height", 0) or getattr(win, "size", (0, 0))[1] or 1
+
+    viewport_width = width if width is not None else default_width
+    viewport_height = height if height is not None else default_height
+
+    if viewport_width <= 0:
+        viewport_width = default_width or 1
+    if viewport_height <= 0:
+        viewport_height = default_height or 1
+
+    win.viewport = (left, bottom, viewport_width, viewport_height)
+
+
+def set_scroll_viewport(
+    left: float,
+    bottom: float,
+    width: float,
+    height: float,
+    window: Optional[arcade.Window] = None,
+) -> None:
+    reset_window_viewport(
+        window,
+        left=left,
+        bottom=bottom,
+        width=width,
+        height=height,
+    )
+
+def load_texture_grid(
+    path: str,
+    width: int,
+    height: int,
+    columns: int,
+    count: int,
+    margin: Union[int, Tuple[int, int, int, int]] = 0,
+    *,
+    hit_box_algorithm=None,
+):
+    sheet = _arcade_load_spritesheet(path)
+    image = sheet.image
+
+    if isinstance(margin, tuple):
+        if len(margin) != 4:
+            raise ValueError("margin tuple must contain four values: (left, right, bottom, top)")
+        margin_left, margin_right, margin_bottom, margin_top = margin
+    else:
+        margin_left = margin_right = margin_bottom = margin_top = margin
+
+    spacing_x = margin_right
+    spacing_y = margin_bottom
+
+    textures = []
+    rows = max(1, (count + columns - 1) // columns)
+
+    texture_index = 0
+    for row in range(rows):
+        for column in range(columns):
+            if texture_index >= count:
+                break
+
+            x = margin_left + column * (width + spacing_x)
+            y = margin_top + row * (height + spacing_y)
+
+            cropped = image.crop((x, y, x + width, y + height))
+            texture = Texture(cropped, hit_box_algorithm=hit_box_algorithm)
+            texture.file_path = Path(path)
+            textures.append(texture)
+            texture_index += 1
+
+    return textures
 
 def get_closest_sprite(pos, sprite_list):
     lowest_dist = float("inf")
@@ -70,15 +168,38 @@ def get_dist(pos, pos2):
     return math.hypot(pos[0] - pos2[0], pos[1] - pos2[1])
 def sprites_in_range(range, pos, sprite_list):
     return [sprite for sprite in sprite_list if get_dist(pos, sprite.position) < range and sprite.position != pos]
-def convert_button(button, button_texture):
-    button.sprite.scale = 1
-    button.hovered_sprite.scale = 1
-    button.pressed_sprite.scale = 1
+def convert_button(
+    button: "CustomUIFlatButton",
+    button_texture: Union[str, arcade.Texture],
+    hovered_texture: Optional[Union[str, arcade.Texture]] = None,
+    pressed_texture: Optional[Union[str, arcade.Texture]] = None,
+) -> None:
+    def _ensure_texture(tex: Union[str, arcade.Texture]) -> arcade.Texture:
+        if isinstance(tex, arcade.Texture):
+            return tex
+        return arcade.load_texture(tex)
 
+    base_texture = _ensure_texture(button_texture)
+    hovered = _ensure_texture(hovered_texture or button_texture)
+    pressed = _ensure_texture(pressed_texture or hovered_texture or button_texture)
 
-    button.sprite.texture = button_texture
-    button.hovered_sprite.texture = button_texture
-    button.pressed_sprite.texture = button_texture
+    desired_width = button.width
+    desired_height = button.height
+
+    texture_width = base_texture.width or 1
+    texture_height = base_texture.height or 1
+
+    scale_x = desired_width / texture_width
+    scale_y = desired_height / texture_height
+    sprite_scale = min(scale_x, scale_y)
+
+    for sprite, texture in (
+        (button.sprite, base_texture),
+        (button.hovered_sprite, hovered),
+        (button.pressed_sprite, pressed),
+    ):
+        sprite.texture = texture
+        sprite.scale = sprite_scale
 
 class AnimationPlayer(object):
     def __init__(self, timetoupdate, index=0) -> None:
@@ -168,8 +289,8 @@ class HealthBar:
         self,
         game,
         position: Tuple[float, float] = (0, 0),
-        full_color: arcade.Color = arcade.color.GREEN,
-        background_color: arcade.Color = arcade.color.BLACK,
+        full_color: Color = arcade.color.GREEN,
+        background_color: Color = arcade.color.BLACK,
         width: int = 40,
         height: int = 4,
         border_size: int = 4,
@@ -266,43 +387,161 @@ class HealthBar:
 class CustomTextSprite(object):
     def __init__(self, string, Alphabet_Textures, scale=1, 
                  center_x=0, center_y = 0, 
-                 text_scale=1, text_margin=16, width=100, height = 40,  Background_offset_x=0, Background_offset_y=0, Background_scale=1, Background_Texture=None) -> None:
+                 text_scale=1, text_margin=16, width=100, height = 40,  Background_offset_x=0, Background_offset_y=0, Background_scale=1, Background_Texture=None, vertical_align:"Literal['center','top','bottom']"='center') -> None:
         super().__init__()
         self.Sprite_List = arcade.SpriteList()
-        self.Background_Sprite = arcade.Sprite(Background_Texture, center_x=center_x+width/2+Background_offset_x, center_y=center_y-height*2+Background_offset_y, scale=Background_scale)
-        
+        self.background_texture = Background_Texture
+        self.background_offset_x = Background_offset_x
+        self.background_offset_y = Background_offset_y
+        self.background_scale = Background_scale
+        self._background_base_width: float = 0
+        self._background_base_height: float = 0
+
+        self.text_scale = text_scale
+        self.text_margin = text_margin
         self.width = width
         self.height = height
-        self.update_text(string, Alphabet_Textures, scale=scale, 
-                 center_x=center_x, center_y=center_y, 
-                 text_margin=text_margin, width=width, height = height)
+        self.scale = scale
+        self.center_x = center_x
+        self.center_y = center_y
+        self.vertical_align = vertical_align
+        self._content_height: float = 0.0
+        self._background_height: float = 0.0
+        self._content_height: float = 0.0
+        self._background_height: float = 0.0
+
+        self._background_height: float = 0.0
+        self.Background_Sprite: Optional[arcade.Sprite]
+        if Background_Texture:
+            self.Background_Sprite = arcade.Sprite(
+                Background_Texture,
+                center_x=center_x + Background_offset_x,
+                center_y=center_y + Background_offset_y,
+                scale=Background_scale,
+            )
+            self._background_base_width = self.Background_Sprite.width
+            self._background_base_height = self.Background_Sprite.height
+        else:
+            self.Background_Sprite = None
+
+        self.update_text(string, Alphabet_Textures)
         
-    def update_text(self, text, Alphabet_Textures, scale=1, 
-                 center_x=0, center_y = 0, 
-                 text_margin=16, width=100, height = 40):
+    def update_text(self, text, Alphabet_Textures, scale=None, 
+                 center_x=None, center_y=None, 
+                 text_margin=None, width=None, height=None, vertical_align=None):
         self.text = text
         self.Sprite_List.clear()
         if not text:
             return
         words = text.split(' ')
-        x = 0
-        y = 0
+        if scale is not None:
+            self.scale = scale
+        if center_x is not None:
+            self.center_x = center_x
+        if center_y is not None:
+            self.center_y = center_y
+        if text_margin is not None:
+            self.text_margin = text_margin
+        if width is not None:
+            self.width = width
+        if height is not None:
+            self.height = height
+        if vertical_align is not None:
+            self.vertical_align = vertical_align
 
-        for word in words:
-            if x > width-90+center_x:
-                y -= text_margin
-                x = 0
-                if words.index(word)+1 == len(words):
-                    x = -text_margin*len(word)/2
-                elif text_margin*len(words[words.index(word)+1]) > self.width/2:
-                    x = -text_margin*len(word)/2
+        available_width = self.width if self.width > 0 else float("inf")
+        glyph_advance = max(14 * self.scale * 0.8, 1)
+        line_height = glyph_advance * 2.2
+        space_width = glyph_advance
 
-            for string in word:
-                sprite = arcade.Sprite(center_x=center_x+x, center_y=center_y+y, scale=scale)
-                sprite.texture = Alphabet_Textures[string]
-                self.Sprite_List.append(sprite)
-                x += text_margin
-            x += text_margin
+        lines: list[tuple[list[str], float]] = []
+        current_words: list[str] = []
+        current_width = 0.0
+
+        for index, word in enumerate(words):
+            word_width = len(word) * glyph_advance
+            additional_space = space_width if current_words else 0
+
+            if current_words and (current_width + additional_space + word_width) > available_width:
+                lines.append((current_words, current_width))
+                current_words = []
+                current_width = 0.0
+                additional_space = 0
+
+            if additional_space:
+                current_width += additional_space
+
+            current_words.append(word)
+            current_width += word_width
+
+        if current_words:
+            lines.append((current_words, current_width))
+
+        glyph_height = glyph_advance * 1.4
+        content_height = len(lines) * line_height
+        total_height = max(glyph_height, content_height)
+        effective_height = self.height if self.height > 0 else total_height
+        padding = glyph_advance * 0.3
+
+        if self.vertical_align == 'top':
+            top_y = self.center_y + effective_height / 2 - padding
+            start_y = top_y - line_height / 2
+        elif self.vertical_align == 'bottom':
+            bottom_y = self.center_y - effective_height / 2 + padding
+            start_y = bottom_y + (len(lines) - 1) * line_height + line_height / 2
+        else:
+            start_y = self.center_y + total_height / 2 - line_height / 2
+
+        current_y = start_y
+        for words_in_line, line_width in lines:
+            start_x = self.center_x - line_width / 2 + glyph_advance / 2
+            current_x = start_x
+            for word_index, word in enumerate(words_in_line):
+                for character in word:
+                    texture = Alphabet_Textures.get(character)
+                    if texture is None:
+                        current_x += glyph_advance
+                        continue
+                    sprite = arcade.Sprite(
+                        center_x=current_x,
+                        center_y=current_y,
+                        scale=self.scale,
+                    )
+                    sprite.texture = texture
+                    self.Sprite_List.append(sprite)
+                    current_x += glyph_advance
+
+                if word_index != len(words_in_line) - 1:
+                    current_x += space_width
+
+            current_y -= line_height
+
+        if self.Background_Sprite:
+            max_line_width = max((width for _, width in lines), default=0)
+            padding_x = glyph_advance * 2.5
+            padding_y = glyph_advance * 2.5
+            bg_width = max(max_line_width + padding_x, 1)
+            bg_height = max(total_height + padding_y, 1)
+
+            self.Background_Sprite.center_x = self.center_x + self.background_offset_x
+            if self.vertical_align == 'top':
+                self.Background_Sprite.center_y = self.center_y + effective_height / 2 - bg_height / 2 + self.background_offset_y
+            elif self.vertical_align == 'bottom':
+                self.Background_Sprite.center_y = self.center_y - effective_height / 2 + bg_height / 2 + self.background_offset_y
+            else:
+                self.Background_Sprite.center_y = self.center_y + self.background_offset_y
+
+            if self._background_base_width and self._background_base_height:
+                self.Background_Sprite.width = max(bg_width, self._background_base_width * self.background_scale)
+                self.Background_Sprite.height = max(bg_height, self._background_base_height * self.background_scale)
+            else:
+                self.Background_Sprite.width = bg_width
+                self.Background_Sprite.height = bg_height
+
+            self._background_height = self.Background_Sprite.height
+
+        else:
+            self._background_height = total_height
     def update_textv2(self, text, Alphabet_Textures, scale=1, 
                  center_x=0, center_y = 0, 
                  text_margin=16, width=100, height = 40):
@@ -321,10 +560,24 @@ class CustomTextSprite(object):
                     pos_x = -45+center_x
                     pos_y -= 24
     def draw(self):
-        self.Background_Sprite.draw()
+        if self.Background_Sprite:
+            self.Background_Sprite.draw()
         self.Sprite_List.draw()
     def update(self, delta_time):
         return None
+
+    def set_position(self, center_x, center_y):
+        dx = center_x - self.center_x
+        dy = center_y - self.center_y
+        self.center_x = center_x
+        self.center_y = center_y
+        for sprite in self.Sprite_List:
+            sprite.center_x += dx
+            sprite.center_y += dy
+        if self.Background_Sprite:
+            self.Background_Sprite.center_x += dx
+            self.Background_Sprite.center_y += dy
+
 class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
     """
     A text button, with support for background color and a border.
@@ -354,23 +607,75 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
                  text_scale=1, text_margin=16,  
                  offset_x=0, offset_y=0, 
                  line_spacing = 20,
-                 Texture="resources/gui/Wood Button.png", Hovered_Texture="resources/gui/Wood Button.png", Pressed_Texture="resources/gui/Wood Button Pressed.png", 
+                 Texture="resources/gui/Wood Button resized.png", Hovered_Texture="resources/gui/Wood Button resized.png", Pressed_Texture="resources/gui/Wood Button Pressed resized.png", 
                  click_sound = None,
                  **kwargs):
-        super().__init__(center_x, center_y, width, height,
-                         size_hint=size_hint,
-                         size_hint_min=size_hint_min,
-                         size_hint_max=size_hint_max)
+
+        widget_x = kwargs.pop("x", None)
+        widget_y = kwargs.pop("y", None)
+
+        if widget_x is None:
+            widget_x = center_x - width / 2
+        else:
+            center_x = widget_x + width / 2
+
+        if widget_y is None:
+            widget_y = center_y - height / 2
+        else:
+            center_y = widget_y + height / 2
+
+        super().__init__(
+            x=widget_x,
+            y=widget_y,
+            width=width,
+            height=height,
+            size_hint=size_hint,
+            size_hint_min=size_hint_min,
+            size_hint_max=size_hint_max,
+            style=style,
+            **kwargs,
+        )
+        self._center_x = center_x
+        self._center_y = center_y
         self.click_sound = click_sound
         self.clicked = False
 
         self._text = text
         self._style = style or {}
-        
+        self._alphabet_textures = Alphabet_Textures
+        self._text_dirty = True
+
+        self.offset_x = offset_x
+        self.offset_y = offset_y
+        self._visual_bounds: Tuple[float, float, float, float] = (0.0, 0.0, width, height)
+
 #image_width=width+50, image_height=height+50       image_width=width+607, image_height=height+303, 
-        self.sprite = arcade.Sprite(filename=Texture, scale=scale, center_x=center_x+offset_x, center_y=center_x+offset_y)#arcade.load_texture(Texture)
-        self.hovered_sprite = arcade.Sprite(filename=Hovered_Texture, scale=scale, center_x=center_x+offset_x, center_y=center_x+offset_y)#arcade.load_texture(Hovered_Texture)
-        self.pressed_sprite = arcade.Sprite(filename=Pressed_Texture, scale=scale, center_x=center_x+offset_x, center_y=center_x+offset_y)#arcade.load_texture(Pressed_Texture)
+        sprite_center_x = center_x + offset_x
+        sprite_center_y = center_y + offset_y
+        base_texture = arcade.load_texture(Texture)
+        hovered_texture = arcade.load_texture(Hovered_Texture)
+        pressed_texture = arcade.load_texture(Pressed_Texture)
+
+        desired_width = width
+        desired_height = height
+        texture_width = base_texture.width or 1
+        texture_height = base_texture.height or 1
+
+        scale_x = desired_width / texture_width
+        scale_y = desired_height / texture_height
+        sprite_scale = min(scale_x, scale_y) * scale
+
+        self.sprite = arcade.Sprite(center_x=sprite_center_x, center_y=sprite_center_y)
+        self.sprite.texture = base_texture
+        self.sprite.scale = sprite_scale
+
+        self.hovered_sprite = arcade.Sprite(center_x=sprite_center_x, center_y=sprite_center_y)
+        self.hovered_sprite.texture = hovered_texture
+        self.hovered_sprite.scale = sprite_scale
+
+        self.pressed_sprite = arcade.Sprite(center_x=sprite_center_x, center_y=sprite_center_y)
+        self.pressed_sprite.texture = pressed_texture
+        self.pressed_sprite.scale = sprite_scale
 
         #game.spritelist.append(self.sprite)
         #game.spritelist.append(self.hovered_sprite)
@@ -421,10 +726,64 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
 
         
         self.set_text(text, Alphabet_Textures)
-        self.scale(1.2)
+        self._text_dirty = True
+
+    def _compute_visual_bounds(self) -> Tuple[float, float, float, float]:
+        min_x = float("inf")
+        min_y = float("inf")
+        max_x = float("-inf")
+        max_y = float("-inf")
+
+        for sprite in itertools.chain(
+            (self.sprite, self.hovered_sprite, self.pressed_sprite),
+            self.text_sprites,
+        ):
+            if not sprite:
+                continue
+            half_width = getattr(sprite, "width", 0) / 2
+            half_height = getattr(sprite, "height", 0) / 2
+            center_x = getattr(sprite, "center_x", 0)
+            center_y = getattr(sprite, "center_y", 0)
+
+            min_x = min(min_x, center_x - half_width)
+            max_x = max(max_x, center_x + half_width)
+            min_y = min(min_y, center_y - half_height)
+            max_y = max(max_y, center_y + half_height)
+
+        if math.isinf(min_x) or math.isinf(min_y):
+            min_x = 0.0
+            min_y = 0.0
+            max_x = self.width
+            max_y = self.height
+
+        self._visual_bounds = (min_x, min_y, max_x, max_y)
+        return self._visual_bounds
+
+    def _limit_render_area(self, surface: arcade.gui.Surface) -> None:
+        """Expand the render surface so button sprites aren't clipped by offsets."""
+        min_x, min_y, max_x, max_y = self._compute_visual_bounds()
+        rect = self.content_rect
+
+        extra_left = max(0.0, -min_x)
+        extra_bottom = max(0.0, -min_y)
+        extra_right = max(0.0, max_x - self.width)
+        extra_top = max(0.0, max_y - self.height)
+
+        if not any((extra_left, extra_right, extra_bottom, extra_top)):
+            surface.limit(rect)
+            return
+
+        expanded = LBWH(
+            rect.left - extra_left,
+            rect.bottom - extra_bottom,
+            rect.width + extra_left + extra_right,
+            rect.height + extra_bottom + extra_top,
+        )
+        surface.limit(expanded)
 
     def do_render(self, surface: arcade.gui.Surface):
-        self.prepare_render(surface)
+        self._update_visual_state()
+        self._limit_render_area(surface)
         if self.pressed:
             self.pressed_sprite.draw()
             if self.click_sound and not self.clicked: 
@@ -516,82 +875,185 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
 
     @text.setter
     def text(self, value):
-        text = value
-        self._text = value
-        self.trigger_render()
+        self.set_text(value, self._alphabet_textures)
 
 
 
     def set_text(self, text, Alphabet_Textures):
+        if Alphabet_Textures is not None:
+            self._alphabet_textures = Alphabet_Textures
+        self._text = text or ""
+        self._text_dirty = True
+        self._rebuild_text_sprites()
+
+    def _rebuild_text_sprites(self):
         self.text_sprites.clear()
-        #self.text_scale = 1
-        if not text:
-            return 
-        words = text.split(" ")
-        pos_x = -45+self.text_offset_x
-        pos_y = 5+self.text_offset_y
+        if not self._text or not self._alphabet_textures:
+            self._text_dirty = False
+            return
 
-        if len(text)*self.text_scale*self.text_margin > self.width:
-            pos_y += 10
-        line_num_of_characters = 0
+        glyph_width = max(self.text_margin * self.text_scale, 1)
+        line_height = max(self.line_spacing * self.text_scale, glyph_width)
+
+        max_line_width = max(self.width - 20, glyph_width)
+        words = self._text.split(" ")
+
+        lines: list[list[str]] = []
+        current_line: list[str] = []
+        current_width = 0.0
+
         for word in words:
-            spaces = len(word)
-            spaces *= self.text_margin
-            if pos_x+len(word)*self.text_scale*14+self.text_margin > self.width-30:
-                pos_x = -45+self.text_offset_x
-                pos_y -= 24
+            word_width = len(word) * glyph_width
+            space_width = glyph_width if current_line else 0
+            if current_line and current_width + space_width + word_width > max_line_width:
+                lines.append(current_line)
+                current_line = []
+                current_width = 0.0
+                space_width = 0
 
-            
-            for character in word:
-                #self.offset_y+pos_y
-                sprite = arcade.Sprite(center_x=self.offset_x+pos_x, center_y=-self.offset_y/2+pos_y, scale=self.text_scale)
-                sprite.texture = Alphabet_Textures[character]
+            if space_width:
+                current_line.append(" ")
+                current_width += space_width
+
+            for ch in word:
+                current_line.append(ch)
+            current_width += word_width
+
+        if current_line:
+            lines.append(current_line)
+
+        base_center_x = self.width / 2 + self.offset_x
+        base_center_y = self.height / 2
+
+        total_height = (len(lines) - 1) * line_height
+        start_y = base_center_y + total_height / 2 + self.text_offset_y
+
+        current_y = start_y
+        for line_chars in lines:
+            line_width = len(line_chars) * glyph_width
+            current_x = base_center_x - line_width / 2 + self.text_offset_x
+            for ch in line_chars:
+                if ch == " ":
+                    current_x += glyph_width
+                    continue
+                texture = self._alphabet_textures.get(ch)
+                if texture is None:
+                    current_x += glyph_width
+                    continue
+                center_x = current_x + glyph_width / 2
+                sprite = arcade.Sprite(
+                    center_x=center_x,
+                    center_y=current_y,
+                    scale=self.text_scale,
+                )
+                sprite.texture = texture
+                sprite._relative_x = center_x - base_center_x
+                sprite._relative_y = current_y - base_center_y
                 self.text_sprites.append(sprite)
-                pos_x += self.text_margin
-            pos_x += self.text_margin
-            line_num_of_characters = len(word)
-            
-        return
-        if self.text:
-            pos_x = -45+self.text_offset_x
-            pos_y = 5+self.text_offset_y
-            if len(text)*self.text_scale*self.text_margin > self.width:
-                pos_y += 10
-            for string in text:
-                #self.offset_y+pos_y
-                sprite = arcade.Sprite(center_x=self.offset_x+pos_x, center_y=-self.offset_y/2+pos_y, scale=self.text_scale)
-                sprite.texture = Alphabet_Textures[string]
-                self.text_sprites.append(sprite)
-                pos_x += self.text_margin
-                if pos_x*self.text_scale > self.width-90:
-                    pos_x = -45+self.text_offset_x
-                    pos_y -= 24
+                current_x += glyph_width
+            current_y -= line_height
+
+        self._text_dirty = False
+
+    def _update_visual_state(self):
+        local_center_x = self.width / 2 + self.offset_x
+        local_center_y = self.height / 2 + self.offset_y
+
+        for sprite in (self.sprite, self.hovered_sprite, self.pressed_sprite):
+            sprite.center_x = local_center_x
+            sprite.center_y = local_center_y
+
+        if self._text_dirty:
+            self._rebuild_text_sprites()
+
+        base_center_x = self.width / 2 + self.offset_x
+        base_center_y = self.height / 2
+        for sprite in self.text_sprites:
+            rel_x = getattr(sprite, "_relative_x", 0)
+            rel_y = getattr(sprite, "_relative_y", 0)
+            sprite.center_x = base_center_x + rel_x
+            sprite.center_y = base_center_y + rel_y
+
+        self._compute_visual_bounds()
+
+    def _hit_test(self, pos: Tuple[float, float]) -> bool:
+        bounds = getattr(self, "_visual_bounds", None)
+        if not bounds:
+            bounds = self._compute_visual_bounds()
+
+        min_x, min_y, max_x, max_y = bounds
+        left = self.rect.left + min_x
+        right = self.rect.left + max_x
+        bottom = self.rect.bottom + min_y
+        top = self.rect.bottom + max_y
+        x, y = pos
+        return left <= x <= right and bottom <= y <= top
+
+    def on_event(self, event: UIEvent) -> bool | None:
+        if UIWidget.on_event(self, event):
+            return EVENT_HANDLED
+
+        if isinstance(event, UIMouseMovementEvent):
+            self.hovered = self._hit_test(event.pos)
+
+        if (
+            isinstance(event, UIMousePressEvent)
+            and self._hit_test(event.pos)
+            and event.button in self.interaction_buttons
+        ):
+            self.pressed = True
+            self._grap_active()
+            return EVENT_HANDLED
+
+        if (
+            self.pressed
+            and isinstance(event, UIMouseReleaseEvent)
+            and event.button in self.interaction_buttons
+        ):
+            self.pressed = False
+            if self._hit_test(event.pos) and not self.disabled:
+                self._grap_active()
+                click_event = UIOnClickEvent(
+                    source=self,
+                    x=event.x,
+                    y=event.y,
+                    button=event.button,
+                    modifiers=event.modifiers,
+                )
+                self.dispatch_event("on_click", click_event)
+            return EVENT_HANDLED
+
+        return EVENT_UNHANDLED
+
 class CustomUISlider(UIWidget):
-    value = _Property(0)
-    hovered = _Property(False)
-    pressed = _Property(False)
+    """Minimal slider implementation drawing directly on the widget surface."""
 
-    def __init__(self,
-                 *,
-                 value=0,
-                 min_value=0,
-                 max_value=100,
-                 x=0,
-                 y=0,
-                 width=300,
-                 height=20,
-                 size_hint=None,
-                 size_hint_min=None,
-                 size_hint_max=None,
-                 offset_x=0, 
-                 offset_y=0,
-                 button_offset_x=0,
-                 button_offset_y=0,
-                 slider_texture="resources/gui/Slider.png",
-                 slider_button_texture="resources/gui/Slider_Button.png",
-                 style: Union[UISliderStyle, dict, None] = None,
-                 **kwargs
-                 ):
+    value = Property(0.0)
+    hovered = Property(False)
+    pressed = Property(False)
+
+    def __init__(
+        self,
+        *,
+        value: float = 0,
+        min_value: float = 0,
+        max_value: float = 100,
+        x: float = 0,
+        y: float = 0,
+        width: float = 300,
+        height: float = 24,
+        size_hint=None,
+        size_hint_min=None,
+        size_hint_max=None,
+        offset_x: Optional[float] = 0,
+        offset_y: float = 0,
+        button_offset_x: float = 0,
+        button_offset_y: float = 0,
+        track_color: Color = (70, 40, 20, 255),
+        fill_color: Color = (196, 120, 48, 255),
+        knob_color: Color = (240, 200, 64, 255),
+        **kwargs,
+    ) -> None:
         super().__init__(
             x=x,
             y=y,
@@ -600,127 +1062,136 @@ class CustomUISlider(UIWidget):
             size_hint=size_hint,
             size_hint_min=size_hint_min,
             size_hint_max=size_hint_max,
-            style=ChainMap(style or {}, UISliderStyle()),  # type: ignore
-            **kwargs
+            **kwargs,
         )
 
-        self.value = value
         self.vmin = min_value
         self.vmax = max_value
+        self.value = max(min(value, self.vmax), self.vmin)
 
-        self.padding = self.height // 3
-        self.cursor_radius = self.height // 3
+        self._offset_x = offset_x or 0
+        self._offset_y = offset_y
+        self.button_offset_x = button_offset_x
+        self.button_offset_y = button_offset_y
 
-        # trigger render on value changes
-        _bind(self, "value", self.trigger_full_render)
-        _bind(self, "hovered", self.trigger_render)
-        _bind(self, "pressed", self.trigger_full_render)
+        self.track_color = track_color
+        self.fill_color = fill_color
+        self.knob_color = knob_color
+
+        self._padding = max(int(self.height * 0.18), 6)
+        self._knob_radius = max(int(self.height * 0.35), 8)
+
+        bind(self, "value", self.trigger_full_render)
+        bind(self, "hovered", self.trigger_render)
+        bind(self, "pressed", self.trigger_full_render)
 
         self.register_event_type("on_change")
 
-        self.slider = arcade.Sprite(slider_texture, center_x=x+offset_x, center_y=y+offset_y)
-        self.slider_button = arcade.Sprite(slider_button_texture, scale=1, center_x=x+button_offset_x, center_y=y+button_offset_y)
+    # Geometry helpers -----------------------------------------------------
+    def _usable_width(self) -> float:
+        return max(self.width - 2 * self._padding, 1)
 
-    def _x_for_value(self, value):
-        padding = self.padding
-        x = self.x
-        nval = (value - self.vmin) / self.vmax
-        return x + padding + nval * (self.width - 2 * padding)
+    def _x_for_value(self, value: float) -> float:
+        span = self.vmax - self.vmin
+        if span == 0:
+            return self._padding
+        clamped = max(min(value, self.vmax), self.vmin)
+        nval = (clamped - self.vmin) / span
+        return self._padding + nval * self._usable_width()
 
     @property
-    def norm_value(self):
-        """ Normalized value between 0.0 and 1.0"""
-        return (self.value - self.vmin) / self.vmax
+    def norm_value(self) -> float:
+        span = self.vmax - self.vmin
+        if span == 0:
+            return 0.0
+        return (self.value - self.vmin) / span
 
     @norm_value.setter
-    def norm_value(self, value):
-        """ Normalized value between 0.0 and 1.0"""
-        self.value = min(value * (self.vmax - self.vmin) + self.vmin, self.vmax)
+    def norm_value(self, norm: float) -> None:
+        span = self.vmax - self.vmin
+        if span == 0:
+            self.value = self.vmin
+            return
+        norm = max(0.0, min(1.0, norm))
+        self.value = self.vmin + norm * span
 
     @property
-    def value_x(self):
+    def value_x(self) -> float:
         return self._x_for_value(self.value)
 
     @value_x.setter
-    def value_x(self, nx):
-        padding = self.padding
-        x = min(self.right - padding, max(nx, self.x + padding))
-        if self.width == 0:
-            self.norm_value = 0
-        else:
-            self.norm_value = (x - self.x - padding) / float(self.width - 2 * padding)
+    def value_x(self, nx: float) -> None:
+        usable = self._usable_width()
+        left = self._padding
+        right = left + usable
+        nx = max(left, min(right, nx))
+        self.norm_value = (nx - left) / usable
 
-    def do_render(self, surface: Surface):
-        state = "pressed" if self.pressed else "hovered" if self.hovered else "normal"
-
+    # Rendering ------------------------------------------------------------
+    def do_render(self, surface: Surface) -> None:
         self.prepare_render(surface)
 
-        # TODO accept constructor params
-        slider_height = self.height // 4
-        cursor_radius = self.cursor_radius
+        track_height = max(int(self.height * 0.22), 4)
+        track_bottom = (self.height - track_height) / 2 + self._offset_y
+        track_left = self._padding
+        track_width = self._usable_width()
 
-        slider_left_x = self._x_for_value(self.vmin)
-        slider_right_x = self._x_for_value(self.vmax)
-        cursor_center_x = self.value_x
+        arcade.draw_lbwh_rectangle_filled(
+            track_left,
+            track_bottom,
+            track_width,
+            track_height,
+            self.track_color,
+        )
 
-        slider_bottom = (self.height - slider_height) // 2
-        slider_center_y = self.height // 2
+        fill_width = track_width * self.norm_value
+        if fill_width > 0:
+            arcade.draw_lbwh_rectangle_filled(
+                track_left,
+                track_bottom,
+                fill_width,
+                track_height,
+                self.fill_color,
+            )
 
-        # slider
-        bg_slider_color = self.style[f"{state}_unfilled_bar"]
-        fg_slider_color = self.style[f"{state}_filled_bar"]
+        knob_center_x = self.value_x + self.button_offset_x
+        knob_center_y = self.height / 2 + self.button_offset_y + self._offset_y
+        arcade.draw_circle_filled(
+            knob_center_x,
+            knob_center_y,
+            self._knob_radius,
+            self.knob_color,
+        )
 
-        #arcade.draw_xywh_rectangle_filled(slider_left_x - self.x, slider_bottom, slider_right_x - slider_left_x,
-        #                                  slider_height, bg_slider_color)
-        #arcade.draw_xywh_rectangle_filled(slider_left_x - self.x, slider_bottom, cursor_center_x - slider_left_x,
-        #                                  slider_height, fg_slider_color)
-
-        self.slider.draw()
-
-
-        # cursor
-        border_width = self.style[f"{state}_border_width"]
-        cursor_color = self.style[f"{state}_bg"]
-        cursor_outline_color = self.style[f"{state}_border"]
-
-        rel_cursor_x = cursor_center_x - self.x
-
-        self.slider_button.center_x = rel_cursor_x
-        self.slider_button.center_y = slider_center_y
-        self.slider_button.draw()
-        #arcade.draw_circle_filled(rel_cursor_x, slider_center_y, cursor_radius, cursor_color)
-        #arcade.draw_circle_filled(rel_cursor_x, slider_center_y, cursor_radius // 4, cursor_outline_color)
-        #arcade.draw_circle_outline(rel_cursor_x, slider_center_y, cursor_radius, cursor_outline_color, border_width)
-
-    def _cursor_pos(self) -> Tuple[int, int]:
-        return self.value_x, self.y + self.height // 2
+    # Interaction ----------------------------------------------------------
+    def _cursor_pos(self) -> Tuple[float, float]:
+        return (
+            self.left + self.value_x + self.button_offset_x,
+            self.bottom + self.height / 2 + self.button_offset_y,
+        )
 
     def _is_on_cursor(self, x: float, y: float) -> bool:
-        cursor_center_x, cursor_center_y = self._cursor_pos()
-        cursor_radius = self.cursor_radius
-        distance_to_cursor = arcade.get_distance(x, y, cursor_center_x, cursor_center_y)
-        return distance_to_cursor <= cursor_radius
+        cx, cy = self._cursor_pos()
+        return math.dist((x, y), (cx, cy)) <= self._knob_radius
 
     def on_event(self, event: UIEvent) -> Optional[bool]:
         if isinstance(event, UIMouseMovementEvent):
             self.hovered = self._is_on_cursor(event.x, event.y)
 
-        if isinstance(event, UIMouseDragEvent):
-            if self.pressed:
-                old_value = self.value
-                self.value_x = event.x
-                self.dispatch_event("on_change", UIOnChangeEvent(self, old_value, self.value))  # type: ignore
+        if isinstance(event, UIMousePressEvent) and self._is_on_cursor(event.x, event.y):
+            self.pressed = True
 
-        if isinstance(event, UIMousePressEvent):
-            if self._is_on_cursor(event.x, event.y):
-                self.pressed = True
+        if isinstance(event, UIMouseDragEvent) and self.pressed:
+            old_value = self.value
+            self.value_x = event.x - self.left
+            self.dispatch_event("on_change", UIOnChangeEvent(self, old_value, self.value))  # type: ignore
 
         if isinstance(event, UIMouseReleaseEvent):
             self.pressed = False
 
         return EVENT_UNHANDLED
 
-    def on_change(self, event: UIOnChangeEvent):
+    def on_change(self, event: UIOnChangeEvent) -> None:
         pass
 
 
@@ -730,44 +1201,123 @@ class CustomTextSprite2(object):
                  text_scale=1, text_margin=16, width=100, height = 40,  Background_offset_x=0, Background_offset_y=0, Background_scale=1, Background_Texture=None) -> None:
         super().__init__()
         self.Sprite_List = arcade.SpriteList()
-        self.Background_Sprite = arcade.Sprite(Background_Texture, center_x=center_x+width/2+Background_offset_x, center_y=center_y-height*2+Background_offset_y, scale=Background_scale)
-        
+        self.background_texture = Background_Texture
+        self.background_offset_x = Background_offset_x
+        self.background_offset_y = Background_offset_y
+        self.background_scale = Background_scale
         self.text_scale = text_scale
         self.width = width
         self.height = height
+        self.center_x = center_x
+        self.center_y = center_y
+        self.scale = scale
+        self.text_margin = text_margin
+
+        if Background_Texture:
+            self.Background_Sprite = arcade.Sprite(
+                Background_Texture,
+                center_x=center_x+width/2+Background_offset_x,
+                center_y=center_y-height*2+Background_offset_y,
+                scale=Background_scale,
+            )
+        else:
+            self.Background_Sprite = None
+
         self.update_text(string, Alphabet_Textures, scale=scale, text_scale=text_scale,
                  center_x=center_x, center_y=center_y, 
                  text_margin=text_margin, width=width, height = height)
         
     def update_text(self, text, Alphabet_Textures, scale=1, text_scale=1,
-                 center_x=0, center_y = 0, 
-                 text_margin=16, width=100, height = 40):
+                 center_x=None, center_y = None, 
+                 text_margin=None, width=None, height = None):
         self.text = text
         self.Sprite_List.clear()
         if not text:
             return
+        if center_x is not None:
+            self.center_x = center_x
+        if center_y is not None:
+            self.center_y = center_y
+        if text_margin is not None:
+            self.text_margin = text_margin
+        if width is not None:
+            self.width = width
+        if height is not None:
+            self.height = height
+
         words = text.split(' ')
-        x = 0
-        y = 0
+
+        glyph_advance = max(14 * scale * text_scale * 0.8, 1)
+        space_width = glyph_advance
+        available_width = self.width if self.width > 0 else float("inf")
+
+        lines: list[tuple[list[str], float]] = []
+        current_words: list[str] = []
+        current_width = 0.0
 
         for word in words:
-            if x > width/2+center_x:
-                y -= text_margin
-                x = -width/2
+            word_width = len(word) * glyph_advance
+            additional_space = space_width if current_words else 0
 
+            if current_words and current_width + additional_space + word_width > available_width:
+                lines.append((current_words, current_width))
+                current_words = []
+                current_width = 0.0
+                additional_space = 0
 
-            for string in word:
-                sprite = arcade.Sprite(center_x=center_x+x, center_y=center_y+y, scale=scale*text_scale)
-                sprite.texture = Alphabet_Textures[string]
-                self.Sprite_List.append(sprite)
-                x += text_margin*scale
-            x += text_margin*scale
+            if additional_space:
+                current_width += additional_space
+
+            current_words.append(word)
+            current_width += word_width
+
+        if current_words:
+            lines.append((current_words, current_width))
+
+        total_height = (len(lines) - 1) * (glyph_advance * 1.2)
+        start_y = self.center_y + total_height / 2
+
+        current_y = start_y
+        for words_in_line, line_width in lines:
+            start_x = self.center_x - line_width / 2 + glyph_advance / 2
+            current_x = start_x
+            for word_index, word in enumerate(words_in_line):
+                for string in word:
+                    texture = Alphabet_Textures.get(string)
+                    if texture is None:
+                        current_x += glyph_advance
+                        continue
+                    sprite = arcade.Sprite(center_x=current_x, center_y=current_y, scale=scale*text_scale)
+                    sprite.texture = texture
+                    self.Sprite_List.append(sprite)
+                    current_x += glyph_advance
+                if word_index != len(words_in_line) - 1:
+                    current_x += space_width
+            current_y -= glyph_advance * 1.2
+
+        if self.Background_Sprite:
+            self.Background_Sprite.center_x = self.center_x + self.background_offset_x
+            self.Background_Sprite.center_y = self.center_y + self.background_offset_y
+
     def draw(self):
-        self.Background_Sprite.draw()
+        if self.Background_Sprite:
+            self.Background_Sprite.draw()
         self.Sprite_List.draw()
 
+    def set_position(self, center_x, center_y):
+        dx = center_x - self.center_x
+        dy = center_y - self.center_y
+        self.center_x = center_x
+        self.center_y = center_y
+        for sprite in self.Sprite_List:
+            sprite.center_x += dx
+            sprite.center_y += dy
+        if self.Background_Sprite:
+            self.Background_Sprite.center_x += dx
+            self.Background_Sprite.center_y += dy
 
-textures = arcade.load_spritesheet("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+
+textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
 Alphabet_Textures = {" ":None}
 string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
 for i in range(len(string)):

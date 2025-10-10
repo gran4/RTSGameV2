@@ -35,7 +35,8 @@ if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
 from math import sqrt, floor
 import arcade, json, random, arcade.gui, time, pickle, atexit
 
-from arcade.gui import UILabel, UIAnchorWidget
+from arcade.gui import UILabel
+from gui_compat import UIAnchorWidget
 from BackGround import *
 from Buildings import *
 from Enemys import *
@@ -43,6 +44,7 @@ from CustomCellularAutomata import initialize_grid, create_grid, do_simulation_s
 from Player import *
 from TextInfo import *
 from Components import *
+from arcade.shape_list import ShapeElementList, create_line
 from copy import copy
 
 from MyPathfinding import LivingMap, _AStarSearch, SearchTilesAround
@@ -98,7 +100,7 @@ class MyGame(arcade.View):
         expand_button.buttons = [slider, label_wrapper]
         self.expand_button = expand_button
         self.speed_bar = expand_button
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="left", anchor_y="bottom",
+        wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
                 child=expand_button, align_x=0, align_y=150)
         expand_button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -116,8 +118,8 @@ class MyGame(arcade.View):
 
     def setup(self, file_num, world_gen):
         self.extra_buttons = []
-        self.camera = arcade.Camera(750, 500)
-        self.not_scrolling_camera = arcade.Camera(750, 500)
+        self.camera = arcade.Camera2D()
+        self.not_scrolling_camera = arcade.Camera2D()
 
         self.lacks = []
 
@@ -243,7 +245,7 @@ class MyGame(arcade.View):
     def create_ui(self):
         self.PopUps = []
          
-        textures = arcade.load_spritesheet("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
         self.Alphabet_Textures = {" ":None}
         string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
         for i in range(len(string)):
@@ -260,7 +262,7 @@ class MyGame(arcade.View):
         expand_button.on_click = self.expand_button_click
         expand_button.expand = False
         self.expand_button = expand_button
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="left", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="left", anchor_y="top",
                 child=expand_button, align_x=0, align_y=30)
         expand_button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -271,7 +273,7 @@ class MyGame(arcade.View):
         main_button.on_click = self.main_button_click
         main_button.open = False
         self.main_button = main_button
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
                 child=main_button, align_x=0, align_y=0)
         main_button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -281,7 +283,7 @@ class MyGame(arcade.View):
         button.on_click = self.menus_button_click
         button.open = False
         self.menus_button = button
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
                 child=button, align_x=250, align_y=0)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -291,7 +293,7 @@ class MyGame(arcade.View):
         button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Science Menu", width=140, height=50, x=0, y=50, text_offset_x = 6, text_offset_y=35, text_margin=14, offset_x=75, offset_y=25)
         button.cost = float('inf')
         button.on_click = self.on_ScienceMenuclick
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
                 child=button, align_x=250, align_y=0)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -301,7 +303,7 @@ class MyGame(arcade.View):
         button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Volume Menu", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
         button.cost = float('inf')
         button.on_click = self.on_VolumeMenuclick
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
                 child=button, align_x=250, align_y=-100)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -311,7 +313,7 @@ class MyGame(arcade.View):
         # Creating save Button
         button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Save", width=140, height=50, x=0, y=50, text_offset_x = 24, text_offset_y=35, offset_x=75, offset_y=25)
         button.on_click = self.save
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
                 child=button, align_x=250, align_y=-100)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -321,7 +323,7 @@ class MyGame(arcade.View):
         button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Selectables", width=140, height=50, x=0, y=50, text_offset_x = -6, text_offset_y=35, text_scale=.8, text_margin=11, offset_x=75, offset_y=25)
         button.on_click = self.selectables_click
         button.open = False
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
                 child=button, align_x=250, align_y=-200)
         button.wrapper = wrapper
 
@@ -335,7 +337,7 @@ class MyGame(arcade.View):
         button.cost = float('inf')
         button.value = 1
         button.on_click = self.switch_val
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
                 child=button, align_x=250, align_y=0)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -345,7 +347,7 @@ class MyGame(arcade.View):
         button.cost = float('inf')
         button.value = 2
         button.on_click = self.switch_val
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
                 child=button, align_x=250, align_y=-100)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -356,7 +358,7 @@ class MyGame(arcade.View):
         button.cost = float('inf')
         button.value = 3
         button.on_click = self.switch_val
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
                 child=button, align_x=250, align_y=-200)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -365,18 +367,16 @@ class MyGame(arcade.View):
 
         button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Return", width=140, height=50, x=0, y=50, text_offset_x = 12, text_offset_y=35, offset_x=75, offset_y=25)
         button.on_click = self.return_to_menu
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
                 child=button, align_x=250, align_y=-300)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
         self.secondary_wrappers.append(wrapper)
     def on_resize(self, width: int, height: int):
-        self.camera.resize(width, height)
-        self.camera.set_projection()
+        self.camera.match_window()
         self.center_camera()
 
-        self.not_scrolling_camera.resize(width, height)
-        self.not_scrolling_camera.set_projection()
+        self.not_scrolling_camera.match_window(position=True)
 
         if self.ui_sprites:
             move_x = width-50
@@ -620,8 +620,8 @@ class MyGame(arcade.View):
 
         t = time.time()
         """Render the screen."""
-        #arcade.start_render() clears screen
-        arcade.start_render()
+        # Clear screen
+        self.clear()
         self.camera.use()
 
 
@@ -1160,7 +1160,7 @@ class MyGame(arcade.View):
             if not self.Completed_Christmas:
                 self.activate_Christmas()
             self.Completed_Christmas = False
-            self.christmas_background._set_alpha(0)
+            self.christmas_background.alpha = 0
         elif self.Christmas_timer >= 120:
             t = -self.Christmas_timer+135
             num = 1-t/15
@@ -1174,7 +1174,7 @@ class MyGame(arcade.View):
             self.Background_music.set_volume(self.Background_music.true_volume*num)
 
             num = t/15*255
-            self.christmas_background._set_alpha(num)#alpha = num
+            self.christmas_background.alpha = num
             index = self.overParticles.index(self.christmas_background)
             self.overParticles.swap(index, -1)
             self.christmas_background.position = self.player.center_x, self.player.center_y
@@ -1190,7 +1190,7 @@ class MyGame(arcade.View):
             self.Background_music.set_volume(self.Background_music.true_volume*num)
 
             num = t/15*255
-            self.christmas_background._set_alpha(num)#.alpha = num
+            self.christmas_background.alpha = num
             index = self.overParticles.index(self.christmas_background)
             self.overParticles.swap(index, -1)
             self.christmas_background.position = self.player.center_x, self.player.center_y
@@ -1663,7 +1663,7 @@ class MyTutorial(MyGame):
         button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=50, height=50, scale=.1, x=50, y=50, offset_x=25, offset_y=25, Texture="resources/gui/Question Mark.png", Pressed_Texture="resources/gui/Question Mark.png", Hovered_Texture="resources/gui/Question Mark.png")
         button.on_click = self.on_question_click
         button.open = False
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center", anchor_y="center",
+        wrapper = UIAnchorWidget(anchor_x="center", anchor_y="center",
                 child=button, align_x=0, align_y=100)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -1680,7 +1680,7 @@ class MyTutorial(MyGame):
 
         self.indicators = arcade.SpriteList()
         for button in self.uimanager.children[0]:
-            if not isinstance(button, arcade.gui.UIAnchorWidget):
+            if not isinstance(button, UIAnchorWidget):
                 continue
             indicator = arcade.Sprite("resources/gui/exclamation point.png", scale=.25)
             self.indicators.append(indicator)
@@ -1871,18 +1871,33 @@ class EndMenu(arcade.View):
         self.Christmas_timer = 30
         self.spawnEnemy = 0
         """ This is run once when we switch to this view """
-        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
+        self._background_color = arcade.color.BEIGE
 
         # Reset the viewport, necessary if we have a scrolling game and we need
         # to reset the viewport back to the start so we can see what we draw.
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
 
         self.click_sound = game.click_sound
         self.Background_music = game.Background_music
         self.Christmas_music = game.Christmas_music
 
-        self.background = arcade.Sprite("resources/gui/Large Bulletin.png", scale=3.6, center_x=370, center_y=180)
-        self.christmas_background = arcade.Sprite("resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
+        window = arcade.get_window()
+        self.window = window
+
+        base_width, base_height = 1440, 900
+        initial_scale = 3.6 * min(self.window.width / base_width, self.window.height / base_height)
+        self.background = arcade.Sprite(
+            "resources/gui/Large Bulletin.png",
+            center_x=self.window.width / 2,
+            center_y=self.window.height / 2,
+            scale=initial_scale
+        )
+        self.christmas_background = arcade.Sprite(
+            "resources/gui/ChristmasOverlay.png",
+            center_x=self.window.width / 2,
+            center_y=self.window.height / 2,
+            scale=max(self.window.width / 5001, self.window.height / 3334)
+        )
         self.christmas_overlay = None #arcade.Sprite("resouces/gui/Large Bulletin.png", scale = .25)
 
         self.texts = []
@@ -1890,7 +1905,7 @@ class EndMenu(arcade.View):
         self.uimanager = arcade.gui.UIManager()
         self.uimanager.enable()
 
-        textures = arcade.load_spritesheet("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
         self.Alphabet_Textures = {" ":None}
         string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
         for i in range(len(string)):
@@ -1898,7 +1913,7 @@ class EndMenu(arcade.View):
   
         start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Return", width=140, height=50, x=0, y=50, text_offset_x = 10, text_offset_y = 30, offset_x=75, offset_y=25)
         start_button.on_click = self.on_return
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-100)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-100)
         self.uimanager.add(wrapper)
 
         #self.check_game_save()
@@ -1910,7 +1925,7 @@ class EndMenu(arcade.View):
         main_button = CustomUIFlatButton(self.game_view.Alphabet_Textures, click_sound = self.game_view.click_sound, width=50, height=50, scale=.05, x=0, y=50, offset_x=25, offset_y=25, Texture="resources/gui/Question Mark.png", Pressed_Texture="resources/gui/Question Mark.png", Hovered_Texture="resources/gui/Question Mark.png")
         main_button.on_click = self.on_question_click
         main_button.open = False
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center", anchor_y="center",
+        wrapper = UIAnchorWidget(anchor_x="center", anchor_y="center",
                 child=main_button, align_x=0, align_y=-200)
         main_button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -1924,7 +1939,7 @@ class EndMenu(arcade.View):
         larger = max(scale1, scale2)
         self.background.center_x = width/2-7*larger/3.6
         self.background.center_y = height/2-75*larger/3.6
-        self.background._set_scale(larger)
+        self.background.scale = larger
 
         self.christmas_background.position = width/2, height/2
         self.christmas_background.scale = .25*max(width/1240, height/900)
@@ -1952,11 +1967,11 @@ class EndMenu(arcade.View):
         self.window.show_view(self.menu)
     def on_show(self):
         """ This is run once when we switch to this view """
-        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        arcade.set_background_color(arcade.color.BEIGE)
+        reset_window_viewport(self.window)
     def on_draw(self):
         """ Draw this view """
-        arcade.start_render()
+        self.clear()
         self.background.draw()
         self.christmas_background.draw()
 
@@ -2001,7 +2016,7 @@ class ChristmasMenu(arcade.View):
         main_button.on_click = self.exit
         main_button.open = False
         self.main_button = main_button
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center", anchor_y="center",
+        wrapper = UIAnchorWidget(anchor_x="center", anchor_y="center",
                 child=main_button, align_x=0, align_y=-150)
         main_button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -2010,7 +2025,7 @@ class ChristmasMenu(arcade.View):
         main_button = CustomUIFlatButton(self.game_view.Alphabet_Textures, click_sound = self.game_view.click_sound, width=50, height=50, scale=.05, x=0, y=50, offset_x=25, offset_y=25, Texture="resources/gui/Question Mark.png", Pressed_Texture="resources/gui/Question Mark.png", Hovered_Texture="resources/gui/Question Mark.png")
         main_button.on_click = self.on_question_click
         main_button.open = False
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center", anchor_y="center",
+        wrapper = UIAnchorWidget(anchor_x="center", anchor_y="center",
                 child=main_button, align_x=0, align_y=-200)
         main_button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -2028,7 +2043,7 @@ class ChristmasMenu(arcade.View):
             self.texts.remove(self.question)
             self.question = None
     def on_draw(self):
-        arcade.start_render()
+        self.clear()
         self.game_view.on_draw()
 
         self.Background.draw()
@@ -2051,11 +2066,12 @@ class startMenu(arcade.View):
         
         super().__init__()
         """ This is run once when we switch to this view """
-        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
+        self._background_color = arcade.color.BEIGE
+        arcade.set_background_color(self._background_color)
 
         # Reset the viewport, necessary if we have a scrolling game and we need
         # to reset the viewport back to the start so we can see what we draw.
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
 
         self.audios = []
         self.audio_type_vols = {"Overall":1, "UI":1, "Background":1}
@@ -2092,60 +2108,70 @@ class startMenu(arcade.View):
         self.uimanager = arcade.gui.UIManager()
         self.uimanager.enable()
 
-        textures = arcade.load_spritesheet("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
         self.Alphabet_Textures = {" ":None}
         string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
         for i in range(len(string)):
             self.Alphabet_Textures[string[i]] = textures[i]
 
-        self.texts.append(CustomTextSprite("SantaFest Destiny", self.Alphabet_Textures, scale=5, width=1000, center_x=250, center_y=600, text_margin=60))
+        title_width = max(self.window.width - 200, 400)
+        self.title_text = CustomTextSprite(
+            "SantaFest Destiny",
+            self.Alphabet_Textures,
+            scale=3.0,
+            width=title_width,
+            center_x=self.window.width / 2,
+            center_y=self.window.height - 140,
+            text_margin=18,
+        )
+        self.texts.append(self.title_text)
 
   
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World1", width=140, height=50, x=0, y=50, text_offset_x = 10, text_offset_y=35, offset_x=75, offset_y=25)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World 1", width=220, height=54, text_margin=16, text_offset_x = 0, text_offset_y=0)
         start_button.on_click = self.Start
         start_button.world_num = 1
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=100)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=150)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World2", width=140, height=50, x=0, y=50, text_offset_x = 10, text_offset_y=35, offset_x=75, offset_y=25)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World 2", width=220, height=54, text_margin=16, text_offset_x = 0, text_offset_y=0)
         start_button.on_click = self.Start
         start_button.world_num = 2
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=0)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=70)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World3", width=140, height=50, x=0, y=50, text_offset_x = 10, text_offset_y=35, offset_x=75, offset_y=25)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World 3", width=220, height=54, text_margin=16, text_offset_x = 0, text_offset_y=0)
         start_button.on_click = self.Start
         start_button.world_num = 3
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-100)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-10)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
 
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Tutorial", width=140, height=50, x=0, y=50, text_margin=14, text_offset_x =-6, text_offset_y = 35, offset_x=75, offset_y=25)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Tutorial", width=220, height=54, text_margin=16, text_offset_x =0, text_offset_y = 0)
         start_button.on_click = self.start_Tutorial
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-200)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-90)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Progress  Tree", width=140, height=50, x=0, y=50, text_margin=14, text_offset_x = -4, text_offset_y=35, offset_x=75, offset_y=25)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Progress Tree", width=220, height=54, text_margin=16, text_offset_x = 0, text_offset_y=0)
         start_button.on_click = self.on_scienceMenuclick
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-20)
+        wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-20)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Volume", width=140, height=50, x=0, y=50, text_margin=14, text_offset_x = 10, text_offset_y=35, offset_x=75, offset_y=25)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Volume", width=220, height=54, text_margin=16, text_offset_x = 0, text_offset_y=0)
         start_button.on_click = self.VolumeMenu
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-70)
+        wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-80)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Credits", width=140, height=50, x=0, y=50, text_margin=14, text_offset_x = 10, text_offset_y=35, offset_x=75, offset_y=25)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Credits", width=220, height=54, text_margin=16, text_offset_x = 0, text_offset_y=0)
         start_button.on_click = self.CreditsMenu
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-120)
+        wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-140)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
@@ -2172,14 +2198,24 @@ class startMenu(arcade.View):
         
         return [bool(button[8]) for button in ScienceMenuInfo]
     def on_resize(self, width: int, height: int):
-        scale1, scale2 = width/218, height/140
-        larger = max(scale1, scale2)
-        self.background.center_x = width/2-7*larger/3.6
-        self.background.center_y = height/2-75*larger/3.6
-        self.background._set_scale(larger)
+        base_width, base_height = 1440, 900
+        scale_factor = min(width / base_width, height / base_height)
+        self.background.scale = 3.6 * scale_factor
+        self.background.center_x = width / 2
+        self.background.center_y = height / 2
 
-        self.christmas_background.position = width/2, height/2
-        self.christmas_background.scale = .25*max(width/1240, height/900)
+        self.christmas_background.scale = max(width / 5001, height / 3334)
+        self.christmas_background.position = width / 2, height / 2
+
+        title_width = max(width - 200, 400)
+        self.title_text.update_text(
+            self.title_text.text,
+            self.Alphabet_Textures,
+            center_x=width / 2,
+            center_y=height - 140,
+            width=title_width,
+        )
+
         return super().on_resize(width, height)         
         
     def VolumeMenu(self, event):
@@ -2231,10 +2267,10 @@ class startMenu(arcade.View):
     def on_show(self):
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
     def on_draw(self):
         """ Draw this view """
-        arcade.start_render()
+        self.clear(self._background_color)
         self.background.draw()
         self.christmas_background.draw()
 
@@ -2255,7 +2291,7 @@ class CreateWorld(arcade.View):
         super().__init__()
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
         self.click_sound = menu.click_sound
         self.Background_music = menu.Background_music
         self.Christmas_music = menu.Christmas_music
@@ -2275,7 +2311,7 @@ class CreateWorld(arcade.View):
         self.file_num = file_num
 
         
-        textures = arcade.load_spritesheet("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
 
         self.Alphabet_Textures = {" ":None}
         string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
@@ -2285,7 +2321,7 @@ class CreateWorld(arcade.View):
 
         start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Start", width=140, height=50, x=0, y=50, text_offset_y = 35, text_offset_x = 16, offset_x=75, offset_y=25)
         start_button.on_click = self.Start
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-100)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-100)
         self.uimanager.add(wrapper)
 
         text = CustomTextSprite("World Type:", self.Alphabet_Textures, center_x=300, center_y = 430, width = 500)
@@ -2297,23 +2333,23 @@ class CreateWorld(arcade.View):
         self.gen_list = ["Normal", "Desert", "Forest"]
         self.gen_list_index = 0
         button = CustomUIFlatButton(self.Alphabet_Textures, text="Normal", width=140, height=50, x=0, y=0, text_offset_x = 15, text_offset_y = 35, text_scale=1, offset_x=75, offset_y=24, Pressed_Texture = "resources/gui/Wood Button.png")
-        #start_button.on_click = self.Generation_change 
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=button, align_x=0, align_y=150)
+        button.on_click = self.Generation_change
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=button, align_x=0, align_y=150)
         self.uimanager.add(wrapper)
         button.set_text(self.gen_list[self.gen_list_index], self.Alphabet_Textures)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=40, height=50, scale=1, x=30, y=50, text_offset_x = 0, offset_x=30, offset_y=8, Texture="resources/gui/Right Pointer.png", Hovered_Texture="resources/gui/Right Pointer.png", Pressed_Texture="resources/gui/Right Pointer.png")
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=60, height=60, Texture="resources/gui/Right Pointer resized.png", Hovered_Texture="resources/gui/Right Pointer resized.png", Pressed_Texture="resources/gui/Right Pointer resized.png")
         start_button.direction = 1#right
         start_button.button = button
         start_button.on_click = self.Generation_change 
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=80, align_y=150)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=130, align_y=150)
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=40, height=50, scale=1, x=20, y=50, text_offset_x = 0, offset_x=20, offset_y=0, Texture="resources/gui/Left Pointer.png", Hovered_Texture="resources/gui/Left Pointer.png", Pressed_Texture="resources/gui/Left Pointer.png")
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=60, height=60, Texture="resources/gui/Left Pointer resized.png", Hovered_Texture="resources/gui/Left Pointer resized.png", Pressed_Texture="resources/gui/Left Pointer resized.png")
         start_button.direction = -1#left
         start_button.button = button
         start_button.on_click = self.Generation_change 
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=-80, align_y=150)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=-130, align_y=150)
         self.uimanager.add(wrapper)
 
 
@@ -2326,39 +2362,40 @@ class CreateWorld(arcade.View):
         self.difficulty_list = [" Easy ", "Normal", " Hard "]
         self.difficulty_list_index = 0
         button = CustomUIFlatButton(self.Alphabet_Textures, text="Easy", width=140, height=50, x=0, y=50, text_offset_x = 10, text_offset_y = 35, offset_x=75, offset_y=24, Pressed_Texture = "resources/gui/Wood Button.png")
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=button, align_x=0, align_y=50)
+        button.on_click = self.Difficulty_change
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=button, align_x=0, align_y=50)
         self.uimanager.add(wrapper)
         button.set_text(self.difficulty_list[self.difficulty_list_index], self.Alphabet_Textures)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=40, height=50, scale=1, x=30, y=50, text_offset_x = 0, offset_x=30, offset_y=8, Texture="resources/gui/Right Pointer.png", Hovered_Texture="resources/gui/Right Pointer.png", Pressed_Texture="resources/gui/Right Pointer.png")
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=60, height=60, Texture="resources/gui/Right Pointer resized.png", Hovered_Texture="resources/gui/Right Pointer resized.png", Pressed_Texture="resources/gui/Right Pointer resized.png")
         start_button.direction = 1#right
         start_button.button = button
         start_button.on_click = self.Difficulty_change
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=80, align_y=50)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=130, align_y=50)
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=40, height=50, scale=1, x=20, y=50, text_offset_x = 0, offset_x=20, offset_y=0, Texture="resources/gui/Left Pointer.png", Hovered_Texture="resources/gui/Left Pointer.png", Pressed_Texture="resources/gui/Left Pointer.png")
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=60, height=60, Texture="resources/gui/Left Pointer resized.png", Hovered_Texture="resources/gui/Left Pointer resized.png", Pressed_Texture="resources/gui/Left Pointer resized.png")
         start_button.direction = -1#left
         start_button.button = button
         start_button.on_click = self.Difficulty_change
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=-80, align_y=50)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=-130, align_y=50)
         self.uimanager.add(wrapper)
 
 
         start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Clear Data", width=140, height=50, text_offset_y = 35, text_offset_x = 16, offset_x=75, offset_y=25)
         start_button.on_click = self.Delete_data
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-50)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-50)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
         start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Return", width=140, height=50, x=0, y=50, text_margin=14, text_offset_y = 35, text_offset_x = 10, offset_x=75, offset_y=25)
         start_button.on_click = self.Return
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-20)
+        wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-20)
         self.uimanager.add(wrapper)
         
         start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Volume", width=140, height=50, x=0, y=50, text_margin=14, text_offset_y = 35, text_offset_x = 10, offset_x=75, offset_y=25)
         start_button.on_click = self.VolumeMenu
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-70)
+        wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-70)
         self.uimanager.add(wrapper)
 
         window = arcade.get_window()
@@ -2376,7 +2413,7 @@ class CreateWorld(arcade.View):
         larger = max(scale1, scale2)
         self.background.center_x = width/2-7*larger/3.6
         self.background.center_y = height/2-75*larger/3.6
-        self.background._set_scale(larger)
+        self.background.scale = larger
 
         self.christmas_background.position = width/2, height/2
         self.christmas_background.scale = .25*max(width/1240, height/900)
@@ -2389,28 +2426,33 @@ class CreateWorld(arcade.View):
 
     def Delete_data(self, event):
         window = arcade.get_window()
-        width, height = window.width, window.height
-        x = event.source.wrapper.align_x
-        y = height+event.source.wrapper.align_y
-        text = UpdatingText(f"Deletes Save File if there is one.", self.Alphabet_Textures, 20, center_x=x, center_y = y, width = 300, Background_Texture="resources/gui/Small Text Background.png")
+        rect = event.source.rect
+        center_x = (rect.left + rect.right) / 2
+        tooltip_y = rect.top + 40
+        text = UpdatingText(
+            "Deletes save file if there is one.",
+            self.Alphabet_Textures,
+            2.0,
+            center_x=center_x,
+            center_y=tooltip_y,
+            Background_offset_y=-40,
+            width=300,
+            Background_Texture="resources/gui/Small Text Background.png",
+        )
         self.texts.append(text)
-        
+
         file = open(f"{self.file_num}", "r+")
         file.truncate() 
     def Generation_change(self, event):
-        self.gen_list_index += event.source.direction
-        if self.gen_list_index >= len(self.gen_list):
-            self.gen_list_index = 0
-        elif self.gen_list_index < 0:
-            self.gen_list_index = len(self.gen_list) - 1
-        event.source.button.set_text(self.gen_list[self.gen_list_index], self.Alphabet_Textures)
+        step = getattr(event.source, "direction", 1)
+        self.gen_list_index = (self.gen_list_index + step) % len(self.gen_list)
+        target_button = getattr(event.source, "button", event.source)
+        target_button.set_text(self.gen_list[self.gen_list_index], self.Alphabet_Textures)
     def Difficulty_change(self, event):
-        self.difficulty_list_index += event.source.direction
-        if self.difficulty_list_index >= len(self.difficulty_list):
-            self.difficulty_list_index = 0
-        elif self.difficulty_list_index < 0:
-            self.difficulty_list_index = len(self.difficulty_list) - 1
-        event.source.button.set_text(self.difficulty_list[self.difficulty_list_index], self.Alphabet_Textures)
+        step = getattr(event.source, "direction", 1)
+        self.difficulty_list_index = (self.difficulty_list_index + step) % len(self.difficulty_list)
+        target_button = getattr(event.source, "button", event.source)
+        target_button.set_text(self.difficulty_list[self.difficulty_list_index], self.Alphabet_Textures)
 
 
     def Start(self, event):
@@ -2440,10 +2482,10 @@ class CreateWorld(arcade.View):
 
         # Reset the viewport, necessary if we have a scrolling game and we need
         # to reset the viewport back to the start so we can see what we draw.
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
     def on_draw(self):
         """ Draw this view """
-        arcade.start_render()
+        self.clear()
         self.background.draw()
         self.christmas_background.draw()
 
@@ -2492,14 +2534,14 @@ class CreditsMenu(arcade.View):
 
         main_button = CustomUIFlatButton(self.menu.Alphabet_Textures, click_sound = self.menu.click_sound, text="Exit", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
         main_button.on_click = self.exit
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center", anchor_y="center",
+        wrapper = UIAnchorWidget(anchor_x="center", anchor_y="center",
                 child=main_button, align_x=0, align_y=-200)
         self.uimanager.add(wrapper)
 
         window = arcade.get_window()
         self.on_resize(window.width, window.height)
     def on_draw(self):
-        arcade.start_render()
+        self.clear()
         self.background.draw()
         self.christmas_background.draw()
 
@@ -2511,11 +2553,11 @@ class CreditsMenu(arcade.View):
         larger = max(scale1, scale2)
         self.background.center_x = width/2-7*larger/3.6
         self.background.center_y = height/2-75*larger/3.6
-        self.background._set_scale(larger)
+        self.background.scale = larger
 
-        self.christmas_background.position = width/2, height/2
-        self.christmas_background.scale = .25*max(width/1240, height/900)
-        return super().on_resize(width, height)
+        self.christmas_background.scale = max(width / 5001, height / 3334)
+        self.christmas_background.position = width / 2, height / 2
+        return super().on_resize(width, height)         
 
     def exit(self, event):
         self.uimanager.disable()
@@ -2534,7 +2576,7 @@ class UpgradeScienceMenu(arcade.View):
         self.gold_button_texture = arcade.load_texture("resources/gui/Gold Button.png")
         self.silver_button_texture = arcade.load_texture("resources/gui/Silver Button.png")
 
-        textures = arcade.load_spritesheet("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
         self.Alphabet_Textures = {" ":None}
         string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
         for i in range(len(string)):
@@ -2543,17 +2585,21 @@ class UpgradeScienceMenu(arcade.View):
         self.set_up()
 
 
-        bg_tex = arcade.load_texture(":resources:gui_basic_assets/window/grey_panel.png")
-        text_area = arcade.gui.UITextArea(x=0, y=0,width=200,height=50, scroll_speed=10,
-                                    text="", text_color=(0, 0, 0, 255))
-        texturePane = arcade.gui.UITexturePane(text_area.with_space_around(right=20), 
-                                tex=bg_tex, padding=(10, 10, 10, 10))
-        
-        text_area.move(dy=-200)
-        texturePane.locked = True
-        texturePane.true_x = 0
-        self.uimanager.add(texturePane)
-        self.text_area = text_area
+        self.tooltip = CustomTextSprite(
+            "",
+            self.Alphabet_Textures,
+            center_x=-1000,
+            center_y=-1000,
+            width=260,
+            height=0,
+            text_margin=12,
+            text_scale=0.9,
+            Background_Texture="resources/gui/Small Text Background.png",
+            Background_offset_x=0,
+            Background_offset_y=-50,
+            vertical_align='top',
+        )
+        self.tooltip_visible = False
 
         window = arcade.get_window()
         self.on_resize(window.width, window.height)
@@ -2570,19 +2616,19 @@ class UpgradeScienceMenu(arcade.View):
 
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
 
 
         self.uimanager = arcade.gui.UIManager()
         self.uimanager.enable()
-        self.lineList = arcade.ShapeElementList()  
+        self.lineList = ShapeElementList()
         self.load()
 
 
         start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Menu", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y = 35, offset_x=75, offset_y=25)
         start_button.on_click = self.exit
         start_button.unlocked = True
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
             child=start_button, align_x=-50, align_y=-50)
         self.uimanager.add(wrapper)
         wrapper.identity = float('inf')
@@ -2593,7 +2639,7 @@ class UpgradeScienceMenu(arcade.View):
         button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=50, height=50, scale=.1, x=50, y=50, offset_x=25, offset_y=25, Texture="resources/gui/Question Mark.png", Pressed_Texture="resources/gui/Question Mark.png", Hovered_Texture="resources/gui/Question Mark.png")
         button.on_click = self.on_question_click
         button.open = False
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center", anchor_y="center",
+        wrapper = UIAnchorWidget(anchor_x="center", anchor_y="center",
                 child=button, align_x=0, align_y=-200)
         wrapper.identity = float('inf')
         wrapper.true_x = 300
@@ -2626,10 +2672,25 @@ class UpgradeScienceMenu(arcade.View):
 
         id = 0
         for button in ScienceMenuInfo:
-            
-            start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text=button[0], width=140, height=50, x=0, y=50, text_margin=13, text_offset_x = 0, text_offset_y = 35, offset_x=75, offset_y=25)
+            label = button[0]
+            button_width = max(160, len(label) * 14)
+
+            start_button = CustomUIFlatButton(
+                self.Alphabet_Textures,
+                click_sound=self.click_sound,
+                text=label,
+                width=button_width,
+                height=54,
+                x=0,
+                y=50,
+                text_margin=12,
+                text_offset_x=0,
+                text_offset_y=0,
+                offset_x=0,
+                offset_y=0,
+            )
             start_button.on_click = self.on_buttonclick
-            wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+            wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
                 child=start_button, align_x=button[1], align_y=button[2])
             wrapper.true_x = button[1]
             self.science_buttons.append(wrapper)
@@ -2665,7 +2726,7 @@ class UpgradeScienceMenu(arcade.View):
             for i in start_button.connections:
                 endx = ScienceMenuInfo[i][1]+370#cameraView
                 endy = ScienceMenuInfo[i][2]+250
-                line = arcade.create_line(button[1]+370, button[2]+250, endx, endy, (0, 0, 0, 255), line_width=5)
+                line = create_line(button[1]+370, button[2]+250, endx, endy, (0, 0, 0, 255), line_width=5)
                 line.identity = id
                 self.lineList.append(line)
 
@@ -2675,13 +2736,13 @@ class UpgradeScienceMenu(arcade.View):
         larger = max(scale1, scale2)
         self.background.center_x = width/2-7*larger/3.6
         self.background.center_y = height/2-75*larger/3.6
-        self.background._set_scale(larger)
+        self.background.scale = larger
 
         self.christmas_background.position = width/2, height/2
         self.christmas_background.scale = .25*max(width/1240, height/900)
 
-        self.lineList._set_center_x(width/2-400+self.x)
-        self.lineList._set_center_y(height/2-250)
+        self.lineList.center_x = width/2 - 400 + self.x
+        self.lineList.center_y = height/2 - 250
         
 
 
@@ -2779,11 +2840,11 @@ class UpgradeScienceMenu(arcade.View):
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
 
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
 
     def on_draw(self):
         """ Draw this view """
-        arcade.start_render()
+        self.clear()
 
         self.background.draw()
         self.christmas_background.draw()
@@ -2793,6 +2854,8 @@ class UpgradeScienceMenu(arcade.View):
         for text in self.texts:
             text.draw() 
         self.text.draw()
+        if self.tooltip_visible:
+            self.tooltip.draw()
         if self.question: self.question.draw()
     def on_mouse_motion(self, x, y, dx, dy):
         """
@@ -2801,18 +2864,32 @@ class UpgradeScienceMenu(arcade.View):
         self.mouse_x = x
         self.mouse_y = y
         
-        self.text_area.rect = self.text_area.rect.align_center(x, y)
-
         collided = False
         for button in self.science_buttons:
-            if not button.rect.collide_with_point(*(x, y)):
+            child = getattr(button, "child", None)
+            rect = child.rect if child else button.rect
+            if not (rect.left <= x <= rect.right and rect.bottom <= y <= rect.top):
                 continue
-            self.text_area.doc.text = button.description
-            self.text_area.trigger_full_render()
+            center_x = (rect.left + rect.right) / 2
+            text = button.description
+            provisional_center_y = rect.top + 40
+            self.tooltip.update_text(
+                text,
+                self.Alphabet_Textures,
+                center_x=center_x,
+                center_y=provisional_center_y,
+                width=260,
+                vertical_align='top',
+            )
+            text_height = getattr(self.tooltip, '_content_height', 0)
+            desired_top = rect.top + 12
+            desired_center_y = desired_top - text_height / 2
+            self.tooltip.set_position(center_x, desired_center_y)
+            self.tooltip_visible = True
             collided = True
             break
         if not collided:
-            self.text_area.rect = self.text_area.rect.align_center(0, -1000)
+            self.tooltip_visible = False
     def on_update(self, delta_time):
 
         if self.pressed_a and self.x + 50 < -self.science_buttons[0].true_x:
@@ -2847,7 +2924,7 @@ class ScienceMenu(arcade.View):
         self.background = arcade.Sprite("resources/gui/Large Bulletin.png", scale=3.6, center_x=370, center_y=180)
         self.christmas_background = arcade.Sprite("resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
 
-        textures = arcade.load_spritesheet("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
         self.Alphabet_Textures = {" ":None}
         string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
         for i in range(len(string)):
@@ -2864,16 +2941,21 @@ class ScienceMenu(arcade.View):
         self.texts.append(self.text)
 
 
-        bg_tex = arcade.load_texture(":resources:gui_basic_assets/window/grey_panel.png")
-        text_area = arcade.gui.UITextArea(x=0, y=0,width=200,height=50, scroll_speed=10,
-                                    text="", text_color=(0, 0, 0, 255))
-        texturePane = arcade.gui.UITexturePane(text_area.with_space_around(right=20), 
-                                tex=bg_tex, padding=(10, 10, 10, 10))
-        text_area.move(dy=-200)
-        texturePane.unlocked = True
-        texturePane.true_x = 0
-        self.uimanager.add(texturePane)
-        self.text_area = text_area
+        self.tooltip = CustomTextSprite(
+            "",
+            self.Alphabet_Textures,
+            center_x=-1000,
+            center_y=-1000,
+            width=260,
+            height=0,
+            text_margin=12,
+            text_scale=0.9,
+            Background_Texture="resources/gui/Small Text Background.png",
+            Background_offset_x=0,
+            Background_offset_y=-50,
+            vertical_align='top',
+        )
+        self.tooltip_visible = False
 
 
         window = arcade.get_window()
@@ -2891,26 +2973,26 @@ class ScienceMenu(arcade.View):
 
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
 
 
         self.uimanager = arcade.gui.UIManager()
         self.uimanager.enable()
 
-        self.lineList = arcade.ShapeElementList()
+        self.lineList = ShapeElementList()
         self.science_buttons = []
     def on_resize(self, width: int, height: int):
         scale1, scale2 = width/218, height/140
         larger = max(scale1, scale2)
         self.background.center_x = width/2-7*larger/3.6
         self.background.center_y = height/2-75*larger/3.6
-        self.background._set_scale(larger)
+        self.background.scale = larger
 
         self.christmas_background.position = width/2, height/2
         self.christmas_background.scale = .25*max(width/1240, height/900)
         
-        self.lineList._set_center_x(width/2-400+self.x)
-        self.lineList._set_center_y(height/2-250)
+        self.lineList.center_x = width/2 - 400 + self.x
+        self.lineList.center_y = height/2 - 250
 
     def pre_load(self):
         #NOTE: Determens if saved
@@ -2919,7 +3001,7 @@ class ScienceMenu(arcade.View):
         start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Menu", width=140, height=50, x=0, y=50, text_offset_x = 24, text_offset_y = 35, offset_x=75, offset_y=25)
         #start_button = arcade.gui.UIFlatButton(text="Menu",width=100, x=50, y=50)
         start_button.on_click = self.exit
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
             child=start_button, align_x=-50, align_y=-50)
         self.uimanager.add(wrapper)
         start_button.unlocked = True
@@ -2941,10 +3023,24 @@ class ScienceMenu(arcade.View):
 
         id = 0
         for button in ScienceMenuInfo:
-            #start_button = arcade.gui.UIFlatButton(text=button[0],width=150, x=0, y=0)
-            start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text=button[0], width=140, height=50, x=0, y=50, text_margin=13, text_offset_x = 0, text_offset_y = 35, offset_x=75, offset_y=25)
+            label = button[0]
+            button_width = max(160, len(label) * 14)
+            start_button = CustomUIFlatButton(
+                self.Alphabet_Textures,
+                click_sound=self.click_sound,
+                text=label,
+                width=button_width,
+                height=54,
+                x=0,
+                y=50,
+                text_margin=12,
+                text_offset_x=0,
+                text_offset_y=0,
+                offset_x=0,
+                offset_y=0,
+            )
             start_button.on_click = self.on_buttonclick
-            wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+            wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
                 child=start_button, align_x=button[1], align_y=button[2])
             wrapper.true_x = button[1]
 
@@ -2980,7 +3076,7 @@ class ScienceMenu(arcade.View):
                 endx = ScienceMenuInfo[i][1]+370#cameraView
                 endy = ScienceMenuInfo[i][2]+250#cameraView
 
-                line = arcade.create_line(button[1]+370, button[2]+250, endx, endy, (120,100,100, 200), line_width=5)
+                line = create_line(button[1]+370, button[2]+250, endx, endy, (120, 100, 100, 200), line_width=5)
                 line.identity = id
                 self.lineList.append(line)
 
@@ -3075,36 +3171,51 @@ class ScienceMenu(arcade.View):
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
 
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
     def on_draw(self):
         """ Draw this view """
-        arcade.start_render()
+        self.clear()
 
         self.background.draw()
         self.christmas_background.draw()
         self.lineList.draw()
         self.uimanager.draw()
-        for text in self.texts: text.draw()
+        for text in self.texts:
+            text.draw()
+        if self.tooltip_visible:
+            self.tooltip.draw()
     def on_mouse_motion(self, x, y, dx, dy):
         """
         Called whenever the mouse moves.
         """
         self.mouse_x = x
         self.mouse_y = y
-        
-        #self.text_area.move(dx, dy)
-        self.text_area.rect = self.text_area.rect.align_center(x, y)
-
         collided = False
         for button in self.science_buttons:
-            if not button.rect.collide_with_point(*(x, y)):
+            child = getattr(button, "child", None)
+            rect = child.rect if child else button.rect
+            if not (rect.left <= x <= rect.right and rect.bottom <= y <= rect.top):
                 continue
-            self.text_area.doc.text = button.description
-            self.text_area.trigger_full_render()
+            center_x = (rect.left + rect.right) / 2
+            text = button.description
+            provisional_center_y = rect.top + 40
+            self.tooltip.update_text(
+                text,
+                self.Alphabet_Textures,
+                center_x=center_x,
+                center_y=provisional_center_y,
+                width=260,
+                vertical_align='top',
+            )
+            text_height = getattr(self.tooltip, '_content_height', 0)
+            desired_top = rect.top + 12
+            desired_center_y = desired_top - text_height / 2
+            self.tooltip.set_position(center_x, desired_center_y)
+            self.tooltip_visible = True
             collided = True
             break
         if not collided:
-            self.text_area.rect = self.text_area.rect.align_center(0, -1000)
+            self.tooltip_visible = False
     def on_update(self, delta_time):
 
         if self.pressed_a and self.x + 50 < -self.science_buttons[0].true_x:
@@ -3129,8 +3240,9 @@ class VolumeMenu(arcade.View):
     def __init__(self, game_view):
         super().__init__()
         """ This is run once when we switch to this view """
-        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        arcade.set_background_color(arcade.color.BEIGE)
+        self.window.background_color = arcade.color.BEIGE
+        reset_window_viewport(self.window)
         game_view.uimanager.disable()
         self.game_view = game_view
         self.set_up()
@@ -3144,97 +3256,160 @@ class VolumeMenu(arcade.View):
 
         self.click_sound = self.game_view.click_sound
 
-        self.background = arcade.Sprite("resources/gui/Large Bulletin.png", scale=3.6, center_x=370, center_y=180)
-        self.christmas_background = arcade.Sprite("resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
+        base_width, base_height = 1440, 900
+        scale_factor = min(self.window.width / base_width, self.window.height / base_height)
+        self.background = arcade.Sprite(
+            "resources/gui/Large Bulletin.png",
+            center_x=self.window.width / 2,
+            center_y=self.window.height / 2,
+            scale=3.6 * scale_factor,
+        )
+        self.christmas_background = arcade.Sprite(
+            "resources/gui/ChristmasOverlay.png",
+            center_x=self.window.width / 2,
+            center_y=self.window.height / 2,
+            scale=max(self.window.width / 5001, self.window.height / 3334),
+        )
 
 
-        textures = arcade.load_spritesheet("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
         self.Alphabet_Textures = {" ":None}
         string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
         for i in range(len(string)):
             self.Alphabet_Textures[string[i]] = textures[i]
         window = arcade.get_window()
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Menu", width=140, height=50, x=0, y=50, text_offset_x = 24, text_offset_y = 35, offset_x=75, offset_y=25)
-        start_button.on_click = self.exit
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="right", anchor_y="top",
-            child=start_button, align_x=0, align_y=0)
-        self.uimanager.add(wrapper)
+        menu_button = CustomUIFlatButton(
+            self.Alphabet_Textures,
+            click_sound=self.click_sound,
+            text="Back",
+            width=160,
+            height=60,
+            text_margin=20,
+        )
+        menu_button.on_click = self.exit
+        back_wrapper = UIAnchorWidget(
+            anchor_x="right",
+            anchor_y="top",
+            child=menu_button,
+            align_x=-40,
+            align_y=-40,
+        )
+        self.uimanager.add(back_wrapper)
 
         self.texts = []
         self.speed = 1
-        ui_slider = CustomUISlider(max_value=200, value=self.game_view.audio_type_vols["Overall"]*100, width=302, height=35, x=0, offset_x=150, offset_y=-10, button_offset_y=-6)#arcade.load_texture("resources/gui/Slider_Button.png")#self.textures[0]
-        #ui_slider.move(-200, -100)
-        label = CustomTextSprite(f"Master Volume: {ui_slider.value:02.0f}%", self.Alphabet_Textures, center_x=window.width/2-145, center_y=window.height/2+150)#UILabel(text=f"Master Volume: {ui_slider.value:02.0f}%")
+        self._pending_slider_refresh = False
+        self._slider_wrappers: list[UIAnchorWidget] = []
+        ui_slider = CustomUISlider(max_value=200, value=self.game_view.audio_type_vols["Overall"]*100, width=360, height=35)
+        label = CustomTextSprite(
+            f"Master Volume: {ui_slider.value:02.0f}%",
+            self.Alphabet_Textures,
+            center_x=window.width/2-170,
+            center_y=window.height/2+130,
+            width=450,
+            text_margin=18,
+        )
 
         @ui_slider.event()
         def on_change(event: UIOnChangeEvent):
-            label.update_text(f"Master Volume: {ui_slider.value:02.0f}%", self.Alphabet_Textures, center_x=window.width/2-145, center_y=window.height/2+150)
-            #label.text = f"Master Volume: {ui_slider.value:02.0f}%"
+            label.update_text(
+                f"Master Volume: {ui_slider.value:02.0f}%",
+                self.Alphabet_Textures,
+                center_x=window.width/2-170,
+                center_y=window.height/2+130,
+            )
             self.speed = ui_slider.value
-            #label.fit_content()
             self.game_view.audio_type_vols["Overall"] = ui_slider.value/100
             self.game_view.update_audio()
 
-        slider = UIAnchorWidget(child=ui_slider, align_x=0, align_y=110, anchor_x="center", anchor_y="center")
+        slider = UIAnchorWidget(child=ui_slider, align_x=140, align_y=130, anchor_x="center", anchor_y="center")
         self.uimanager.add(slider)
-        #self.label = UIAnchorWidget(child=label, align_x=0, align_y=160, anchor_x="center", anchor_y="center")
         self.texts.append(label)
+        self._slider_wrappers.append(slider)
 
 
 
-        ui_slider1 = CustomUISlider(max_value=200, value=self.game_view.audio_type_vols["UI"]*100, width=302, height=35, x=0, offset_x=150, offset_y=-10, button_offset_y=-6)#arcade.load_texture("resources/gui/Slider_Button.png")#self.textures[0]
-        #ui_slider.move(-200, -100)
-        label1 = CustomTextSprite(f"UI Volume: {ui_slider1.value:02.0f}%", self.Alphabet_Textures, center_x=window.width/2-145, center_y=window.height/2+50)
+        ui_slider1 = CustomUISlider(max_value=200, value=self.game_view.audio_type_vols["UI"]*100, width=360, height=35)
+        label1 = CustomTextSprite(
+            f"UI Volume: {ui_slider1.value:02.0f}%",
+            self.Alphabet_Textures,
+            center_x=window.width/2-170,
+            center_y=window.height/2+30,
+            width=450,
+            text_margin=18,
+        )
 
         @ui_slider1.event()
         def on_change(event: UIOnChangeEvent):
-            label1.update_text(f"UI Volume: {ui_slider1.value:02.0f}%", self.Alphabet_Textures, center_x=window.width/2-145, center_y=window.height/2+50)
+            label1.update_text(
+                f"UI Volume: {ui_slider1.value:02.0f}%",
+                self.Alphabet_Textures,
+                center_x=window.width/2-170,
+                center_y=window.height/2+30,
+            )
             self.speed = ui_slider1.value
 
             self.game_view.audio_type_vols["UI"] = ui_slider1.value/100
             self.game_view.update_audio()
 
-        slider = UIAnchorWidget(child=ui_slider1, align_x=0, align_y=10, anchor_x="center", anchor_y="center")
+        slider = UIAnchorWidget(child=ui_slider1, align_x=140, align_y=30, anchor_x="center", anchor_y="center")
         self.uimanager.add(slider)
         self.texts.append(label1)
+        self._slider_wrappers.append(slider)
 
 
 
 
-        ui_slider2 = CustomUISlider(max_value=200, value=self.game_view.audio_type_vols["Background"]*100, width=302, height=35, x=0, offset_x=150, offset_y=-10, button_offset_y=-6)#arcade.load_texture("resources/gui/Slider_Button.png")#self.textures[0]
-        #ui_slider.move(-200, -100)
-        label2 = CustomTextSprite(f"Background Volume: {ui_slider2.value:02.0f}%", self.Alphabet_Textures, center_x=window.width/2-145, center_y=window.height/2-50, text_margin=14)
+        ui_slider2 = CustomUISlider(max_value=200, value=self.game_view.audio_type_vols["Background"]*100, width=360, height=35)
+        label2 = CustomTextSprite(
+            f"Background Volume: {ui_slider2.value:02.0f}%",
+            self.Alphabet_Textures,
+            center_x=window.width/2-170,
+            center_y=window.height/2-70,
+            width=450,
+            text_margin=18,
+        )
 
         @ui_slider2.event()
         def on_change(event: UIOnChangeEvent):
-            label2.update_text(f"Background Volume: {ui_slider2.value:02.0f}%", self.Alphabet_Textures, center_x=window.width/2-145, center_y=window.height/2-50, text_margin=14)
+            label2.update_text(
+                f"Background Volume: {ui_slider2.value:02.0f}%",
+                self.Alphabet_Textures,
+                center_x=window.width/2-170,
+                center_y=window.height/2-70,
+            )
             self.speed = ui_slider2.value
 
             self.game_view.audio_type_vols["Background"] = ui_slider2.value/100
             self.game_view.update_audio()
 
-        slider = UIAnchorWidget(child=ui_slider2, align_x=0, align_y=-90, anchor_x="center", anchor_y="center")
+        slider = UIAnchorWidget(child=ui_slider2, align_x=140, align_y=-70, anchor_x="center", anchor_y="center")
         self.uimanager.add(slider)
         self.texts.append(label2)
-    def on_resize(self, width: int, height: int):
-        scale1, scale2 = width/218, height/140
-        larger = max(scale1, scale2)
-        self.background.center_x = width/2-7*larger/3.6
-        self.background.center_y = height/2-75*larger/3.6
-        self.background._set_scale(larger)
+        self._slider_wrappers.append(slider)
 
+        # Defer surface refresh to the next frame so layout has finalized
+        self._pending_slider_refresh = True
+        arcade.schedule_once(self._refresh_slider_surfaces, 0)
+    def on_resize(self, width: int, height: int):
+        base_width, base_height = 1440, 900
+        scale_factor = min(width / base_width, height / base_height)
+        self.background.scale = 3.6 * scale_factor
+        self.background.center_x = width / 2
+        self.background.center_y = height / 2
+
+        self.christmas_background.scale = max(width/5001, height/3334)
         self.christmas_background.position = width/2, height/2
-        self.christmas_background.scale = .25*max(width/1240, height/900)
-        
-        y = center_y=height/2+150
+
+        y = height/2 + 130
         for label in self.texts:
-            label.update_text(label.text, self.Alphabet_Textures, center_x=width/2-145, center_y=y)
+            label.update_text(label.text, self.Alphabet_Textures, center_x=width/2-170, center_y=y)
             y -= 100
         return super().on_resize(width, height)
 
     def on_draw(self):
-        arcade.start_render()
+        self.clear(self._background_color)
         self.background.draw()
         self.christmas_background.draw()
         for text in self.texts: text.draw()
@@ -3242,11 +3417,17 @@ class VolumeMenu(arcade.View):
         self.uimanager.draw()
     def on_mouse_drag(self, x: float, y: float, dx: float, dy: float, _buttons: int, _modifiers: int):
         return super().on_mouse_drag(x, y, dx, dy, _buttons, _modifiers)
+    def _refresh_slider_surfaces(self, dt):
+        for wrapper in getattr(self, "_slider_wrappers", []):
+            wrapper.trigger_full_render()
+        self._pending_slider_refresh = False
     def exit(self, event):
+        if getattr(self, "_pending_slider_refresh", False):
+            arcade.unschedule(self._refresh_slider_surfaces)
+            self._pending_slider_refresh = False
         self.game_view.Christmas_music.true_volume = self.game_view.Christmas_music.volume
         self.game_view.Background_music.true_volume = self.game_view.Background_music.volume
 
-        arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
         self.uimanager.disable()
         self.game_view.uimanager.enable()
         self.window.show_view(self.game_view)
@@ -3255,7 +3436,7 @@ class ShowMenu(arcade.View):
         super().__init__()
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
         game_view.uimanager.disable()
         self.game_view = game_view
         self.set_up()
@@ -3267,7 +3448,7 @@ class ShowMenu(arcade.View):
 
         start_button = arcade.gui.UIFlatButton(text="Menu",width=100, x=50, y=50)
         start_button.on_click = self.exit
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+        wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
             child=start_button, align_x=300, align_y=200)
         self.uimanager.add(wrapper)
 
@@ -3280,7 +3461,7 @@ class ShowMenu(arcade.View):
             y -= 50
 
     def on_draw(self):
-        arcade.start_render()
+        self.clear()
         for text in self.texts:
             text.draw()
         self.uimanager.draw()
@@ -3319,13 +3500,13 @@ class BuildingMenu(arcade.View):
 
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
 
 
         self.uimanager = arcade.gui.UIManager()
         self.uimanager.enable()
 
-        self.lineList = arcade.ShapeElementList()
+        self.lineList = ShapeElementList()
         
     def load(self):
         with open("textInfo.json", "r") as read_file:
@@ -3333,7 +3514,7 @@ class BuildingMenu(arcade.View):
             
         start_button = arcade.gui.UIFlatButton(text="Menu",width=100, x=50, y=50)
         start_button.on_click = self.exit
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+        wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
             child=start_button, align_x=300, align_y=200)
         self.uimanager.add(wrapper)
         wrapper.description = "None"
@@ -3342,7 +3523,7 @@ class BuildingMenu(arcade.View):
             length = len(button[3])*11
             start_button = arcade.gui.UIFlatButton(text=button[3],width=length, x=0, y=0)
             start_button.on_click = self.on_buttonclick
-            wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+            wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
                 child=start_button, align_x=button[1], align_y=button[2])
 
             start_button.type = button[3]
@@ -3393,12 +3574,12 @@ class BuildingMenu(arcade.View):
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
 
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
 
 
     def on_draw(self):
         """ Draw this view """
-        arcade.start_render()
+        self.clear()
 
         self.uimanager.draw()
 
@@ -3434,13 +3615,13 @@ class TrainingMenu(arcade.View):
 
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
 
 
         self.uimanager = arcade.gui.UIManager()
         self.uimanager.enable()
 
-        self.lineList = arcade.ShapeElementList()
+        self.lineList = ShapeElementList()
         self.image = arcade.Sprite()
 
         self.updating_texts = []
@@ -3455,7 +3636,7 @@ class TrainingMenu(arcade.View):
             
         start_button = CustomUIFlatButton(self.game_view.Alphabet_Textures, click_sound = self.game_view.click_sound, text="Menu", width=140, height=50, x=0, y=50, text_offset_x = 24, text_offset_y = 35, offset_x=75, offset_y=25)
         start_button.on_click = self.exit
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+        wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
             child=start_button, align_x=300, align_y=200)
         self.uimanager.add(wrapper)
         wrapper.description = "None"
@@ -3464,7 +3645,7 @@ class TrainingMenu(arcade.View):
         for button in buttons:
             start_button = CustomUIFlatButton(self.game_view.Alphabet_Textures, click_sound = self.game_view.click_sound, text=button, width=140, height=50, x=0, y=50, margin=13, text_offset_x = -6, text_offset_y = 35, offset_x=75, offset_y=25)
             start_button.on_click = self.on_selectionclick
-            wrapper = arcade.gui.UIAnchorWidget(anchor_x="left", anchor_y="top",
+            wrapper = UIAnchorWidget(anchor_x="left", anchor_y="top",
                 child=start_button, align_x=x, align_y=y)
             start_button.wrapper = wrapper
             start_button.string = button
@@ -3523,7 +3704,7 @@ class TrainingMenu(arcade.View):
         self.button.on_click = self.on_buttonclick
         self.button.string = self.string
         self.button.cost = requirements[self.string]
-        wrapper = arcade.gui.UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+        wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
             child=self.button, align_x=0, align_y=-200)
         self.button.wrapper = wrapper
         self.uimanager.add(wrapper)
@@ -3537,7 +3718,7 @@ class TrainingMenu(arcade.View):
 
 
         self.image = objects[self.string](self.game_view, 400, 320)
-        self.image._set_scale(4)
+        self.image.scale = 4
 
     def on_buttonclick(self, event):
         source = event.source
@@ -3582,10 +3763,10 @@ class TrainingMenu(arcade.View):
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
 
-        arcade.set_viewport(0, self.window.width, 0, self.window.height)
+        reset_window_viewport(self.window)
     def on_draw(self):
         """ Draw this view """
-        arcade.start_render()
+        self.clear()
 
         self.uimanager.draw()
         self.ui_texts.draw()
