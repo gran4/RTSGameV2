@@ -1,4 +1,5 @@
 import arcade, random
+from arcade import math as arcade_math
 from Components import *
 """
 OBJECT x
@@ -120,7 +121,7 @@ class Child(BaseEnemy):
         self.front_texture = arcade.load_texture("resources/Sprites/Child Front.png")
         self.back_texture = arcade.load_texture("resources/Sprites/Child Back.png")
         self.left_texture = arcade.load_texture("resources/Sprites/Child Left.png")
-        self.right_texture = arcade.load_texture("resources/Sprites/Child Left.png", flipped_vertically=True)
+        self.right_texture = self.left_texture.flip_left_right()
 
         self.texture = self.front_texture
 
@@ -211,8 +212,8 @@ class Enemy_Swordsman(BaseEnemy):
             self.can_attack = False
 class Enemy_Slinger(BaseEnemy):
     def __init__(self, game, x, y, difficulty=1):
-        super().__init__("resources/Sprites/enemy.png", x, y, 5*difficulty, 10*difficulty, 500, scale=1)
-        self.texture = arcade.load_texture("resources/Sprites/enemy.png", flipped_horizontally=True)
+        super().__init__("resources/Sprites/enemy.png", x, y, 5*difficulty, 10*difficulty, 325, scale=1)
+        self.texture = arcade.load_texture("resources/Sprites/enemy.png")
 
         self.building_bias = 1
         self.people_bias = .3
@@ -235,7 +236,7 @@ class Enemy_Slinger(BaseEnemy):
         self.front_texture = arcade.load_texture("resources/Sprites/Child Front.png")
         self.back_texture = arcade.load_texture("resources/Sprites/Child Back.png")
         self.left_texture = arcade.load_texture("resources/Sprites/Child Left.png")
-        self.right_texture = arcade.load_texture("resources/Sprites/Child Left.png", flipped_vertically=True)
+        self.right_texture = self.left_texture.flip_left_right()
         self.texture = self.front_texture
 
         self.pull_back_sound = None
@@ -247,34 +248,55 @@ class Enemy_Slinger(BaseEnemy):
         self.on_update(game, delta_time)
 
         if self.focused_on:
-            self.bow.angle = rotation(self.center_x, self.center_y, self.focused_on.center_x, self.focused_on.center_y, angle = self.bow.angle-90)+90
+            heading = heading_towards(
+                self.center_x,
+                self.center_y,
+                self.focused_on.center_x,
+                self.focused_on.center_y,
+            )
+            self.bow.angle = -heading - 90
 
         self.bow.center_x = self.center_x
         self.bow.center_y = self.center_y
 
         self.update_movement(game, delta_time)
-        for arrow in self.arrows:
-            arrow.forward(speed=delta_time*50)
+        for arrow in list(self.arrows):
+            advance_sprite(arrow, delta_time)
             arrow.update()
 
             arrow.time += delta_time
-            if arrow.time > 15:
+            if arrow.time > 15 or not self.focused_on:
                 arrow.remove_from_sprite_lists()
-            elif not self.focused_on:
-                break
-            elif arcade.get_distance(arrow.center_x, arrow.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
-                self.hit = True
-                arrow.hit_sound = SOUND("resources/sound_effects/arrow-impact.wav", .25, get_dist(self.position, game.player.position))
-                arrow.hit_sound._timer.active = False
+                try:
+                    self.arrows.remove(arrow)
+                except ValueError:
+                    pass
+                continue
+            elif arcade_math.get_distance(arrow.center_x, arrow.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
+                arrow.hit = True
+                arrow.hit_sound = SOUND(
+                    "resources/sound_effects/arrow-impact.wav",
+                    .25,
+                    get_dist(self.position, game.player.position),
+                    volume_map=getattr(game, "audio_type_vols", None),
+                    sound_type="UI",
+                )
+                if getattr(arrow, "hit_sound", None) and getattr(arrow.hit_sound, "_timer", None):
+                    arrow.hit_sound._timer.active = False
                 arrow.visible = False
                 
             if arrow.hit:
-                arrow.destory_timer += delta_time
+                arrow.destroy_timer += delta_time
                 if arrow.destroy_timer > .5:
                     self.focused_on.health -= self.damage*random.random()*random.random()*4
                     arrow.remove_from_sprite_lists()
+                    try:
+                        self.arrows.remove(arrow)
+                    except ValueError:
+                        pass
                     continue
-                arrow.hit_sound._timer.set_time(arrow.hit_sound._timer.get_time()+.5)
+                if getattr(arrow, "hit_sound", None) and getattr(arrow.hit_sound, "_timer", None):
+                    arrow.hit_sound._timer.set_time(arrow.hit_sound._timer.get_time()+.5)
             #else:
             #    arrow.pull_back_sound._timer.set_time(arrow.pull_back_sound._timer.get_time()+delta_time)
 
@@ -308,24 +330,44 @@ class Enemy_Slinger(BaseEnemy):
             return
 
         if not self.pull_back_sound:
-            self.pull_back_sound = SOUND("resources/sound_effects/Arrow Shoot.wav", 1, get_dist(self.position, game.player.position))
-            self.pull_back_sound._timer.active = False
-        self.pull_back_sound._timer.set_time(self.pull_back_sound._timer.get_time()+delta_time*.5)
+            self.pull_back_sound = SOUND(
+                "resources/sound_effects/Arrow Shoot.wav",
+                1,
+                get_dist(self.position, game.player.position),
+                volume_map=getattr(game, "audio_type_vols", None),
+                sound_type="UI",
+            )
+            if getattr(self.pull_back_sound, "_timer", None):
+                self.pull_back_sound._timer.active = False
+        if getattr(self.pull_back_sound, "_timer", None):
+            self.pull_back_sound._timer.set_time(self.pull_back_sound._timer.get_time()+delta_time*.5)
         anim = self.bow.Attack_animation.updateAnim(delta_time, len(self.bow.Attack_textures))
         if anim is None:
             return
         elif anim == 0:
             self.bow.canAttack = False
         elif anim == 8:
-            angle = rotation(self.center_x, self.center_y, self.focused_on.center_x, self.focused_on.center_y, max_turn=360)+random.randrange(-5, 5)
-            arrow = arcade.Sprite("resources/Sprites/Arcane archer/projectile.png", scale=1, center_x = self.center_x, center_y = self.center_y, angle = angle)
+            heading = heading_towards(
+                self.center_x,
+                self.center_y,
+                self.focused_on.center_x,
+                self.focused_on.center_y,
+            )
+            heading += random.randrange(-5, 5)
+            arrow = arcade.Sprite(
+                "resources/Sprites/Arcane archer/projectile_cropped.png",
+                scale=1,
+                center_x=self.center_x,
+                center_y=self.center_y,
+                angle=-heading,
+            )
             arrow.time = 0
+            set_sprite_motion(arrow, heading, 50)
             self.arrows.append(arrow)
             game.overParticles.append(arrow)
-            arrow.forward()
             arrow.update()
             arrow.hit = False
-            arrow.destory_timer = 0
+            arrow.destroy_timer = 0
             self.pull_back_sound = None
 
         self.bow.texture = self.bow.Attack_textures[anim]
@@ -333,10 +375,16 @@ class Enemy_Slinger(BaseEnemy):
             
         self.bow.timer = 0
     def destroy(self, game):
+        if self.bow in game.overParticles:
+            game.overParticles.remove(self.bow)
         self.bow.remove_from_sprite_lists()
         self.bow = None
 
-        [arrow.remove_from_sprite_lists() for arrow in self.arrows]
+        for arrow in list(self.arrows):
+            if arrow in game.overParticles:
+                game.overParticles.remove(arrow)
+            arrow.remove_from_sprite_lists()
+        self.arrows = arcade.SpriteList()
         return super().destroy(game)
     def save(self, game):
         super().save(game)
@@ -370,7 +418,7 @@ class Arsonist(BaseEnemy):
         self.front_texture = arcade.load_texture("resources/Sprites/Child Front.png")
         self.back_texture = arcade.load_texture("resources/Sprites/Child Back.png")
         self.left_texture = arcade.load_texture("resources/Sprites/Child Left.png")
-        self.right_texture = arcade.load_texture("resources/Sprites/Child Left.png", flipped_vertically=True)
+        self.right_texture = self.left_texture.flip_left_right()
         self.texture = self.front_texture
 
         self.building_bias = 1
@@ -564,7 +612,7 @@ class Wizard(BaseEnemy):
         self.front_texture = arcade.load_texture("resources/Sprites/Child Front.png")
         self.back_texture = arcade.load_texture("resources/Sprites/Child Back.png")
         self.left_texture = arcade.load_texture("resources/Sprites/Child Left.png")
-        self.right_texture = arcade.load_texture("resources/Sprites/Child Left.png", flipped_vertically=True)
+        self.right_texture = self.left_texture.flip_horizontally()
         self.texture = self.front_texture
 
 
@@ -605,13 +653,13 @@ class Wizard(BaseEnemy):
             self.destroy(game)
         for projectile in self.projectiles:
             if not projectile.destroy:
-                projectile.forward(speed=delta_time*50)
+                advance_sprite(projectile, delta_time)
                 projectile.update()
                 projectile.time += delta_time
                 if projectile.time > projectile.maxtime:
                     projectile.remove_from_sprite_lists()
 
-                if self.focused_on and arcade.get_distance(projectile.center_x, projectile.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
+                if self.focused_on and arcade_math.get_distance(projectile.center_x, projectile.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
                     projectile.destroy = True
             else:
                 anim = projectile.destructionAnim.updateAnim(delta_time, len(projectile.destruction))
@@ -648,8 +696,18 @@ class Wizard(BaseEnemy):
         self.wand.projectile.scale = 0
     def create_projectile(self, game, maxtime=15, maxrotation=5, num=1):
         for i in range(num):
-            angle = rotation(self.center_x, self.center_y, self.focused_on.center_x, self.focused_on.center_y, max_turn=360)
-            projectile = arcade.Sprite("resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-2.png", scale = 1, angle=angle+random.randrange(-maxrotation, maxrotation))
+            heading = heading_towards(
+                self.center_x,
+                self.center_y,
+                self.focused_on.center_x,
+                self.focused_on.center_y,
+            )
+            heading += random.randrange(-maxrotation, maxrotation)
+            projectile = arcade.Sprite(
+                "resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-2.png",
+                scale=1,
+                angle=heading - 90,
+            )
             game.overParticles.append(projectile)
             self.projectiles.append(projectile)
             
@@ -660,9 +718,9 @@ class Wizard(BaseEnemy):
                 projectile.destruction.append(arcade.load_texture(f"resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png"))
             projectile.destructionAnim = AnimationPlayer(.1)
             projectile.destroy = False
-            
+
             projectile.position = self.position
-            projectile.forward()
+            set_sprite_motion(projectile, heading, 50)
             projectile.update()
     def destroy(self, game):
         super().destroy(game)
@@ -721,24 +779,37 @@ class Privateer(BaseEnemy):
         self.on_update(game, delta_time)
 
         if self.focused_on:
-            self.bow.angle = rotation(self.center_x, self.center_y, self.focused_on.center_x, self.focused_on.center_y, angle = self.bow.angle-90)+90
+            heading = heading_towards(
+                self.center_x,
+                self.center_y,
+                self.focused_on.center_x,
+                self.focused_on.center_y,
+            )
+            self.bow.angle = -heading - 90
 
         self.bow.center_x = self.center_x
         self.bow.center_y = self.center_y
 
         self.update_movement(game, delta_time)
         
-        for arrow in self.arrows:
-            arrow.forward(speed=delta_time*50)
+        for arrow in list(self.arrows):
+            advance_sprite(arrow, delta_time)
             arrow.update()
             arrow.time += delta_time
-            if arrow.time > 15:
+            if arrow.time > 15 or not self.focused_on:
                 arrow.remove_from_sprite_lists()
-            elif not self.focused_on:
-                break
-            elif arcade.get_distance(arrow.center_x, arrow.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
+                try:
+                    self.arrows.remove(arrow)
+                except ValueError:
+                    pass
+                continue
+            elif arcade_math.get_distance(arrow.center_x, arrow.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
                 self.focused_on.health -= self.damage*random.random()*random.random()*4
                 arrow.remove_from_sprite_lists()
+                try:
+                    self.arrows.remove(arrow)
+                except ValueError:
+                    pass
 
         self.bow.timer += delta_time
         if self.bow.timer < self.bow.WaitToAttack:
@@ -747,8 +818,14 @@ class Privateer(BaseEnemy):
         self.bow.canAttack = True
 
     def update_movement(self, game, delta_time):
-        if self.path: 
-            self.angle = rotation(self.center_x, self.center_y, self.path[0][0], self.path[0][1], angle = self.angle+90)-90   
+        if self.path:
+            heading = heading_towards(
+                self.center_x,
+                self.center_y,
+                self.path[0][0],
+                self.path[0][1],
+            )
+            self.angle = heading - 90
         self.path_timer += delta_time
         if self.path_timer > self.next_time:
             pos = self.get_path()
@@ -756,7 +833,12 @@ class Privateer(BaseEnemy):
                 self.position = pos
             self.path_timer -= self.next_time
     def on_attack(self, game, delta_time):  
-        self.angle = rotation(self.center_x, self.center_y, self.focused_on.center_x, self.focused_on.center_y, angle = self.angle+90)-90   
+        self.angle = heading_towards(
+            self.center_x,
+            self.center_y,
+            self.focused_on.center_x,
+            self.focused_on.center_y,
+        ) - 90
         if not self.bow.canAttack: 
             return
         anim = self.bow.Attack_animation.updateAnim(delta_time, len(self.bow.Attack_textures))
@@ -765,12 +847,24 @@ class Privateer(BaseEnemy):
         elif anim == 0:
             self.bow.canAttack = False
         elif anim == 8:
-            angle = rotation(self.center_x, self.center_y, self.focused_on.center_x, self.focused_on.center_y, max_turn=360)+random.randrange(-5, 5)
-            arrow = arcade.Sprite("resources/Sprites/Arcane archer/projectile.png", scale=1, center_x = self.center_x, center_y = self.center_y, angle = angle)
+            heading = heading_towards(
+                self.center_x,
+                self.center_y,
+                self.focused_on.center_x,
+                self.focused_on.center_y,
+            )
+            heading += random.randrange(-5, 5)
+            arrow = arcade.Sprite(
+                "resources/Sprites/Arcane archer/projectile_cropped.png",
+                scale=1,
+                center_x=self.center_x,
+                center_y=self.center_y,
+                angle=-heading,
+            )
             arrow.time = 0
+            set_sprite_motion(arrow, heading, 50)
             self.arrows.append(arrow)
             game.overParticles.append(arrow)
-            arrow.forward()
             arrow.update()
         self.bow.texture = self.bow.Attack_textures[anim]
         self.bow.Attack_animation.timetoupdate = self.bow.AttackAnimTimes[anim]
@@ -780,7 +874,8 @@ class Privateer(BaseEnemy):
         self.bow.remove_from_sprite_lists()
         self.bow = None
 
-        [arrow.remove_from_sprite_lists() for arrow in self.arrows]
+        for arrow in self.arrows:
+            arrow.remove_from_sprite_lists()
         return super().destroy(game)
     def save(self, game):
         super().save(game)

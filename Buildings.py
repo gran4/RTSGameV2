@@ -1,4 +1,5 @@
 import arcade
+from arcade import math as arcade_math
 from Components import *
 from Player import *
 from gui_compat import UIAnchorWidget
@@ -6,9 +7,11 @@ from gui_compat import UIAnchorWidget
 things = {"Bad Gifter":BadGifter, "Bad Reporter":BadReporter}
 
 class BaseBuilding(arcade.Sprite):
+    produces: dict[str, float] = {}
     def __init__(self, game, x:float, y:float, health:float, dmg:float, range:int, max_len:int, texture:str, scale=1):
         super().__init__(texture, center_x=x, center_y=y, scale=scale)
-        
+
+        self.game = game
         self.texture = arcade.load_texture(texture)
         self.center_x = x
         self.center_y = y
@@ -28,19 +31,23 @@ class BaseBuilding(arcade.Sprite):
         self.enemy = None
         self.fire = None
         self.fire_resistence = .9
-        self.vars = {}
+        self.vars = dict(self.produces)
     def add(self, sprite):
         if len(self.list_of_people) == self.max_length:
             return True
+        if sprite in self.game.People:
+            self.game.People.remove(sprite)
         self.list_of_people.append(sprite)
         sprite.health_bar.visible = False
         sprite.remove_from_sprite_lists()
+        sprite.in_building = True
         return False
     def remove(self):
         if len(self.list_of_people) == 0:
             return
         sprite = self.list_of_people[0]
         sprite.health_bar.visible = True
+        sprite.in_building = False
         self.list_of_people.pop(0)
         return sprite
     def destroy(self, game, menu_destroy = False):
@@ -113,18 +120,26 @@ class BaseBuilding(arcade.Sprite):
         if self.enemy:
             if arcade.get_distance_between_sprites(self, self.enemy) < self.range:
                 self.on_attack(delta_time, game)
+            else:
+                self.enemy = None
         else:
             self.check_timer += delta_time
             if self.check_timer < 1:
                 return
             self.check_timer -= 1
-            enemy, distance = arcade.get_closest_sprite(self, game.Enemies)
-            self.enemy = enemy
+            enemy, distance = get_closest_sprite(self.position, game.Enemies)
+            if enemy and distance <= self.range:
+                self.enemy = enemy
     def on_attack(self, delta_time, game):
+        if not self.enemy:
+            return
         self.enemy.health -= self.dmg
-        if self.enemy.health < 0:
-            game.Enemies.remove(self.enemy)
+        if self.enemy.health <= 0:
+            enemy = self.enemy
             self.enemy = None
+            if enemy in game.Enemies:
+                game.Enemies.remove(enemy)
+            enemy.destroy(game)
     def save(self, game):
         if self.enemy:
             self.enemy = game.Enemies.index(self.enemy)
@@ -178,30 +193,30 @@ class UNbuiltBuilding(BaseBuilding):
         game.uimanager.add(wrapper)
 
 class ResearchShop(BaseBuilding):
+    produces = {"science": .04}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/conjurerater.png")
-        self.vars = {"science":.04}
         self.Updates = False
 class Lab(BaseBuilding):
+    produces = {"science": .1}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/Lab.png")
-        self.vars = {"science":.1}
         self.Updates = False
 
 class WorkShop(BaseBuilding):
+    produces = {"toys": 1}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/WorkShop.png")
-        self.vars = {"toys":1}
 class Factory(BaseBuilding):
+    produces = {"toys": 2}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/Factory.png", scale=.5)
-        self.vars = {"toys":2}
 
 
 class Hospital(BaseBuilding):
+    produces = {}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/Hospital.png")
-        self.vars = {}
     def update(self, delta_time, game):
         for person in self.list_of_people:
             if person.health >= 1:
@@ -210,24 +225,24 @@ class Hospital(BaseBuilding):
         self.on_update(delta_time, game)
 
 class PebbleSite(BaseBuilding):
+    produces = {"stone": .1}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 20, 0, 0, 1, "resources/Sprites/Pebble Site.png")
-        self.vars = {"stone":.1}
         self.Updates = False
 class Quary(BaseBuilding):
+    produces = {"stone": .25}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 20, 0, 0, 1, "resources/Sprites/Quary.png")
-        self.vars = {"stone":.25}
         self.Updates = False
 class Lumbermill(BaseBuilding):
+    produces = {"wood": .25}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/tree_farm.png")
-        self.vars = {"wood":.25}
         self.Updates = False
 class BlackSmith(BaseBuilding):
+    produces = {}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/BlackSmith.png")
-        self.vars = {}
         self.Updates = True
 
         self.required = {"wood":.01, "stone":.002}
@@ -251,60 +266,89 @@ class BlackSmith(BaseBuilding):
         
 
 class SnowTower(BaseBuilding):
+    produces = {}
     def __init__(self, game, x:float, y:float):
-        super().__init__(game, x, y, 20, .5, 250, 1, "resources/Sprites/SnowTower.png")
-        self.vars = {}
+        super().__init__(game, x, y, 20, .5, 400, 1, "resources/Sprites/SnowTower.png")
         self.Updates = False
         self.canAttack = True
+        self.timer = 0
+        self.WaitToAttack = 1
 
         self.snowballs = arcade.SpriteList()
         self.focused_on = None
-    def update(self, game, delta_time):
+    def update(self, delta_time, game):
         if self.health <= 0:
             self.destroy(game)
             return 
-        self.on_update(game, delta_time)
+
+        self.health_bar.fullness = self.health/self.max_health
+
+        target, distance = get_closest_sprite(self.position, game.Enemies)
+        if target and distance <= self.range:
+            self.focused_on = target
+        else:
+            self.focused_on = None
 
         
-        for snowball in self.snowballs:
-            snowball.forward(speed=delta_time*50)
+        for snowball in list(self.snowballs):
+            advance_sprite(snowball, delta_time)
             snowball.update()
             snowball.time += delta_time
             if snowball.time > 15:
                 snowball.remove_from_sprite_lists()
-            elif not self.focused_on:
-                break
-            elif arcade.get_distance(snowball.center_x, snowball.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
-                self.focused_on.health -= self.damage*random.random()*random.random()*4
+                continue
+            if not self.focused_on:
                 snowball.remove_from_sprite_lists()
+                continue
+            if arcade_math.get_distance(snowball.center_x, snowball.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
+                self.focused_on.health -= self.dmg * random.random() * random.random() * 4
+                snowball.remove_from_sprite_lists()
+                if self.focused_on.health <= 0:
+                    self.focused_on = None
 
         self.timer += delta_time
-        if self.timer < self.WaitToAttack:
+        if self.timer < self.WaitToAttack or not self.focused_on:
             return
-        self.timer -= self.bow.WaitToAttack
+        self.timer -= self.WaitToAttack
         self.canAttack = True
-    def on_attack(self, game, delta_time):     
+        self.on_attack(delta_time, game)
+    def on_attack(self, delta_time, game):     
         if not self.canAttack: 
             return
-        angle = rotation(self.center_x, self.center_y, self.focused_on.center_x, self.focused_on.center_y, max_turn=360)+random.randrange(-5, 5)
-        snowball = arcade.Sprite("resources/Sprites/Snowball.png", scale=1, center_x = self.center_x, center_y = self.center_y, angle = angle)
+        heading = heading_towards(
+            self.center_x,
+            self.center_y,
+            self.focused_on.center_x,
+            self.focused_on.center_y,
+        )
+        heading += random.uniform(-5, 5)
+        snowball = arcade.Sprite(
+            "resources/Sprites/Snowball.png",
+            scale=1,
+            center_x=self.center_x,
+            center_y=self.center_y,
+            angle=-heading,
+        )
         snowball.time = 0
+        set_sprite_motion(snowball, heading, 50)
         self.snowballs.append(snowball)
         game.overParticles.append(snowball)
-        snowball.forward()
         snowball.update()
+        self.canAttack = False
+        if self.focused_on and self.focused_on.health <= 0:
+            self.focused_on = None
 
 
 class RaindeerFarm(BaseBuilding):
+    produces = {"food": 1.4}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/Pasture.png")
-        self.vars = {"food":1.4}
         self.Updates = False
 class Farm(BaseBuilding):
+    produces = {"food": 1.6}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/Observatory.jpeg")
         self.set_hit_box(((-25.0, -25.0), (25.0, -25.0), (25.0, 25.0), (-25.0, 25.0)))
-        self.vars = {"food":1.6}
 
         self.AnimationPlayer = AnimationPlayer(1)
         self.textures = load_texture_grid("resources/Sprites/Farm Pixilart Sprite Sheet.png", 50, 50, 50, 2)
@@ -326,6 +370,7 @@ class Farm(BaseBuilding):
         self.list_of_people.pop(0)
         return sprite
 class FireStation(BaseBuilding):
+    produces = {}
     def __init__(self, game, x: float, y: float):
         super().__init__(game, x, y, .4, 50, 400, 1, "resources/Sprites/Fire Station.png", scale=1)
         self.timer = 0
@@ -348,9 +393,9 @@ class FireStation(BaseBuilding):
 
 
 class Path(BaseBuilding):
+    produces = {}
     def __init__(self, game, x:float, y:float, health, max_len, crossing_time, image):
         super().__init__(game, x, y, health, 0, 0, max_len, image)
-        self.vars = {}
         self.Updates = False
         self.crossing_time = crossing_time
 
@@ -368,9 +413,9 @@ class Path(BaseBuilding):
         game.graph[x][y] = self.before
         super().destroy(game, menu_destroy)
 class Pass(Path):
+    produces = {}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 10, 10, 2, "resources/Sprites/Road.png")
-        self.vars = {}
         self.Updates = False
         self.prev = game.graph[round(self.center_x/50)][round(self.center_y/50)]
         game.graph[round(self.center_x/50)][round(self.center_y/50)] = 0
@@ -380,9 +425,9 @@ class Pass(Path):
 
 
 class Housing(BaseBuilding):
+    produces = {}
     def __init__(self, game, x:float, y:float, health, sprite, people_amount):
         super().__init__(game, x, y, health, 0, 0, people_amount, sprite)
-        self.vars = {}
         self.people_amount = people_amount
 
         self.max_length = people_amount
@@ -397,9 +442,9 @@ class Dormatory(Housing):
 
 
 class FoodDepot(BaseBuilding):
+    produces = {}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/FoodDepot.png")
-        self.vars = {}
         self.food_storage = 75
 
         game.food_storage += self.food_storage
@@ -408,30 +453,30 @@ class FoodDepot(BaseBuilding):
         super().destroy(game, menu_destroy)
 
 class StoneWall(BaseBuilding):
+    produces = {}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 100, 0, 0, 1, "resources/Sprites/StoneWall.png")
-        self.vars = {}
 class MetalWall(BaseBuilding):
+    produces = {}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 1000, 0, 0, 1, "resources/Sprites/MetalWall.png")
-        self.vars = {}
 
 
 class MaterialDepot(BaseBuilding):
+    produces = {}
     def __init__(self, game, x:float, y:float):
         self.storage = 10
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/MaterialDepot.png")
-        self.vars = {}
 
         game.mcsStorage += self.storage
     def destroy(self, game, menu_destroy=False):
         game.mcsStorage -= self.storage
         super().destroy(game, menu_destroy)
 class BetterMaterialDepot(BaseBuilding):
+    produces = {}
     def __init__(self, game, x:float, y:float):
         self.storage = 20
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/MaterialDepot.png")
-        self.vars = {}
 
         game.mcsStorage += self.storage
     def destroy(self, game, menu_destroy=False):
@@ -439,22 +484,28 @@ class BetterMaterialDepot(BaseBuilding):
         super().destroy(game, menu_destroy)
 
 class Encampment(BaseBuilding):
+    produces = {}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/Training Ground.png")
-        self.vars = {}
         self.trainable = ["Bad Gifter", "Bad Reporter"]
     def add(self, sprite):
         if len(self.list_of_people) == self.max_length:
             return True
-        try:
-            if not sprite.advancement in self.trainable:
-                return True
-        except:
+        advancement = getattr(sprite, "advancement", None)
+        if advancement and advancement not in self.trainable:
+            return True
+
+        if not hasattr(sprite, "advancement"):
             sprite.advancement = None
+        if not hasattr(sprite, "trainingtime"):
             sprite.trainingtime = 0
+
+        if sprite in self.game.People:
+            self.game.People.remove(sprite)
         self.list_of_people.append(sprite)
         sprite.health_bar.visible = False
         sprite.remove_from_sprite_lists()
+        sprite.in_building = True
         return False
     def remove(self):
         if len(self.list_of_people) == 0:
@@ -467,6 +518,9 @@ class Encampment(BaseBuilding):
         if person is None:
             person = self.list_of_people[0]
         self.list_of_people.remove(person)
+        person.health_bar.visible = True
+        person.in_building = False
+        person.position = self.position
         return person
     def clicked_override(self, game):
         button = CustomUIFlatButton(game.Alphabet_Textures, text="Train", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)

@@ -1,4 +1,5 @@
 import arcade
+from arcade import math as arcade_math
 from math import floor
 import random, time
 from Components import *
@@ -114,14 +115,14 @@ class BaseBoat(arcade.Sprite):
             game.last = None
             return 
         game.last = self
-        button = CustomUIFlatButton(game.Alphabet_Textures, text="Move", width=140, height=50, x=0, y=50, text_offset_x = 24, text_offset_y=35, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(game.Alphabet_Textures, text="Move", width=140, height=50)
         button.on_click = game.Move
         wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
             child=button, align_x=0, align_y=0)
         game.uimanager.add(wrapper)
         game.extra_buttons.append(wrapper)
 
-        button = CustomUIFlatButton(game.Alphabet_Textures, text="Leave", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(game.Alphabet_Textures, text="Leave", width=140, height=50)
         button.on_click = game.leave
         button.obj = self
         wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
@@ -129,7 +130,7 @@ class BaseBoat(arcade.Sprite):
         game.uimanager.add(wrapper)
         game.extra_buttons.append(wrapper)
         
-        button = CustomUIFlatButton(game.Alphabet_Textures, text="Destoy", width=140, height=50, scale=.3, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(game.Alphabet_Textures, text="Destroy", width=140, height=50)
         button.on_click = game.leave
         button.obj = self
         wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
@@ -145,6 +146,24 @@ class BaseBoat(arcade.Sprite):
             person.health_bar.remove_from_sprite_lists()
         self.health_bar.remove_from_sprite_lists()
         self.remove_from_sprite_lists()
+        if getattr(game, "player", None) and game.player.boat is self:
+            game.player.boat = None
+            # Drop the player at the boat's final position if the tile is walkable
+            tile = game.graph[int(self.center_x/50)][int(self.center_y/50)]
+            if tile == 0:
+                game.player.position = (self.center_x, self.center_y)
+            else:
+                # Find nearest walkable tile
+                player_pos = game.player.position
+                target, _ = get_closest_sprite(self.position, game.Lands)
+                if target:
+                    game.player.position = target.position
+                else:
+                    game.player.position = player_pos
+        if getattr(game, "last", None) is self:
+            game.clear_uimanager()
+            game.last = None
+            game.selection_rectangle.position = (-1000000, -1000000)
         game.population -= len(self.list)
     def save(self, game):
         self.health_bar.remove_from_sprite_lists()
@@ -163,9 +182,7 @@ class VikingLongShip(BaseBoat):
         super().__init__("resources/Sprites/Arrow.png", game, x, y, 20, 0, 0, 2, scale=0.78125)
         self.textures = load_texture_grid("resources/Sprites/Viking Ship/sprPlayer_strip16.png", 64, 64, 16, 16, margin=0)
         self.texture = self.textures[0]
-
         self.rot = 0
-
 
     def update(self, game, delta_time):
         self.health_bar.fullness = self.health/self.max_health
@@ -283,7 +300,7 @@ class Person(arcade.Sprite):
             return 
         game.last = self
 
-        button = CustomUIFlatButton(game.Alphabet_Textures, text="Move", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(game.Alphabet_Textures, text="Move", width=140, height=50 )
         
         button.on_click = game.Move
         wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
@@ -346,13 +363,18 @@ class Person(arcade.Sprite):
         self.position = self.path.pop(0)
         self.health_bar.position = self.position
 
-
         buildings_at_point = arcade.get_sprites_at_point(self.position, game.Buildings)
         if len(buildings_at_point) > 0:
             isMaxPeople = buildings_at_point[0].add(self)
+            refresh = getattr(game, "refresh_population", None)
+            if callable(refresh):
+                refresh()
         ships_at_point = arcade.get_sprites_at_point(self.position, game.Boats)
         if len(ships_at_point) > 0:
             isMaxPeople = ships_at_point[0].add(self)
+            refresh = getattr(game, "refresh_population", None)
+            if callable(refresh):
+                refresh()
 
 
         wood_at_point = arcade.get_sprites_at_point(self.position, game.Trees)
@@ -381,10 +403,15 @@ class Person(arcade.Sprite):
                 variables[self.var] += amount*game.overall_multiplier
 
     
-    def destroy(self, game):
+    def destroy(self, game, *, count_population: bool = True):
+        self.health_bar.remove_from_sprite_lists()
         self.remove_from_sprite_lists()
         self.health = -100
-        game.population -= 1
+        if count_population:
+            game.population -= 1
+        refresh = getattr(game, "refresh_population", None)
+        if callable(refresh):
+            refresh()
     def save(self, game):
         self.health_bar.remove_from_sprite_lists()
     def load(self, game):
@@ -400,9 +427,8 @@ class People_that_attack(Person):
 
         self.check = True
         self.focused_on = None
-    def destroy(self, game):
-        self.remove_from_sprite_lists()
-        self.health = -100
+    def destroy(self, game, *, count_population: bool = True):
+        super().destroy(game, count_population=count_population)
     def update(self, game, delta_time):
         #NOTE: Override
         #update anims here
@@ -478,11 +504,10 @@ class BadGifter(People_that_attack):
         self.state2 = "Patrol"
 
         game.overParticles.append(self.coal)
-    def destroy(self, game):
-        self.remove_from_sprite_lists()
+    def destroy(self, game, *, count_population: bool = True):
         self.coal.remove_from_sprite_lists()
         [coal.remove_from_sprite_lists() for coal in self.gifts]
-        self.health = -100
+        super().destroy(game, count_population=count_population)
     def draw(self, *, filter=None, pixelated=None, blend_function=None):
         super().draw()
         self.coal.draw()
@@ -522,14 +547,14 @@ class BadGifter(People_that_attack):
 
     
         for gift in self.gifts:
-            gift.forward(speed=delta_time*50)
+            advance_sprite(gift, delta_time)
             gift.update()
             gift.time += delta_time
             if gift.time > 15:
                 gift.remove_from_sprite_lists()
             elif self.focused_on is None:
                 pass
-            elif arcade.get_distance(gift.center_x, gift.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
+            elif arcade_math.get_distance(gift.center_x, gift.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
                 self.focused_on.health -= self.damage*delta_time*random.random()*random.random()*4
                 gift.remove_from_sprite_lists()
     def update_movement(self, game):
@@ -606,12 +631,24 @@ class BadGifter(People_that_attack):
             self.check = True
             self.on_update(game, 0)
             
-        angle = rotation(self.center_x, self.center_y, self.focused_on.center_x, self.focused_on.center_y, max_turn=360)+random.randrange(-5, 5)
-        coal = arcade.Sprite("resources/Sprites/Coal.png", scale=1, center_x = self.center_x, center_y = self.center_y, angle = angle)
+        heading = heading_towards(
+            self.center_x,
+            self.center_y,
+            self.focused_on.center_x,
+            self.focused_on.center_y,
+        )
+        heading += random.randrange(-5, 5)
+        coal = arcade.Sprite(
+            "resources/Sprites/Coal.png",
+            scale=1,
+            center_x=self.center_x,
+            center_y=self.center_y,
+            angle=heading - 90,
+        )
         coal.time = 0
+        set_sprite_motion(coal, heading, 50)
         self.gifts.append(coal)
         game.overParticles.append(coal)
-        coal.forward()
         coal.update()
         self.timer = 0
     def state_update(self, game, state):
@@ -671,11 +708,10 @@ class BadReporter(People_that_attack):
         self.state2 = "Patrol"
 
         game.overParticles.append(self.paper)
-    def destroy(self, game):
-        self.remove_from_sprite_lists()
+    def destroy(self, game, *, count_population: bool = True):
         self.paper.remove_from_sprite_lists()
         [coal.remove_from_sprite_lists() for coal in self.gifts]
-        self.health = -100
+        super().destroy(game, count_population=count_population)
     def draw(self, *, filter=None, pixelated=None, blend_function=None):
         super().draw()
         self.paper.draw()
@@ -715,14 +751,14 @@ class BadReporter(People_that_attack):
 
     
         for gift in self.gifts:
-            gift.forward(speed=delta_time*50)
+            advance_sprite(gift, delta_time)
             gift.update()
             gift.time += delta_time
             if gift.time > 15:
                 gift.remove_from_sprite_lists()
             elif self.focused_on is None:
                 pass
-            elif arcade.get_distance(gift.center_x, gift.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
+            elif arcade_math.get_distance(gift.center_x, gift.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
                 self.focused_on.health -= self.damage*delta_time*random.random()*random.random()*4
                 gift.remove_from_sprite_lists()
     def update_movement(self, game):
@@ -799,12 +835,24 @@ class BadReporter(People_that_attack):
             self.check = True
             self.on_update(game, 0)
             
-        angle = rotation(self.center_x, self.center_y, self.focused_on.center_x, self.focused_on.center_y, max_turn=360)+random.randrange(-5, 5)
-        coal = arcade.Sprite("resources/Sprites/Paper.png", scale=1, center_x = self.center_x, center_y = self.center_y, angle = angle)
+        heading = heading_towards(
+            self.center_x,
+            self.center_y,
+            self.focused_on.center_x,
+            self.focused_on.center_y,
+        )
+        heading += random.randrange(-5, 5)
+        coal = arcade.Sprite(
+            "resources/Sprites/Paper.png",
+            scale=1,
+            center_x=self.center_x,
+            center_y=self.center_y,
+            angle=heading - 90,
+        )
         coal.time = 0
+        set_sprite_motion(coal, heading, 50)
         self.gifts.append(coal)
         game.overParticles.append(coal)
-        coal.forward()
         coal.update()
         self.timer = 0
     def state_update(self, game, state):

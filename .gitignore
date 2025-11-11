@@ -8,6 +8,7 @@ venv/
 
 # Ignore VS Code settings
 .vscode/
+.DS_Store
 
 # Ignore saved files folder
 save_files/

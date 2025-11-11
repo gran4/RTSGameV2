@@ -20,22 +20,29 @@ len in dict
 >0 is spawnable
 
 NOTE: __getattr__ is obj.item
-NOTE: __getitem is obj[item]
+NOTE: __getitem__ is obj[item]
 """
 
 #python3.10 -m PyInstaller MainTestResizable.py --noconsole --onefile --add-data "resources:resources"
 #python3.10 -m PyInstaller MainTestResizable.py --windowed --noconsole --onefile --add-data "resources:resources" --icon="resources/Sprites/Icon.png"
 
+# saving is broken
+# You lack housing pop-up is broken
+# Tutorial Menu is broken
+
 import sys, os
+from pathlib import Path
+import logging
 
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
     os.chdir(sys._MEIPASS)
 
 
-from math import sqrt, floor
+from math import sqrt, floor, ceil
 import arcade, json, random, arcade.gui, time, pickle, atexit
+from arcade import math as arcade_math
 
-from arcade.gui import UILabel
+from arcade.gui import UILabel, UIFlatButton
 from gui_compat import UIAnchorWidget
 from BackGround import *
 from Buildings import *
@@ -46,6 +53,43 @@ from TextInfo import *
 from Components import *
 from arcade.shape_list import ShapeElementList, create_line
 from copy import copy
+
+BASE_DIR = Path(__file__).resolve().parent
+SAVE_DIR = BASE_DIR / "save_files"
+SAVE_DIR.mkdir(parents=True, exist_ok=True)
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+logging.basicConfig(
+    filename=str(LOG_DIR / "ui.log"),
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+
+CHRISTMAS_TRIGGER_TIME = 120.0
+
+
+def get_save_path(file_id):
+    if file_id is None:
+        return None
+    return SAVE_DIR / f"{file_id}"
+
+
+def apply_audio_volume(audio, volume_map):
+    start = getattr(audio, "start_vol", 1)
+    type_key = getattr(audio, "type", "Overall")
+    overall = volume_map.get("Overall", 1)
+    type_vol = volume_map.get(type_key, 1)
+    volume = start * type_vol * overall
+    if hasattr(audio, "set_volume"):
+        audio.set_volume(volume)
+    else:
+        audio.volume = volume
+        if getattr(audio, "player", None):
+            audio.player.volume = volume
+    source = getattr(audio, "source", None)
+    if source is not None:
+        source.volume = volume
+
 
 from MyPathfinding import LivingMap, _AStarSearch, SearchTilesAround
 arcade.PymunkPhysicsEngine
@@ -65,6 +109,7 @@ class MyGame(arcade.View):
         self.time_alive = 0
         self.Christmas_timer = -300
         self.Completed_Christmas = False
+        self._returning_to_menu = False
         self.file_num = file_num
         self.difficulty = difficulty
         self.menu = menu
@@ -75,19 +120,18 @@ class MyGame(arcade.View):
         self.updateStorage()
 
         self.speed = 1
-        ui_slider = CustomUISlider(max_value=20, value=2, width=302, height=35, x=0, offset_x=150, offset_y=-10, button_offset_y=-6)#arcade.load_texture("resources/gui/Slider_Button.png")#self.textures[0]
-        #ui_slider.move(-200, -100)
-        label = UILabel(text=f"speed {ui_slider.value*.5:02.0f}x")
+        ui_slider = CustomUISlider(max_value=20, value=2, width=302, height=35, x=0, offset_x=150, offset_y=-10, button_offset_y=-6)
+        label = UILabel(text=f"speed {ui_slider.value*.5:.0f}x")
         self.label = label
         self.ui_slider = ui_slider
 
         @ui_slider.event()
         def on_change(event: UIOnChangeEvent):
-            label.text = f"speed {ui_slider.value*.5:02.0f}x"
+            label.text = f"speed {ui_slider.value*.5:.0f}x"
             self.speed = ui_slider.value*.5
             label.fit_content()
 
-        slider = UIAnchorWidget(child=ui_slider, align_x=0, align_y=110, anchor_x="left", anchor_y="bottom")
+        slider = UIAnchorWidget(child=ui_slider, align_x=100, align_y=25, anchor_x="left", anchor_y="bottom")
         ui_slider.wrapper = slider
         self.uimanager.add(slider)
         label_wrapper = UIAnchorWidget(child=label, align_x=50, align_y=160, anchor_x="left", anchor_y="bottom")
@@ -101,7 +145,7 @@ class MyGame(arcade.View):
         self.expand_button = expand_button
         self.speed_bar = expand_button
         wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
-                child=expand_button, align_x=0, align_y=150)
+                child=expand_button, align_x=0, align_y=0)
         expand_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
@@ -143,8 +187,10 @@ class MyGame(arcade.View):
         self.stone = 0
         self.metal = 0
         self.wood = 50
-        self.toys = 0
+        self.toys = 300
         self.toy_amount = 100
+        self.failed_toys = 0
+        self.max_toy_failures = 3
 
         self.mcsStorage = 200
         self.max_pop = 5
@@ -189,8 +235,8 @@ class MyGame(arcade.View):
         self.fireUpdate = .3
 
         self.ui_sprites = arcade.SpriteList()
-        self.ui_sprite_background = arcade.Sprite("resources/gui/Small Text Background.png", scale = 1.1, center_x=-2000)
-        self.ui_sprite_text = CustomTextSprite(None, {})#arcade.create_text_sprite("Selected None", 50, 25, arcade.color.BLACK)
+        self.selection_panel = None
+        self.selection_panel_visible = False
 
         self.RiteSlots = 0
 
@@ -204,7 +250,7 @@ class MyGame(arcade.View):
         self.uimanager.enable()
     
 
-        self.unlocked = unlocked
+        self.unlocked = copy(unlocked)
         self.objects = objects
 
         self.object_placement = None
@@ -236,95 +282,108 @@ class MyGame(arcade.View):
         self.update_audio()
     def update_audio(self):
         for audio in self.audios:
-            audio.volume = audio.start_vol*self.audio_type_vols[audio.type]*self.audio_type_vols["Overall"]
-            audio.source.volume = audio.volume
-            if audio.player:
-                audio.player.volume = audio.volume
-            #audio.set_volume(audio.volume, audio.player)
+            apply_audio_volume(audio, self.audio_type_vols)
 
     def create_ui(self):
         self.PopUps = []
          
-        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 71, margin=1)
         self.Alphabet_Textures = {" ":None}
-        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
+        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_'"
         for i in range(len(string)):
             self.Alphabet_Textures[string[i]] = textures[i]
 
         self.text_timer = 0
         self.text_sprites = []
         self.lack_text = None
+        self.lack_popup = None
+        self.lack_popup_timer = 0.0
         self.text_visible = True
         self.under_sprite = arcade.Sprite("resources/gui/Medium Bulletin.png", scale=2.2, center_x=200, center_y=280)
         self.update_text(1)
 
-        expand_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text=None, width=64, height=64, offset_x=16, offset_y=16, Texture="resources/gui/contract.png", Hovered_Texture="resources/gui/contract.png", Pressed_Texture="resources/gui/expand.png")
+        self.selection_panel_position = (200, 110)
+        self.selection_panel_width = 260
+        self.selection_panel = CustomTextSprite(
+            None,
+            self.Alphabet_Textures,
+            center_x=self.selection_panel_position[0],
+            center_y=self.selection_panel_position[1],
+            width=self.selection_panel_width,
+            Background_Texture="resources/gui/Small Text Background.png",
+            Background_scale=1.1,
+            vertical_align='top',
+        )
+        self.selection_panel_visible = False
+
+        self._active_lack_popup_type: Optional[str] = None
+
+        expand_button = CustomUIFlatButton({}, click_sound = self.click_sound, text=None, width=64, height=64, offset_x=16, offset_y=16, Texture="resources/gui/contract.png", Hovered_Texture="resources/gui/contract.png", Pressed_Texture="resources/gui/expand.png")
         expand_button.on_click = self.expand_button_click
         expand_button.expand = False
         self.expand_button = expand_button
         wrapper = UIAnchorWidget(anchor_x="left", anchor_y="top",
-                child=expand_button, align_x=0, align_y=30)
+                child=expand_button, align_x=0, align_y=-30)
         expand_button.wrapper = wrapper
         self.uimanager.add(wrapper)
-        
 
         self.secondary_wrappers = []
-        main_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Menus", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
+        main_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Panels", width=140, height=50)
         main_button.on_click = self.main_button_click
         main_button.open = False
         self.main_button = main_button
         wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
-                child=main_button, align_x=0, align_y=0)
+                child=main_button, align_x=-50, align_y=-50)
         main_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
 
-        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Menu", width=140, height=50, x=0, y=50, text_offset_x = 24, text_offset_y=35, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Menus", width=140, height=50)
         button.on_click = self.menus_button_click
         button.open = False
         self.menus_button = button
         wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
-                child=button, align_x=250, align_y=0)
+                child=button, align_x=150, align_y=-50)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
         self.secondary_wrappers.append(wrapper)
         self.menu_buttons = []
 
-        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Science Menu", width=140, height=50, x=0, y=50, text_offset_x = 6, text_offset_y=35, text_margin=14, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Science Menu", width=140, height=50)
         button.cost = float('inf')
         button.on_click = self.on_ScienceMenuclick
         wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
-                child=button, align_x=250, align_y=0)
+                child=button, align_x=150, align_y=-50)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
         self.menu_buttons.append(wrapper)
 
 
-        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Volume Menu", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Volume Menu", width=140, height=50)
         button.cost = float('inf')
         button.on_click = self.on_VolumeMenuclick
         wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
-                child=button, align_x=250, align_y=-100)
+                child=button, align_x=150, align_y=-150)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
         self.menu_buttons.append(wrapper)
 
 
         # Creating save Button
-        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Save", width=140, height=50, x=0, y=50, text_offset_x = 24, text_offset_y=35, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Save", width=140, height=50)
         button.on_click = self.save
         wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
-                child=button, align_x=250, align_y=-100)
+                child=button, align_x=150, align_y=-150)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
         self.secondary_wrappers.append(wrapper)
 
 
-        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Selectables", width=140, height=50, x=0, y=50, text_offset_x = -6, text_offset_y=35, text_scale=.8, text_margin=11, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Deploy", width=140, height=50)
         button.on_click = self.selectables_click
         button.open = False
         wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
-                child=button, align_x=250, align_y=-200)
+                child=button, align_x=150, align_y=-250)
         button.wrapper = wrapper
 
         self.selectables_button = button
@@ -332,46 +391,44 @@ class MyGame(arcade.View):
         self.secondary_wrappers.append(wrapper)
         self.selectables = []
 
+        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Return", width=140, height=50)
+        button.on_click = self.return_to_menu
+        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
+                child=button, align_x=250, align_y=-350)
+        button.wrapper = wrapper
+        self.uimanager.add(wrapper)
+        self.secondary_wrappers.append(wrapper)
 
-        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Buildings", width=140, height=50, x=0, y=50, text_offset_x=0, text_offset_y=35, text_scale=1, text_margin=13, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Buildings", width=140, height=50, text_margin=14)
         button.cost = float('inf')
         button.value = 1
         button.on_click = self.switch_val
         wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
-                child=button, align_x=250, align_y=0)
+                child=button, align_x=150, align_y=-50)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
         self.selectables.append(wrapper)
 
-        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="People", width=140, height=50, x=0, y=50, text_offset_x=12, text_offset_y=35, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="People", width=140, height=50)
         button.cost = float('inf')
         button.value = 2
         button.on_click = self.switch_val
         wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
-                child=button, align_x=250, align_y=-100)
+                child=button, align_x=150, align_y=-150)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
         self.selectables.append(wrapper)
 
         
-        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Boats", width=140, height=50, x=0, y=50, text_offset_x=12, text_offset_y=35, offset_x=75, offset_y=25)
+        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Boats", width=140, height=50)
         button.cost = float('inf')
         button.value = 3
         button.on_click = self.switch_val
         wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
-                child=button, align_x=250, align_y=-200)
+                child=button, align_x=150, align_y=-250)
         button.wrapper = wrapper
         self.uimanager.add(wrapper)
         self.selectables.append(wrapper)
-
-
-        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Return", width=140, height=50, x=0, y=50, text_offset_x = 12, text_offset_y=35, offset_x=75, offset_y=25)
-        button.on_click = self.return_to_menu
-        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
-                child=button, align_x=250, align_y=-300)
-        button.wrapper = wrapper
-        self.uimanager.add(wrapper)
-        self.secondary_wrappers.append(wrapper)
     def on_resize(self, width: int, height: int):
         self.camera.match_window()
         self.center_camera()
@@ -398,13 +455,17 @@ class MyGame(arcade.View):
         self.christmas_background.scale = .25*max(width/1240, height/900)
         return super().on_resize(width, height)
 
-    def End(self):
+    def End(self, reason: str | None = None, force_menu: bool = False, extra_lines: list[str] | None = None):
         self.science_list = None
         self.uimanager.disable()
+        print("JNENJDEJNEDNJDJDENJDENJE")
 
         if self.file_num:
-            file = open(f"{self.file_num}", "r+")
-            file.truncate() 
+            file_path = get_save_path(self.file_num)
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            file_path.touch(exist_ok=True)
+            with file_path.open("r+") as file:
+                file.truncate()
 
         num = self.time_alive-300
         if num > 0: history = 2*1.5**(num/60)
@@ -417,11 +478,11 @@ class MyGame(arcade.View):
                 p = {}
                 science_unlocked = []
                 with open("GameBase.json", "r") as read_file:
-                    buttons = json.load(read_file)
+                    menu_config = json.load(read_file)
                 
 
-                for button in buttons["ScienceMenu"]: 
-                    science_unlocked.append(bool(button[8]))
+                for node in menu_config["ScienceMenu"]: 
+                    science_unlocked.append(bool(node[8]))
                 p["science_menu"] = science_unlocked
                 p["Money"] = history
                 
@@ -436,9 +497,15 @@ class MyGame(arcade.View):
             if self.Christmas_music.player: self.Christmas_music.stop(self.Christmas_music.player)
         self.Christmas_music = None
 
-        Endmenu = EndMenu(history, self, self.menu)
-        self.window.show_view(Endmenu)
+        if force_menu:
+            message = reason or "The workshop could not meet the children's demands."
+            game_over = GameOverView(self.menu, message)
+            self.window.show_view(game_over)
+        else:
+            Endmenu = EndMenu(history, self, self.menu, reason, extra_lines=extra_lines)
+            self.window.show_view(Endmenu)
     def return_to_menu(self, event):
+        self._returning_to_menu = True
         global prev_frame
         prev_frame = {"food":1000, "wood":0, "stone":0, "metal":0}
 
@@ -458,38 +525,37 @@ class MyGame(arcade.View):
                 wrapper.align_x = 250
             for wrapper in self.secondary_wrappers:
                 wrapper.align_x = 250
-            event.source.wrapper.align_x = 0
+            event.source.wrapper.align_x = -50
             event.source.open = False
             self.ui_sprites = arcade.SpriteList()
             self.object_placement = None
             self.object = None
             self.requirements = {"wood":float("inf")}
-            self.ui_sprite_text = CustomTextSprite(None, self.Alphabet_Textures, center_x=50, center_y = 20, width = 500)
             self.secondary_wrappers[0].child.open = False
             self.secondary_wrappers[2].child.open = False
-            self.ui_sprite_background.center_x = -200
+            self.hide_selection_panel()
         else:
             for wrapper in self.secondary_wrappers:
-                wrapper.align_x = 0
-            event.source.wrapper.align_x = -150
+                wrapper.align_x = -50
+            event.source.wrapper.align_x = -200
             event.source.open = True
     def menus_button_click(self, event):
         if event.source.open:
             for wrapper in self.menu_buttons:
                 wrapper.align_x = 250
             for wrapper in self.secondary_wrappers:
-                wrapper.align_x = 0
-            self.main_button.wrapper.align_x = -150
+                wrapper.align_x = -50
+            self.main_button.wrapper.align_x = -200
             event.source.open = False
-            self.ui_sprite_background.center_x = -200
+            self.hide_selection_panel()
         else:
             for wrapper in self.selectables:
                 wrapper.align_x = 250
             for wrapper in self.menu_buttons:
-                wrapper.align_x = 0
+                wrapper.align_x = -50
             for wrapper in self.secondary_wrappers:
-                wrapper.align_x = -150
-            self.main_button.wrapper.align_x = -300
+                wrapper.align_x = -200
+            self.main_button.wrapper.align_x = -350
             event.source.open = True
             self.selectables_button.open = False
 
@@ -497,8 +563,7 @@ class MyGame(arcade.View):
             self.object_placement = None
             self.object = None
             self.requirements = {"wood":float("inf")}
-            self.ui_sprite_background.center_x = -200
-            self.ui_sprite_text = CustomTextSprite(None, self.Alphabet_Textures, center_x=50, center_y = 20, width = 500)
+            self.hide_selection_panel()
     def selectables_click(self, event):
         if event.source.open:
             for wrapper in self.menu_buttons:
@@ -506,23 +571,22 @@ class MyGame(arcade.View):
             for wrapper in self.selectables:
                 wrapper.align_x = 250
             for wrapper in self.secondary_wrappers:
-                wrapper.align_x = 0
-            self.main_button.wrapper.align_x = -150
+                wrapper.align_x = -50
+            self.main_button.wrapper.align_x = -200
 
             self.ui_sprites = arcade.SpriteList()
             self.object_placement = None
             self.object = None
             self.requirements = {"wood":float("inf")}
-            self.ui_sprite_background.center_x = -200
-            self.ui_sprite_text = CustomTextSprite(None, self.Alphabet_Textures, center_x=50, center_y = 20, width = 500)
+            self.hide_selection_panel()
         else:
             for wrapper in self.menu_buttons:
                 wrapper.align_x = 250
             for wrapper in self.selectables:
-                wrapper.align_x = 0
+                wrapper.align_x = -50
             for wrapper in self.secondary_wrappers:
-                wrapper.align_x = -150
-            self.main_button.wrapper.align_x = -300
+                wrapper.align_x = -200
+            self.main_button.wrapper.align_x = -350
             self.menus_button.open = False
         event.source.open = not event.source.open
     def expand_button_click(self, event):
@@ -574,26 +638,66 @@ class MyGame(arcade.View):
                 ui_sprite.requirements = requirements[obj]
 
                 self.ui_sprites.append(ui_sprite)
-                sprite.destroy(self)
                 if isinstance(sprite, Person):
-                    self.population += 1
+                    sprite.destroy(self, count_population=False)
+                else:
+                    sprite.destroy(self)
+
+    def hide_selection_panel(self):
+        self.selection_panel_visible = False
+
+    def show_selection_panel(self, text):
+        if not self.selection_panel:
+            return
+        self.selection_panel.update_text(
+            text,
+            self.Alphabet_Textures,
+            center_x=self.selection_panel_position[0],
+            center_y=self.selection_panel_position[1],
+            width=self.selection_panel_width,
+            vertical_align='top',
+        )
+        self.selection_panel_visible = True
+
+    def show_lack_popup(self, text, screen_x, screen_y, duration=3):
+        self.lack_popup_timer = time.time() + duration
+        self.lack_popup = CustomTextSprite(
+            text,
+            self.Alphabet_Textures,
+            center_x=screen_x,
+            center_y=screen_y,
+            width=200,
+            text_margin=14,
+        )
+        self._active_lack_popup_type = text
+
+    def refresh_population(self) -> int:
+        """Recompute population based on active sprites and return it."""
+        alive_people = len(self.People)
+        people_in_buildings = sum(len(getattr(building, "list_of_people", [])) for building in self.Buildings)
+        people_on_boats = sum(len(getattr(boat, "list", [])) for boat in self.Boats)
+        self.population = alive_people + people_in_buildings + people_on_boats
+        return self.population
+
+    def _add_lack(self, lack_name: str):
+        if lack_name not in self.lacks:
+            self.lacks.append(lack_name)
     def on_ScienceMenuclick(self, event):
         self.ui_sprites = arcade.SpriteList()
         self.object_placement = None
         self.object = None
         self.requirements = {"wood":float("inf")}
-        self.ui_sprite_background.center_x = -200
-        self.ui_sprite_text = CustomTextSprite(None, self.Alphabet_Textures, center_x=50, center_y = 20, width = 500)
+        self.hide_selection_panel()
 
         self.uimanager.disable()
         self.window.show_view(ScienceMenu(self))
+
     def on_VolumeMenuclick(self, event):
         self.ui_sprites = arcade.SpriteList()
         self.object_placement = None
         self.object = None
         self.requirements = {"wood":float("inf")}
-        self.ui_sprite_background.center_x = -200
-        self.ui_sprite_text = CustomTextSprite(None, self.Alphabet_Textures, center_x=50, center_y = 20, width = 500)
+        self.hide_selection_panel()
 
         self.uimanager.disable()
         self.window.show_view(VolumeMenu(self))
@@ -601,12 +705,30 @@ class MyGame(arcade.View):
         self.uimanager.disable()
         self.window.show_view(BuildingMenu(self))
     def activate_Christmas(self):
+        if self._returning_to_menu:
+            return
+        if self.toys < self.toy_amount:
+            self.End("The workshop could not meet the children's demands.")
+            return
+
         self.update_text(1)
         self.uimanager.disable()
         self.window.show_view(ChristmasMenu(self))
     def training_menu(self, event):
         self.uimanager.disable()
         self.window.show_view(TrainingMenu(self, event.source.building))
+    def apply_christmas_success(self):
+        self.toys -= self.toy_amount
+        if self.toys < 0:
+            self.toys = 0
+        self.toy_amount = ceil(self.toy_amount * 1.08)
+        self.Completed_Christmas = False
+        self.Christmas_timer = 0
+    def resume_after_christmas(self):
+        self.apply_christmas_success()
+        self.uimanager.enable()
+        self.center_camera()
+        self.window.show_view(self)
     def person_switch(self, event):
         person = event.source.obj
         if person.state2 == "Patrol":
@@ -664,8 +786,13 @@ class MyGame(arcade.View):
             for text in self.text_sprites:
                 text.draw()
             if self.lack_text: self.lack_text.draw()
-        self.ui_sprite_background.draw()
-        self.ui_sprite_text.draw()
+        if self.lack_popup:
+            if time.time() > self.lack_popup_timer:
+                self.lack_popup = None
+            else:
+                self.lack_popup.draw()
+        if self.selection_panel_visible and self.selection_panel:
+            self.selection_panel.draw()
         for PopUp in self.PopUps: PopUp.draw()
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
@@ -814,25 +941,37 @@ class MyGame(arcade.View):
                 return
             
             string = ""
-            if arcade.get_distance(self.player.center_x, self.player.center_y, x, y) > 400:
-                string = "Too far from Santa"
-            elif not _AStarSearch(self.graph, self.player.position, (x, y), movelist=[0], min_dist=50):
-                string = "Santa can not pathfind here"
-            elif get_closest_sprite((x, y), self.People)[1] < 100:
-                pass
-            elif self.SnowMap[x][y] == 0:
-                string = "Must be 3 blocks from a Building or adjacent to an elf"
-            elif arcade.get_sprites_at_point((x, y), self.Enemies): 
-                string = "Can not place on an Enemy"
-            elif self.objects[self.object] == Person and self.population >= self.max_pop:
-                string = "Not enough Housing"
-            if string: 
-                info_sprite = UpdatingText(string, self.Alphabet_Textures, .5, width = 150, center_x=org_x, center_y=org_y)
-                self.PopUps.append(info_sprite)
-                return
+        if self.object is None:
+            info_sprite = UpdatingText("Select an item to deploy first", self.Alphabet_Textures, .5, width = 200, center_x=org_x, center_y=org_y)
+            self.PopUps.append(info_sprite)
+            return
 
-            if self.unlocked[self.object] and 0 < x < 5000 and 0 < y < 5000:
-                
+        current_population = self.refresh_population()
+
+        if arcade_math.get_distance(self.player.center_x, self.player.center_y, x, y) > 400:
+            string = "Too far from Santa"
+        elif not _AStarSearch(self.graph, self.player.position, (x, y), movelist=[0], min_dist=50):
+            string = "Santa can not pathfind here"
+        elif get_closest_sprite((x, y), self.People)[1] < 100:
+            pass
+        elif self.SnowMap[x][y] == 0:
+            string = "Must be 3 blocks from a Building or adjacent to an elf"
+        elif arcade.get_sprites_at_point((x, y), self.Enemies):
+            string = "Can not place on an Enemy"
+        elif (
+            current_population >= self.max_pop
+            and (
+                self.object_placement == "People"
+                or issubclass(self.objects[self.object], Person)
+            )
+        ):
+            string = "Not enough Housing"
+
+        if string:
+            self.show_lack_popup(string, org_x, org_y, duration=1.5)
+            return
+
+        if self.unlocked[self.object] and 0 < x < 5000 and 0 < y < 5000:
                 dont_continue = False
                 if tiles[self.object] == Land and self.graph[x2][y2] != 0:
                     dont_continue = True
@@ -862,6 +1001,16 @@ class MyGame(arcade.View):
                     info_sprite = UpdatingText("missing: "+missing, self.Alphabet_Textures, .5, width = 300, center_x=org_x, center_y=org_y)
                     self.PopUps.append(info_sprite)
                     return                 
+
+                current_population = self.refresh_population()
+
+                if (
+                    current_population >= self.max_pop
+                    and issubclass(self.objects[self.object], Person)
+                ):
+                    self._add_lack("housing")
+                    self.show_lack_popup("Not enough Housing", org_x, org_y, duration=1.5)
+                    return
               
                 for _type, requirement in self.requirements.items():
                     vars(self)[_type] -= requirement
@@ -885,7 +1034,7 @@ class MyGame(arcade.View):
                 self.updateStorage()
                 self.update_text(1)
 
-            return
+        return
     def info_on_click(self, x, y):
         x2 = x
         y2 = y
@@ -923,7 +1072,7 @@ class MyGame(arcade.View):
             info += f", 1 person"
         elif len(people) > 1:
             info += f", {len(people)} people"
-        if arcade.get_distance(x, y, self.player.center_x, self.player.center_y) <= 30:
+        if arcade_math.get_distance(x, y, self.player.center_x, self.player.center_y) <= 30:
             info += f", PLAYER"
 
 
@@ -946,25 +1095,21 @@ class MyGame(arcade.View):
                 string = string.replace("Costs:", "")
 
             
-            string2 = ""
-            try:
-                obj = self.objects[ui[0].name](self, 0, 0)
-                for x, y in obj.vars.items():
-                    if not string2: string2 += ". Creates: "
-                    else: string2 += ", "
-                    string2 += f"{y} {x}"
+            produced = {}
+            obj_cls = self.objects.get(ui[0].name)
+            if obj_cls and issubclass(obj_cls, BaseBuilding):
+                produced = getattr(obj_cls, "produces", {}) or {}
 
-                if len(obj.vars.items()) == 0:
-                    string2 = string2.replace(". Creates:", "")
-                obj.destroy(self)
-            except:
-                print("PROBLEM ON LINE 966", ui[0].name)
-            string += string2
+            if produced:
+                parts = []
+                for resource, amount in produced.items():
+                    parts.append(f"{amount} {resource}")
+                if parts:
+                    string += ". Creates: " + ", ".join(parts)
 
             string += f" Placed On {tiles[ui[0].name].__name__}"
 
-            self.ui_sprite_background.center_x = 200
-            self.ui_sprite_text = CustomTextSprite(string, self.Alphabet_Textures, center_x=50, center_y = 100, width = 250)#arcade.create_text_sprite(string, 10, 10, arcade.csscolor.WHITE)#CustomTextSprite(string, self.Alphabet_Textures, Background_Texture="resources/gui/Wood Button2.png", width=len(string)*16)
+            self.show_selection_panel(string)
             
             return True
         else:
@@ -987,7 +1132,10 @@ class MyGame(arcade.View):
                 enemy.focuse_on = obj
                 self.calculate_enemy_path(enemy)
     def spawn_enemy(self):
-        x, y = self.EnemySpawnPos()
+        spawn_pos = self.EnemySpawnPos()
+        if spawn_pos is None:
+            return
+        x, y = spawn_pos
         enemy_pick = "Enemy Archer"#random.choice(["Basic Enemy", "Privateer", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
         #while not self.unlocked[enemy_pick]:
         #    enemy_pick = random.choice(["Basic Enemy", "Privateer", "Enemy Swordsman", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
@@ -1001,10 +1149,12 @@ class MyGame(arcade.View):
         if len(self.OpenToEnemies) == 0:
             max_i = 1
         i = 0
-        while not self.graph[x/50][y/50] in enemy.movelist:
+        while self.graph[int(x/50)][int(y/50)] not in enemy.movelist:
             pos = self.EnemySpawnPos()
-            if pos is not None:
-                x, y = pos
+            if pos is None:
+                enemy.destroy(self)
+                return
+            x, y = pos
             i += 1
             if i >= max_i:
                 enemy.destroy(self)
@@ -1015,6 +1165,10 @@ class MyGame(arcade.View):
                 enemy = enemy_class(self, x, y, difficulty=self.hardness_multiplier)
                 enemy.focused_on = None
                 i = 0
+                spawn_pos = self.EnemySpawnPos()
+                if spawn_pos is None:
+                    return
+                x, y = spawn_pos
 
 
 
@@ -1032,9 +1186,17 @@ class MyGame(arcade.View):
         enemy.check = False
         enemy.path = []
         #return 
-        building, distance = arcade.get_closest_sprite(enemy, self.Buildings)
-        person, distance2 = arcade.get_closest_sprite(enemy, self.People)
-        boat, distance3 = arcade.get_closest_sprite(enemy, self.Boats)
+        building, distance = get_closest_sprite(enemy.position, self.Buildings)
+        if building is None:
+            distance = float("inf")
+
+        person, distance2 = get_closest_sprite(enemy.position, self.People)
+        if person is None:
+            distance2 = float("inf")
+
+        boat, distance3 = get_closest_sprite(enemy.position, self.Boats)
+        if boat is None:
+            distance3 = float("inf")
 
         
         bias1 = (distance+5)*enemy.building_bias
@@ -1091,7 +1253,7 @@ class MyGame(arcade.View):
         obj.path = []
         #return 
         
-        obj2, distance = arcade.get_closest_sprite(obj, SpriteList)
+        obj2, distance = get_closest_sprite(obj.position, SpriteList)
         if obj2 == [] or distance > max_distance:
             return
 
@@ -1132,6 +1294,7 @@ class MyGame(arcade.View):
         person = event.source.obj.remove()
         if person != None:
             self.People.append(person)
+            self.refresh_population()
     def print_attr(self, event):
         print(vars(event.source.obj))
     def center_camera(self):
@@ -1147,52 +1310,22 @@ class MyGame(arcade.View):
             self.update_text(delta_time)
         [self.PopUps.remove(PopUp) for PopUp in self.PopUps if PopUp.update(delta_time)]
         delta_time *= self.speed
-        
+        if self._returning_to_menu:
+            return
+
+        self.refresh_population()
 
         self.Christmas_timer += delta_time
-        if self.Christmas_timer >= 135:
-            self.Christmas_timer -= 135
-            if self.Christmas_music: 
-                if self.Christmas_music.player: self.Christmas_music.stop(self.Christmas_music.player)
-            self.Christmas_music.player = None
-
-            if not self.Completed_Christmas:
-                self.activate_Christmas()
-            self.Completed_Christmas = False
+        if (
+            self.Christmas_timer >= CHRISTMAS_TRIGGER_TIME
+            and not self.Completed_Christmas
+        ):
+            if self.Christmas_music and self.Christmas_music.player:
+                self.Christmas_music.stop(self.Christmas_music.player)
             self.christmas_background.alpha = 0
-        elif self.Christmas_timer >= 120:
-            t = -self.Christmas_timer+135
-            num = 1-t/15
-
-            if not self.Completed_Christmas:
-                self.activate_Christmas()
-                self.Completed_Christmas = True
-
-
-            self.Christmas_music.set_volume(self.Christmas_music.true_volume*t/15)#.1*delta_time
-            self.Background_music.set_volume(self.Background_music.true_volume*num)
-
-            num = t/15*255
-            self.christmas_background.alpha = num
-            index = self.overParticles.index(self.christmas_background)
-            self.overParticles.swap(index, -1)
-            self.christmas_background.position = self.player.center_x, self.player.center_y
-
-            
-        elif self.Christmas_timer >= 105:
-            t = self.Christmas_timer-105
-            num = 1-t/15
-    
-            if not self.Christmas_music.player: self.Christmas_music.play()
-            
-            self.Christmas_music.set_volume(self.Christmas_music.true_volume*t/15)
-            self.Background_music.set_volume(self.Background_music.true_volume*num)
-
-            num = t/15*255
-            self.christmas_background.alpha = num
-            index = self.overParticles.index(self.christmas_background)
-            self.overParticles.swap(index, -1)
-            self.christmas_background.position = self.player.center_x, self.player.center_y
+            self.activate_Christmas()
+            self.Completed_Christmas = True
+            return
 
         self.player.on_update(delta_time)
         t = time.time()
@@ -1206,13 +1339,12 @@ class MyGame(arcade.View):
             self.science += .03/(sqrt(self.difficulty))
         if self.food <= 0:
             self.food = 0
-            self.toy_amount += delta_time*5
-            self.lacks.append("food")
+            self._add_lack("food")
 
         
             
         if self.population <= 1:
-            self.End()
+            self.End("All your elves have fallen. The workshop stands empty.")
         #Update
         self.updateStorage()
         [fire.update(self, delta_time) for fire in self.Fires]
@@ -1224,14 +1356,23 @@ class MyGame(arcade.View):
         if self.player.boat: self.player.position = self.player.boat.position
         self.center_camera()
     
-        self.spawnEnemy += delta_time
-        if self.spawnEnemy >= 0:
+        scaled_delta = delta_time * self.speed
+
+        self.spawnEnemy += scaled_delta
+        spawned = False
+        while self.spawnEnemy >= 0:
             self.spawnEnemy -= 25
             self.spawn_enemy()  
             self.difficulty *= 1.02
+            spawned = True
+        if spawned and not self.Enemies:
+            # Ensure snow towers retarget after new spawn
+            for building in self.Buildings:
+                if isinstance(building, SnowTower):
+                    building.focused_on = None
         
         if self.population <= 1:
-            self.End()      
+            self.End("All your elves have fallen. The workshop stands empty.")      
         t2 = time.time()-t
 
         variables = vars(self)
@@ -1239,13 +1380,16 @@ class MyGame(arcade.View):
         for resource in ["wood", "stone", "metal"]:
             weight += variables[resource]*item_weight[resource]
         if weight/self.mcsStorage > .98:
-            self.lacks.append("Mcs Storage")
+            self._add_lack("Mcs Storage")
         
         if self.population >= self.max_pop:
-            self.lacks.append("housing")
+            self._add_lack("housing")
         if not self.lacks:
             self.lack_text = None
             return
+        if self.lack_popup and time.time() > self.lack_popup_timer:
+            self.lack_popup = None
+            self._active_lack_popup_type = None
         window = arcade.get_window()
         x, y = window.width/2, window.height-20
         string = ""
@@ -1253,7 +1397,9 @@ class MyGame(arcade.View):
             if string: string += ", "
             else: string += "You lack: "
             string += lack
-        self.lack_text = CustomTextSprite(string, self.Alphabet_Textures, center_x=x-200, center_y = y, width = 200, text_margin=14, Background_offset_x=100, Background_offset_y=-50, Background_Texture="resources/gui/Small Text Background.png", Background_scale=2)
+            if self.object and lack.lower().startswith(self.object.lower()[:3]) and self.lack_popup is None:
+                self.show_lack_popup(f"{lack}", x, y)
+        self.lack_text = CustomTextSprite(string, self.Alphabet_Textures, center_x=x-200, center_y = y, width = 200, text_margin=14)#, Background_offset_x=100, Background_offset_y=-50, Background_Texture="resources/gui/Small Text Background.png", Background_scale=1)
     def update_text(self, delta_time):
         self.text_timer += delta_time
 
@@ -1264,62 +1410,63 @@ class MyGame(arcade.View):
         y = self.camera.viewport_height-20
 
         output = f"Wood Count: {floor(self.wood)}"
-        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=55, center_y = y, width = 500, text_margin=14))
+        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=145, center_y = y, width = 500, text_margin=14))
         y -= 30
 
         output = f"Stone Count: {floor(self.stone)}"
-        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=55, center_y = y, width = 500, text_margin=14))
+        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=145, center_y = y, width = 500, text_margin=14))
         y -= 30
 
         output = f"Food Count: {floor(self.food)}"
-        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=55, center_y = y, width = 500, text_margin=14))
+        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=155, center_y = y, width = 500, text_margin=14))
         y -= 30
 
         output = f"Science Count: {floor(self.science*10)/10}"
-        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=55, center_y = y, width = 500, text_margin=14))
+        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=175, center_y = y, width = 500, text_margin=14))
         y -= 30
 
         output = f"Time Alive: {floor(self.time_alive*100)/100}"
-        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=55, center_y = y, width = 500, text_margin=14))
+        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=160, center_y = y, width = 500, text_margin=14))
         y -= 30
 
         spawntime = -self.spawnEnemy
         output = f"Next Wave: {floor(spawntime*100)/100}"
-        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=55, center_y = y, width = 500, text_margin=14))
+        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=155, center_y = y, width = 500, text_margin=14))
         y -= 30
 
         output = f"Food Storage:{floor(self.foodStoragePercent*100)}% full"
-        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=55, center_y = y, width = 500, text_margin=13))
+        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=180, center_y = y, width = 500, text_margin=13))
         y -= 30
 
         output = f"Resource Storage:{floor(self.mcsStoragePercent*100)}% full"
-        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=55, center_y = y, width = 500, text_margin=13))
+        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=200, center_y = y, width = 500, text_margin=13))
         y -= 30
 
-        output = f"{floor(self.toys)} Toys, {floor(self.toys/self.toy_amount)}% of Toys Made"
-        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=55, center_y = y, width = 500, text_margin=13))
+        percent = 0
+        if self.toy_amount:
+            percent = floor((self.toys / self.toy_amount) * 100)
+        output = f"{floor(self.toys)} Toys, {percent}% of Toys Made"
+        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=190, center_y = y, width = 500, text_margin=13))
         y -= 30
 
-        num = 75-self.Christmas_timer
-        if num < 0:
-            num = 90+num
-        output = f"Christmas in {round(num*100)/100}"
-        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=55, center_y = y, width = 500, text_margin=13))
+        remaining = max(0.0, CHRISTMAS_TRIGGER_TIME - self.Christmas_timer)
+        output = f"Christmas in {round(remaining*100)/100}"
+        self.text_sprites.append(CustomTextSprite(output, self.Alphabet_Textures, center_x=165, center_y = y, width = 500, text_margin=13))
     def updateStorage(self):
         variables = vars(self)
         weight = variables["food"]*item_weight["food"]
         if weight > self.food_storage and prev_frame["food"] < weight: 
-            self.lacks.append("food storage")
+            self._add_lack("food storage")
             variables["food"] = prev_frame["food"]
         elif weight > self.food_storage:
-            self.lacks.append("food storage")
+            self._add_lack("food storage")
         self.foodStoragePercent = weight / self.food_storage
 
         weight = 0
         for resource in ["wood", "stone", "metal"]:
             weight += variables[resource]*item_weight[resource]
         if weight > self.mcsStorage:
-            self.lacks.append("Mcs Storage")
+            self._add_lack("Mcs Storage")
             for resource in ["wood", "stone", "metal"]: 
                 variables[resource] = prev_frame[resource]
                 
@@ -1498,15 +1645,18 @@ class MyGame(arcade.View):
             y = 0
             x += 50
     def EnemySpawnPos(self):
-        if len(self.OpenToEnemies) > 0:
+        while self.OpenToEnemies:
             random_num = random.randrange(0, len(self.OpenToEnemies))
-            return self.OpenToEnemies[random_num][0], self.OpenToEnemies[random_num][1]
-        elif len(self.People) > 0:
+            x, y = self.OpenToEnemies[random_num]
+            if self.graph[int(x/50)][int(y/50)] == 0:
+                return x, y
+            self.OpenToEnemies.pop(random_num)
+        if len(self.People) > 0:
             person = self.People[random.randrange(0, len(self.People))]
             return person.center_x, person.center_y
-        elif self.population == 0:
+        if self.population == 0:
             self.End()
-        elif len(self.Boats) > 0:
+        if len(self.Boats) > 0:
             boat = self.Boats[random.randrange(0, len(self.Boats))]
             return boat.center_x, boat.center_y
         raise ReferenceError("BUG: Either no People in Spritelist or No place open to enemies")
@@ -1515,6 +1665,7 @@ class MyGame(arcade.View):
         x = round(x/50)*50
         y = round(y/50)*50
 
+        graph_lookup = self.graph
         for x2 in range(-max_dist, max_dist, 50):
             if not 0 <= x2+x < 5000:
                 continue
@@ -1524,6 +1675,7 @@ class MyGame(arcade.View):
 
                 x1 = x2+x
                 y1 = y2+y
+                tile_type = graph_lookup[int(x1/50)][int(y1/50)]
                 if abs(x2)<=min_dist and abs(y2)<=min_dist:
                     self.EnemyMap[x1][y1] -= placing
                     self.SnowMap[x1][y1] += placing
@@ -1531,9 +1683,10 @@ class MyGame(arcade.View):
                     self.EnemyMap[x1][y1] += placing
     
                 #NOTE: UPDATE open to Enemies list
+                if tile_type != 0:
+                    continue
                 if self.EnemyMap[x1][y1] > 0:
-                    if not (x1, y1) in self.OpenToEnemies:
-
+                    if (x1, y1) not in self.OpenToEnemies:
                         self.OpenToEnemies.append((x1, y1))
                 elif (x1, y1) in self.OpenToEnemies:
                     self.OpenToEnemies.remove((x1, y1))
@@ -1567,23 +1720,33 @@ class MyGame(arcade.View):
                 continue
             if isinstance(value, arcade.SpriteList):
                 variables[key] = self.copy_SpriteList(value)
-                outfile = open(f"{self.file_num}",'wb')
             elif isinstance(value, (int, float, dict, list)):
                 variables[key] = value
-            
-        variables[f"player"] = copy(self.player)
-        variables["player"].sprite_lists = []
-        variables["player"]._sprite_list = []
 
-        
+        # Capture only primitive player state for serialization
+        player_state = {
+            "center_x": self.player.center_x,
+            "center_y": self.player.center_y,
+            "health": getattr(self.player, "health", 0),
+            "max_health": getattr(self.player, "max_health", 0),
+        }
+        variables["player_state"] = player_state
+
+
         variables["EnemyMap"] = self.EnemyMap
         variables["OpenToEnemies"] = self.OpenToEnemies
         variables["graph"] = self.graph.graph
+        variables["x_line"] = getattr(self, "x_line", 0)
+        variables["y_line"] = getattr(self, "y_line", 0)
         print(type(self.graph.graph))
-        
-        outfile = open(f"{self.file_num}",'wb')
-        pickle.dump(variables, outfile)
-        outfile.close()
+
+        if not self.file_num:
+            return
+
+        file_path = get_save_path(self.file_num)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        with file_path.open('wb') as outfile:
+            pickle.dump(variables, outfile)
     def copy_SpriteList(self, sprite_list: arcade.SpriteList):
         """
         Copy(and convert) the spritelist into a list
@@ -1598,19 +1761,27 @@ class MyGame(arcade.View):
         :return: Converted SpriteList
         """
         sprite_list_copy = []
+        state_attrs = ("max_pop", "food_storage", "mcsStorage")
         for sprite in sprite_list:
+            state_snapshot = {attr: getattr(self, attr, None) for attr in state_attrs}
             sprite2 = type(sprite)(self, sprite.center_x, sprite.center_y)
+            for attr, value in state_snapshot.items():
+                if value is not None:
+                    setattr(self, attr, value)
             variables = vars(sprite2)
             for key, val in vars(sprite).items():
-                #pythonic apperently
-                if val.__class__.__module__ == '__builtin__': 
+                if isinstance(val, (int, float, bool, str, list, dict, tuple, type(None))):
                     variables[key] = val
             sprite2.save(self)
             sprite_list_copy.append(sprite2)
         return sprite_list_copy
     def load(self, file_num):
-        infile = open(f"{file_num}", 'rb')
-        file = pickle.load(infile)
+        file_path = get_save_path(file_num)
+        with file_path.open('rb') as infile:
+            file = pickle.load(infile)
+
+        x_line = file.get("x_line", getattr(self, "x_line", 0))
+        y_line = file.get("y_line", getattr(self, "y_line", 0))
 
         for key, val in file.items():
             if isinstance(val, list): 
@@ -1618,17 +1789,22 @@ class MyGame(arcade.View):
                     vars(self)[key] = val
                     continue
                 elif key == "graph":
-                    print("DEJNNJED")
-                    print(type(vars(self)[key]))
-                    print(vars(self)[key][10][12])
-                    graph = LivingMap(file["x_line"], file["y_line"], file["x_line"]*file["y_line"])
-                    vars(self)[key] = val
+                    if x_line and y_line:
+                        graph = LivingMap(x_line, y_line, x_line * y_line, tilesize=50)
+                        graph.graph = val
+                        self.graph = graph
+                        self.x_line = x_line
+                        self.y_line = y_line
+                    continue
                 for sprite in val:
                     vars(self)[key].append(sprite)
             elif isinstance(val, arcade.SpriteList):
                 for sprite in val:
                     vars(self)[key].append(sprite)
             else:
+                if key in {"x_line", "y_line"}:
+                    vars(self)[key] = val
+                    continue
                 vars(self)[key] = val
         for key, val in vars(self).items():
             if isinstance(val, arcade.SpriteList): 
@@ -1636,7 +1812,12 @@ class MyGame(arcade.View):
                     continue
                 for sprite in val:
                     sprite.load(self)
-        self.player = Player(center_x=file["player"].center_x, center_y=file["player"].center_y)#arcade.Sprite("resources/Sprites/Player.png", scale=.5, center_x=file["player"].center_x, center_y=file["player"].center_y)
+        player_state = file.get("player_state") or {}
+        self.player = Player(center_x=player_state.get("center_x", 0), center_y=player_state.get("center_y", 0))
+        if "health" in player_state:
+            self.player.health = player_state["health"]
+        if "max_health" in player_state:
+            self.player.max_health = player_state["max_health"]
         """ self.graph = LivingMap(file["graphlength"], file["graphlength"], file["graphlength"]*file["graphlength"], self.Stones, self.Seas, tilesize=50)
         self.graphlength = file["graphlength"]
 
@@ -1809,8 +1990,10 @@ class MyTutorial(MyGame):
 
         if self.question: self.question.draw()
     def spawn_enemy(self):
-        #super().spawn_enemy()
-        x, y = self.EnemySpawnPos()
+        spawn_pos = self.EnemySpawnPos()
+        if spawn_pos is None:
+            return
+        x, y = spawn_pos
         enemy_pick = random.choice(["Basic Enemy", "Privateer", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
         while not self.unlocked[enemy_pick]:
             enemy_pick = random.choice(["Basic Enemy", "Privateer", "Enemy Swordsman", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
@@ -1824,10 +2007,12 @@ class MyTutorial(MyGame):
         if len(self.OpenToEnemies) == 0:
             max_i = 1
         i = 0
-        while not self.graph[x/50][y/50] in enemy.movelist:
+        while self.graph[int(x/50)][int(y/50)] not in enemy.movelist:
             pos = self.EnemySpawnPos()
-            if pos is not None:
-                x, y = pos
+            if pos is None:
+                enemy.destroy(self)
+                return
+            x, y = pos
             i += 1
             if i >= max_i:
                 enemy.destroy(self)
@@ -1838,6 +2023,10 @@ class MyTutorial(MyGame):
                 enemy = enemy_class(self, x, y, difficulty=self.hardness_multiplier)
                 enemy.focused_on = None
                 i = 0
+                spawn_pos = self.EnemySpawnPos()
+                if spawn_pos is None:
+                    return
+                x, y = spawn_pos
 
         enemy.center_x = x
         enemy.center_y = y
@@ -1860,11 +2049,79 @@ class MyTutorial(MyGame):
         "Enemy Wizard":"Wizard, has 2 types of attacks. Does splash damage. Prefers people"}[enemy_pick]
         sprite.text = f"{enemy_name}"
 
+class GameOverView(arcade.View):
+
+    def __init__(self, menu, message: str):
+        super().__init__()
+        self.menu = menu
+        self.message = message
+        self.uimanager = arcade.gui.UIManager()
+        self.uimanager.enable()
+
+        button = UIFlatButton(text="Return to Menu", width=220)
+        button.on_click = self.on_return
+        wrapper = UIAnchorWidget(
+            anchor_x="center",
+            anchor_y="center",
+            child=button,
+            align_x=0,
+            align_y=-80,
+        )
+        self.uimanager.add(wrapper)
+
+        exit_button = UIFlatButton(text="Exit", width=220)
+        exit_button.on_click = self.on_exit
+        wrapper = UIAnchorWidget(
+            anchor_x="center",
+            anchor_y="center",
+            child=exit_button,
+            align_x=0,
+            align_y=-150,
+        )
+        self.uimanager.add(wrapper)
+
+    def on_draw(self):
+        self.clear(arcade.color.DARK_SLATE_GRAY)
+        width, height = self.window.width, self.window.height
+        arcade.draw_text(
+            "Game Over",
+            width / 2,
+            height / 2 + 80,
+            arcade.color.WHITE,
+            36,
+            anchor_x="center",
+        )
+        arcade.draw_text(
+            self.message,
+            width / 2,
+            height / 2 + 20,
+            arcade.color.ANTIQUE_WHITE,
+            18,
+            anchor_x="center",
+            width=width * 0.8,
+            align="center",
+        )
+
+    def on_return(self, _event):
+        self.uimanager.disable()
+        if hasattr(self.menu, "uimanager"):
+            self.menu.uimanager.enable()
+        if hasattr(self.menu, "update_audio"):
+            self.menu.update_audio()
+        self.window.show_view(self.menu)
+
+    def on_exit(self, _event):
+        self.uimanager.disable()
+        self.window.show_view(startMenu())
+
+
 class EndMenu(arcade.View):
 
-    def __init__(self, history, game,  menu):
+    def __init__(self, history, game, menu, reason: str | None = None, extra_lines: list[str] | None = None):
         self.menu = menu
         self.game_view = game
+        self.reason = reason
+        self.extra_lines = extra_lines or []
         
         super().__init__()
         self.Christmas_timer = 30
@@ -1904,24 +2161,41 @@ class EndMenu(arcade.View):
         self.uimanager = arcade.gui.UIManager()
         self.uimanager.enable()
 
-        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 71, margin=1)
         self.Alphabet_Textures = {" ":None}
-        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
+        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_'"
         for i in range(len(string)):
             self.Alphabet_Textures[string[i]] = textures[i]
   
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Return", width=140, height=50, x=0, y=50, text_offset_x = 10, text_offset_y = 30, offset_x=75, offset_y=25)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Return", width=140, height=50)
         start_button.on_click = self.on_return
         wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-100)
         self.uimanager.add(wrapper)
 
         #self.check_game_save()
-        self.texts.append(CustomTextSprite(f"You Died. ", self.Alphabet_Textures, center_x=600, center_y = 600, width = 1000, scale = 4, text_margin=50))
+        self.texts.append(CustomTextSprite(f"You Died. ", self.Alphabet_Textures, center_x=self.window.width/2, center_y = self.window.height+200, width = 1000, scale = 4, text_margin=50))
+        if self.reason:
+            self.texts.append(CustomTextSprite(self.reason, self.Alphabet_Textures, center_x=self.window.width/2, center_y = 540, width = 1200, text_margin=18, scale=1.5))
+        if self.extra_lines:
+            extra_y = 500
+            for line in self.extra_lines:
+                self.texts.append(
+                    CustomTextSprite(
+                        line,
+                        self.Alphabet_Textures,
+                        center_x=self.window.width/2,
+                        center_y=extra_y,
+                        width=1200,
+                        text_margin=18,
+                        scale=1.2,
+                    )
+                )
+                extra_y -= 35
         if history == 0: string = "You gained no history"
         else: string = f"You gained: {round(history*10)/10} History"
         self.texts.append(CustomTextSprite(f"You were alive for {round(game.time_alive*100)/100} seconds.  {string}", self.Alphabet_Textures, center_x=300, center_y = 50, width = 5000, text_margin=16))
 
-        main_button = CustomUIFlatButton(self.game_view.Alphabet_Textures, click_sound = self.game_view.click_sound, width=50, height=50, scale=.05, x=0, y=50, offset_x=25, offset_y=25, Texture="resources/gui/Question Mark.png", Pressed_Texture="resources/gui/Question Mark.png", Hovered_Texture="resources/gui/Question Mark.png")
+        main_button = CustomUIFlatButton(self.game_view.Alphabet_Textures, click_sound = self.game_view.click_sound, width=50, height=50, scale=1, Texture="resources/gui/Question Mark.png", Pressed_Texture="resources/gui/Question Mark.png", Hovered_Texture="resources/gui/Question Mark.png")
         main_button.on_click = self.on_question_click
         main_button.open = False
         wrapper = UIAnchorWidget(anchor_x="center", anchor_y="center",
@@ -1954,7 +2228,11 @@ class EndMenu(arcade.View):
     def on_question_click(self, event):
         window = arcade.get_window()
         if not self.question: 
-            text = CustomTextSprite("You lose once you have less than 2 elfs alive. You get history based on how long you lived. See Progress Tree to use it. You start getting history after 5 minutes, so you can not spam create worlds", self.game_view.Alphabet_Textures, width=-150, center_x=window.width/2+event.source.wrapper.align_x-150, center_y=window.height/2+event.source.wrapper.align_y-80, Background_offset_x=220, Background_offset_y=-25, Background_scale=1.6, Background_Texture="resources/gui/Small Text Background.png")
+            text = CustomTextSprite(
+                "You lose once you have less than 2 elfs alive. You get history based on how long you lived. See Progress Tree to use it. You start getting history after 5 minutes, so you can not spam create worlds",
+                self.game_view.Alphabet_Textures, width=3000,
+                center_x=window.width/2+event.source.wrapper.align_x-150, center_y=window.height/2+event.source.wrapper.align_y-80,
+                Background_Texture="resources/gui/Small Text Background.png")
             self.texts.append(text)
             self.question = text
         else:
@@ -1964,6 +2242,10 @@ class EndMenu(arcade.View):
         self.uimanager.disable()
         self.menu.uimanager.enable()
         self.window.show_view(self.menu)
+
+    def on_exit(self, _event):
+        self.uimanager.disable()
+        self.window.show_view(startMenu())
     def on_show(self):
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.color.BEIGE)
@@ -1976,89 +2258,94 @@ class EndMenu(arcade.View):
 
         self.uimanager.draw()
         for text in self.texts: text.draw()
+
+
 class ChristmasMenu(arcade.View):
+
     def __init__(self, game):
+        super().__init__()
         self.game_view = game
         self.window = arcade.get_window()
-        super().__init__(self.window)
+
+        self.background = arcade.Sprite(
+            "resources/gui/Christmas_menu_Background.png",
+            center_x=self.window.width / 2,
+            center_y=self.window.height / 2,
+            scale=10,
+        )
+
         self.uimanager = arcade.gui.UIManager()
         self.uimanager.enable()
-        self.Background = arcade.Sprite("resources/gui/Christmas_menu_Background.png", center_x=self.window.width/2, center_y=self.window.height/2, scale = 10)
 
-        self.texts = []
-        if self.game_view.toys >= self.game_view.toy_amount:
-            self.texts.append(CustomTextSprite(f"We exceded by {self.game_view.toy_amount-self.game_view.toys} toys.", self.game_view.Alphabet_Textures, center_x=self.window.width/3, center_y = self.window.height/1.5, width = 5000))
-            self.texts.append(CustomTextSprite(f"Next Year The Children will expect at least {math.ceil(self.game_view.toy_amount*1.08)} toys", self.game_view.Alphabet_Textures, center_x=self.window.width/4, center_y = self.window.height/1.5-40, width = 5000))
-            
-            self.game_view.toy_amount *= 1.08
-        else:
-            self.texts.append(CustomTextSprite(f"We were short of {self.game_view.toy_amount-self.game_view.toys} toys.", self.game_view.Alphabet_Textures, center_x=self.window.width/3, center_y = self.window.height/1.5, width = 5000))
-            self.texts.append(CustomTextSprite(f"Over Excited Children will be {round(1-self.game_view.toys/self.game_view.toy_amount, 2)*100} % more dangerous.", self.game_view.Alphabet_Textures, center_x=self.window.width/4, center_y = self.window.height/1.5-40, width = 5000))
-            self.texts.append(CustomTextSprite(f"Next Year The Children will expect at least {math.ceil(self.game_view.toy_amount*1.1)} toys", self.game_view.Alphabet_Textures, center_x=self.window.width/4, center_y = self.window.height/1.5-80, width = 5000))
-            self.game_view.difficulty += self.game_view.toys/self.game_view.toy_amount
-            self.game_view.toy_amount *= 1.1
-            if self.game_view.toy_amount > 400 and self.game_view.difficulty >= 5:
-                if not self.game_view.unlocked["Enemy Wizard"]:
-                    self.texts.append(CustomTextSprite(f"Some Children Got Their Hands on Wands", self.game_view.Alphabet_Textures, center_x=self.window.width/4, center_y = self.window.height/1.5-120, width = 5000))
-                self.game_view.unlocked["Enemy Wizard"] = True
-            elif self.game_view.toy_amount > 300 and self.game_view.difficulty >= 3:
-                if not self.game_view.unlocked["Enemy Arsonist"]:
-                    self.texts.append(CustomTextSprite(f"Some Children Got Their Hands on Bombs", self.game_view.Alphabet_Textures, center_x=self.window.width/4, center_y = self.window.height/1.5-120, width = 5000))
-                self.game_view.unlocked["Enemy Arsonist"] = True
-            elif self.game_view.toy_amount > 200 and self.game_view.difficulty >= 2:
-                if not self.game_view.unlocked["Enemy Archer"]:
-                    self.texts.append(CustomTextSprite(f"Some Children Got Their Hands on Bows", self.game_view.Alphabet_Textures, center_x=self.window.width/4, center_y = self.window.height/1.5-120, width = 5000))
-                self.game_view.unlocked["Enemy Archer"] = True
-        self.game_view.toys -= self.game_view.toy_amount
-        if self.game_view.toys < 0: self.game_view.toys = 0
-        main_button = CustomUIFlatButton(self.game_view.Alphabet_Textures, click_sound = self.game_view.click_sound, text="Exit", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
-        main_button.on_click = self.exit
-        main_button.open = False
-        self.main_button = main_button
-        wrapper = UIAnchorWidget(anchor_x="center", anchor_y="center",
-                child=main_button, align_x=0, align_y=-150)
-        main_button.wrapper = wrapper
+        self.texts: list[CustomTextSprite] = []
+        self._text_offsets: list[tuple[float, float]] = []
+
+        quota = self.game_view.toy_amount
+        toys_made = floor(self.game_view.toys)
+        diff = toys_made - quota
+        next_quota = ceil(quota * 1.08)
+
+        summary = f"We crafted {toys_made} toys. Quota was {quota}."
+        details = "We met the children's expectations exactly."
+        if diff > 0:
+            details = f"We exceeded the quota by {diff} toy(s)!"
+
+        future = f"Next year's quota will be {next_quota}."
+
+        entries = [summary, details, future, "Press Return to resume festivities."]
+        base_y = self.window.height / 2 + 80
+        for idx, text in enumerate(entries):
+            sprite = CustomTextSprite(
+                text,
+                self.game_view.Alphabet_Textures,
+                center_x=self.window.width / 2,
+                center_y=base_y - idx * 40,
+                width=800,
+                text_margin=18,
+            )
+            self.texts.append(sprite)
+            self._text_offsets.append((0, base_y - idx * 40 - self.window.height / 2))
+
+        return_button = CustomUIFlatButton(
+            self.game_view.Alphabet_Textures,
+            click_sound=self.game_view.click_sound,
+            text="Return",
+            width=160,
+            height=54,
+        )
+        return_button.on_click = self.on_return
+        wrapper = UIAnchorWidget(
+            anchor_x="center",
+            anchor_y="center",
+            child=return_button,
+            align_x=0,
+            align_y=-120,
+        )
         self.uimanager.add(wrapper)
 
+        self.game_view.Completed_Christmas = True
 
-        main_button = CustomUIFlatButton(self.game_view.Alphabet_Textures, click_sound = self.game_view.click_sound, width=50, height=50, scale=.05, x=0, y=50, offset_x=25, offset_y=25, Texture="resources/gui/Question Mark.png", Pressed_Texture="resources/gui/Question Mark.png", Hovered_Texture="resources/gui/Question Mark.png")
-        main_button.on_click = self.on_question_click
-        main_button.open = False
-        wrapper = UIAnchorWidget(anchor_x="center", anchor_y="center",
-                child=main_button, align_x=0, align_y=-200)
-        main_button.wrapper = wrapper
-        self.uimanager.add(wrapper)
-        self.question = None
-    def on_resize(self, width: int, height: int):
-        self.game_view.on_resize(width, height)
-        return super().on_resize(width, height)
-    def on_question_click(self, event):
-        window = arcade.get_window()
-        if not self.question: 
-            text = CustomTextSprite("Make enough toys for the Children for Christmas or they will become stronger.  Happens every 2 minutes. Toys to be made increases if your elfs starve", self.game_view.Alphabet_Textures, width=-150, center_x=window.width/2+event.source.wrapper.align_x-200, center_y=window.height/2+event.source.wrapper.align_y-90, Background_offset_x=250, Background_offset_y=-25, Background_scale=1.5, Background_Texture="resources/gui/Small Text Background.png")
-            self.texts.append(text)
-            self.question = text
-        else:
-            self.texts.remove(self.question)
-            self.question = None
+    def on_return(self, _event):
+        self.uimanager.disable()
+        self.game_view.resume_after_christmas()
+
     def on_draw(self):
         self.clear()
-        self.game_view.on_draw()
-
-        self.Background.draw()
-        for text in self.texts: text.draw()
+        self.background.draw()
+        for text in self.texts:
+            text.draw()
         self.uimanager.draw()
-    def exit(self, event):
-        self.uimanager.disable()
-        self.game_view.uimanager.enable()
 
-        self.window.show_view(self.game_view)
     def on_update(self, delta_time: float):
         for text in self.texts:
-            if text.update(delta_time):
-                self.texts.remove(text)
-        return super().on_update(delta_time)
+            text.update(delta_time)
 
+    def on_resize(self, width: int, height: int):
+        self.background.center_x = width / 2
+        self.background.center_y = height / 2
+        for sprite, (_, offset_y) in zip(self.texts, self._text_offsets):
+            sprite.set_position(width / 2, height / 2 + offset_y)
+        return super().on_resize(width, height)
 class startMenu(arcade.View):
 
     def __init__(self):
@@ -2073,17 +2360,19 @@ class startMenu(arcade.View):
         reset_window_viewport(self.window)
 
         self.audios = []
-        self.audio_type_vols = {"Overall":1, "UI":1, "Background":1}
+        self.audio_type_vols = {"Overall":0, "UI":1, "Background":1}
 
         self.click_sound = Sound("resources/audio/click.wav")
         self.click_sound.start_vol = 5
         self.click_sound.type = "UI"
         self.click_sound.player = None
+        apply_audio_volume(self.click_sound, self.audio_type_vols)
         self.audios.append(self.click_sound)
 
         self.Background_music = Sound("resources/audio/magical-christmas-paul-yudin-main-version-19227-01-40.wav")
         self.Background_music.start_vol = .1
         self.Background_music.type = "Background"
+        apply_audio_volume(self.Background_music, self.audio_type_vols)
         self.audios.append(self.Background_music)
         self.Background_music.play(loop=True)
 
@@ -2091,6 +2380,7 @@ class startMenu(arcade.View):
         self.Christmas_music.start_vol = .1
         self.Christmas_music.type = "Background"
         self.Christmas_music.player = None
+        apply_audio_volume(self.Christmas_music, self.audio_type_vols)
         self.audios.append(self.Christmas_music)
         self.update_audio()
         
@@ -2107,9 +2397,9 @@ class startMenu(arcade.View):
         self.uimanager = arcade.gui.UIManager()
         self.uimanager.enable()
 
-        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 71, margin=1)
         self.Alphabet_Textures = {" ":None}
-        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
+        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_'"
         for i in range(len(string)):
             self.Alphabet_Textures[string[i]] = textures[i]
 
@@ -2126,21 +2416,21 @@ class startMenu(arcade.View):
         self.texts.append(self.title_text)
 
   
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World 1", width=220, height=54, text_margin=16, text_offset_x = 0, text_offset_y=0)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World 1", width=220, height=54)
         start_button.on_click = self.Start
         start_button.world_num = 1
-        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=150)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y", child=start_button, align_x=0, align_y=150)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World 2", width=220, height=54, text_margin=16, text_offset_x = 0, text_offset_y=0)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World 2", width=220, height=54)
         start_button.on_click = self.Start
         start_button.world_num = 2
         wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=70)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World 3", width=220, height=54, text_margin=16, text_offset_x = 0, text_offset_y=0)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World 3", width=220, height=54)
         start_button.on_click = self.Start
         start_button.world_num = 3
         wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-10)
@@ -2149,26 +2439,26 @@ class startMenu(arcade.View):
 
 
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Tutorial", width=220, height=54, text_margin=16, text_offset_x =0, text_offset_y = 0)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Tutorial", width=220, height=54)
         start_button.on_click = self.start_Tutorial
         wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-90)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Progress Tree", width=220, height=54, text_margin=16, text_offset_x = 0, text_offset_y=0)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Progress Tree", width=220, height=54)
         start_button.on_click = self.on_scienceMenuclick
         wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-20)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Volume", width=220, height=54, text_margin=16, text_offset_x = 0, text_offset_y=0)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Volume", width=220, height=54)
         start_button.on_click = self.VolumeMenu
         wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-80)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Credits", width=220, height=54, text_margin=16, text_offset_x = 0, text_offset_y=0)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Credits", width=220, height=54)
         start_button.on_click = self.CreditsMenu
         wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-140)
         start_button.wrapper = wrapper
@@ -2195,7 +2485,7 @@ class startMenu(arcade.View):
         with open("resources/GameBase copy.json", "r") as read_file:
             ScienceMenuInfo = json.load(read_file)["ScienceMenu"]
         
-        return [bool(button[8]) for button in ScienceMenuInfo]
+        return [bool(node[8]) for node in ScienceMenuInfo]
     def on_resize(self, width: int, height: int):
         base_width, base_height = 1440, 900
         scale_factor = min(width / base_width, height / base_height)
@@ -2227,10 +2517,7 @@ class startMenu(arcade.View):
         self.window.show_view(Menu)
     def update_audio(self):
         for audio in self.audios:
-            audio.volume = audio.start_vol*self.audio_type_vols[audio.type]*self.audio_type_vols["Overall"]
-            audio.source.volume = audio.volume
-            if audio.player:
-                audio.player.volume = audio.volume
+            apply_audio_volume(audio, self.audio_type_vols)
 
     def Start(self, event):
         if self.button == 4:
@@ -2310,91 +2597,91 @@ class CreateWorld(arcade.View):
         self.file_num = file_num
 
         
-        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 71, margin=1)
 
         self.Alphabet_Textures = {" ":None}
-        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
+        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_'"
         for i in range(len(string)):
             self.Alphabet_Textures[string[i]] = textures[i]
 
-
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Start", width=140, height=50, x=0, y=50, text_offset_y = 35, text_offset_x = 16, offset_x=75, offset_y=25)
-        start_button.on_click = self.Start
-        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-100)
-        self.uimanager.add(wrapper)
-
-        text = CustomTextSprite("World Type:", self.Alphabet_Textures, center_x=300, center_y = 430, width = 500)
-        text.org_x = -75
+        text = CustomTextSprite("World Type:", self.Alphabet_Textures, width = 500)
+        text.org_x = 5
         text.org_y = 180
         self.texts.append(text)
 
 
         self.gen_list = ["Normal", "Desert", "Forest"]
         self.gen_list_index = 0
-        button = CustomUIFlatButton(self.Alphabet_Textures, text="Normal", width=140, height=50, x=0, y=0, text_offset_x = 15, text_offset_y = 35, text_scale=1, offset_x=75, offset_y=24, Pressed_Texture = "resources/gui/Wood Button.png")
+        button = CustomUIFlatButton(self.Alphabet_Textures, text="Normal", width=140, height=50, Pressed_Texture = "resources/gui/Wood Button.png")
         button.on_click = self.Generation_change
-        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=button, align_x=0, align_y=150)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=button, align_x=0, align_y=145)
         self.uimanager.add(wrapper)
         button.set_text(self.gen_list[self.gen_list_index], self.Alphabet_Textures)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=60, height=60, Texture="resources/gui/Right Pointer resized.png", Hovered_Texture="resources/gui/Right Pointer resized.png", Pressed_Texture="resources/gui/Right Pointer resized.png")
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=40, height=40, Texture="resources/gui/Right Pointer resized.png")
         start_button.direction = 1#right
         start_button.button = button
-        start_button.on_click = self.Generation_change 
-        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=130, align_y=150)
+        start_button.on_click = self.Generation_change
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=80, align_y=145)
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=60, height=60, Texture="resources/gui/Left Pointer resized.png", Hovered_Texture="resources/gui/Left Pointer resized.png", Pressed_Texture="resources/gui/Left Pointer resized.png")
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=40, height=40, Texture="resources/gui/Left Pointer resized.png")
         start_button.direction = -1#left
         start_button.button = button
-        start_button.on_click = self.Generation_change 
-        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=-130, align_y=150)
+        start_button.on_click = self.Generation_change
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=-80, align_y=145)
         self.uimanager.add(wrapper)
 
 
-        text = CustomTextSprite("Difficulty:", self.Alphabet_Textures, center_x=300, center_y = 330, width = 500)
-        text.org_x = -75
+        text = CustomTextSprite("Difficulty:", self.Alphabet_Textures, width = 500)
+        text.org_x = 5
         text.org_y = 80
         self.texts.append(text)
 
 
         self.difficulty_list = [" Easy ", "Normal", " Hard "]
         self.difficulty_list_index = 0
-        button = CustomUIFlatButton(self.Alphabet_Textures, text="Easy", width=140, height=50, x=0, y=50, text_offset_x = 10, text_offset_y = 35, offset_x=75, offset_y=24, Pressed_Texture = "resources/gui/Wood Button.png")
+        button = CustomUIFlatButton(self.Alphabet_Textures, text="Easy", width=140, height=50, text_offset_x = 10, Pressed_Texture = "resources/gui/Wood Button.png")
         button.on_click = self.Difficulty_change
         wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=button, align_x=0, align_y=50)
         self.uimanager.add(wrapper)
         button.set_text(self.difficulty_list[self.difficulty_list_index], self.Alphabet_Textures)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=60, height=60, Texture="resources/gui/Right Pointer resized.png", Hovered_Texture="resources/gui/Right Pointer resized.png", Pressed_Texture="resources/gui/Right Pointer resized.png")
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=40, height=40, Texture="resources/gui/Right Pointer resized.png")
         start_button.direction = 1#right
         start_button.button = button
         start_button.on_click = self.Difficulty_change
-        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=130, align_y=50)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=80, align_y=50)
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=60, height=60, Texture="resources/gui/Left Pointer resized.png", Hovered_Texture="resources/gui/Left Pointer resized.png", Pressed_Texture="resources/gui/Left Pointer resized.png")
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=40, height=40, Texture="resources/gui/Left Pointer resized.png")
         start_button.direction = -1#left
         start_button.button = button
         start_button.on_click = self.Difficulty_change
-        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=-130, align_y=50)
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=-80, align_y=50)
         self.uimanager.add(wrapper)
 
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Clear Data", width=140, height=50, text_offset_y = 35, text_offset_x = 16, offset_x=75, offset_y=25)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Clear Data", width=140, height=50)
         start_button.on_click = self.Delete_data
         wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-50)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Return", width=140, height=50, x=0, y=50, text_margin=14, text_offset_y = 35, text_offset_x = 10, offset_x=75, offset_y=25)
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Start", width=140, height=50)
+        start_button.on_click = self.Start
+        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-100)
+        self.uimanager.add(wrapper)
+
+
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Return", width=220, height=54)
         start_button.on_click = self.Return
         wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-20)
         self.uimanager.add(wrapper)
-        
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Volume", width=140, height=50, x=0, y=50, text_margin=14, text_offset_y = 35, text_offset_x = 10, offset_x=75, offset_y=25)
+
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Volume", width=220, height=54)
         start_button.on_click = self.VolumeMenu
-        wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-70)
+        wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=start_button, align_x=20, align_y=-80)
         self.uimanager.add(wrapper)
 
         window = arcade.get_window()
@@ -2405,7 +2692,6 @@ class CreateWorld(arcade.View):
             text.update_text(text.text, self.Alphabet_Textures, center_x = text.center_x, center_y = text.center_y)
         
         self.christmas_background = arcade.Sprite("resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
-        
         self.on_resize(window.width, window.height)
     def on_resize(self, width: int, height: int):
         scale1, scale2 = width/218, height/140
@@ -2424,7 +2710,6 @@ class CreateWorld(arcade.View):
         return super().on_resize(width, height)
 
     def Delete_data(self, event):
-        window = arcade.get_window()
         rect = event.source.rect
         center_x = (rect.left + rect.right) / 2
         tooltip_y = rect.top + 40
@@ -2440,8 +2725,11 @@ class CreateWorld(arcade.View):
         )
         self.texts.append(text)
 
-        file = open(f"{self.file_num}", "r+")
-        file.truncate() 
+        if self.file_num:
+            file_path = get_save_path(self.file_num)
+            file_path.touch(exist_ok=True)
+            with file_path.open("r+") as save_file:
+                save_file.truncate()
     def Generation_change(self, event):
         step = getattr(event.source, "direction", 1)
         self.gen_list_index = (self.gen_list_index + step) % len(self.gen_list)
@@ -2452,6 +2740,7 @@ class CreateWorld(arcade.View):
         self.difficulty_list_index = (self.difficulty_list_index + step) % len(self.difficulty_list)
         target_button = getattr(event.source, "button", event.source)
         target_button.set_text(self.difficulty_list[self.difficulty_list_index], self.Alphabet_Textures)
+        print(self.difficulty_list[self.difficulty_list_index])
 
 
     def Start(self, event):
@@ -2469,10 +2758,7 @@ class CreateWorld(arcade.View):
         self.window.show_view(Game)
     def update_audio(self):
         for audio in self.audios:
-            audio.volume = audio.start_vol*self.audio_type_vols[audio.type]*self.audio_type_vols["Overall"]
-            audio.source.volume = audio.volume
-            if audio.player:
-                audio.player.volume = audio.volume
+            apply_audio_volume(audio, self.audio_type_vols)
 
 
     def on_show(self):
@@ -2510,31 +2796,30 @@ class CreditsMenu(arcade.View):
         self.christmas_background = arcade.Sprite("resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
 
     
-        x = 150
-        y = self.window.height/1.5+40
+        x = self.window.width/2
+        y = self.window.height/2+150
         self.texts.append(CustomTextSprite(f"Credits", self.menu.Alphabet_Textures, center_x=x, center_y = y, scale=4, text_margin = 60, width = 500))
         y -= 40
         self.texts.append(CustomTextSprite(f"The Arcade Library by Paul Vincent Craven", self.menu.Alphabet_Textures, center_x=x, center_y = y, width = 500))
-        y -= 40
-        self.texts.append(CustomTextSprite(f"Christmas Over Lay From https://www.freepik.com/free-vector/watercolor-christmas  -background_19963694.htm", self.menu.Alphabet_Textures, center_x=x, center_y = y, text_scale=2, text_margin = 13, width = 500))
+        y -= 50
+        self.texts.append(CustomTextSprite(f"Christmas Over Lay from: https://www.freepik.com/free-vector/watercolor-christmas  -background_19963694.htm", self.menu.Alphabet_Textures, center_x=x, center_y = y, text_scale=2, text_margin = 13, width = 1000))
         y -= 60
-        self.texts.append(CustomTextSprite(f"Wooden Buttons are From https://www.freepik.com/free-vector/wooden-buttons  -user-interface-design-game-video-player-website-vector-cartoon-set-brown  _18056387.htm", self.menu.Alphabet_Textures, center_x=x, center_y = y, scale=1, text_margin = 16, width = 500))
+        self.texts.append(CustomTextSprite(f"Wooden Buttons are from: https://www.freepik.com/free-vector/wooden-buttons  -user-interface-design-game-video-player-website-vector-cartoon-set-brown  _18056387.htm", self.menu.Alphabet_Textures, center_x=x, center_y = y, width = 1000))
         y -= 60
-        self.texts.append(CustomTextSprite(f"Silver Buttons are From https://www.freepik.com/free-vector/game-buttons-wood-stone-gamer-  interface_23068339.htm", self.menu.Alphabet_Textures, center_x=x, center_y = y, scale=.9, text_margin = 12, width = 500))
+        self.texts.append(CustomTextSprite(f"Silver Buttons are from: https://www.freepik.com/free-vector/game-buttons-wood-stone-gamer-  interface_23068339.htm", self.menu.Alphabet_Textures, center_x=x, center_y = y, scale=.9, text_margin = 12, width = 1000))
         y -= 60
-        self.texts.append(CustomTextSprite(f"Gold Buttons are From https://www.freepik.com/free-vector/wooden-gold-buttons-ui-game  _12760665.htm", self.menu.Alphabet_Textures, center_x=x, center_y = y, text_scale=2, text_margin = 13, width = 500))
+        self.texts.append(CustomTextSprite(f"Gold Buttons are from: https://www.freepik.com/free-vector/wooden-gold-buttons-ui-game  _12760665.htm", self.menu.Alphabet_Textures, center_x=x, center_y = y, text_scale=2, text_margin = 13, width = 1000))
         y -= 60
-        self.texts.append(CustomTextSprite(f"Woodeen Backgrounds are From https://www.freepik.com/free-vector/wooden-gold-buttons-ui  -game_12760665.htm", self.menu.Alphabet_Textures, center_x=x, center_y = y, text_scale=2, text_margin = 13, width = 500))
+        self.texts.append(CustomTextSprite(f"Wooden Backgrounds are from: https://www.freepik.com/free-vector/wooden-gold-buttons-ui  -game_12760665.htm", self.menu.Alphabet_Textures, center_x=x, center_y = y, text_scale=2, text_margin = 13, width = 1000))
         y -= 60
         
 
         self.uimanager = arcade.gui.UIManager()
         self.uimanager.enable()
 
-        main_button = CustomUIFlatButton(self.menu.Alphabet_Textures, click_sound = self.menu.click_sound, text="Exit", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y=35, offset_x=75, offset_y=25)
-        main_button.on_click = self.exit
-        wrapper = UIAnchorWidget(anchor_x="center", anchor_y="center",
-                child=main_button, align_x=0, align_y=-200)
+        menu_button = CustomUIFlatButton(self.menu.Alphabet_Textures, click_sound = self.menu.click_sound, text="Back", width=220, height=54)
+        menu_button.on_click = self.exit
+        wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=menu_button, align_x=20, align_y=-20)
         self.uimanager.add(wrapper)
 
         window = arcade.get_window()
@@ -2575,14 +2860,12 @@ class UpgradeScienceMenu(arcade.View):
         self.gold_button_texture = arcade.load_texture("resources/gui/Gold Button.png")
         self.silver_button_texture = arcade.load_texture("resources/gui/Silver Button.png")
 
-        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 71, margin=1)
         self.Alphabet_Textures = {" ":None}
-        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
+        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_'"
         for i in range(len(string)):
             self.Alphabet_Textures[string[i]] = textures[i]
-  
         self.set_up()
-
 
         self.tooltip = CustomTextSprite(
             "",
@@ -2607,39 +2890,29 @@ class UpgradeScienceMenu(arcade.View):
 
         self.pressed_a = False
         self.pressed_d = False
-
         self.mouse_x = 0
         self.mouse_y = 0
         self.x = 0
-        
 
         """ This is run once when we switch to this view """
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
         reset_window_viewport(self.window)
-
 
         self.uimanager = arcade.gui.UIManager()
         self.uimanager.enable()
         self.lineList = ShapeElementList()
         self.load()
 
-
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Menu", width=140, height=50, x=0, y=50, text_offset_x = 16, text_offset_y = 35, offset_x=75, offset_y=25)
-        start_button.on_click = self.exit
-        start_button.unlocked = True
-        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
-            child=start_button, align_x=-50, align_y=-50)
+        menu_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Back", width=220, height=54)
+        menu_button.on_click = self.exit
+        wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=menu_button, align_x=20, align_y=-20)
         self.uimanager.add(wrapper)
-        wrapper.identity = float('inf')
-        wrapper.true_x = 300
-        wrapper.description = "None"
 
-
-        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=50, height=50, scale=.1, x=50, y=50, offset_x=25, offset_y=25, Texture="resources/gui/Question Mark.png", Pressed_Texture="resources/gui/Question Mark.png", Hovered_Texture="resources/gui/Question Mark.png")
+        button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, width=50, height=50, scale=.6, x=50, y=50, offset_x=25, offset_y=25, Texture="resources/gui/Question Mark.png", Pressed_Texture="resources/gui/Question Mark.png", Hovered_Texture="resources/gui/Question Mark.png")
         button.on_click = self.on_question_click
         button.open = False
-        wrapper = UIAnchorWidget(anchor_x="center", anchor_y="center",
-                child=button, align_x=0, align_y=-200)
+        wrapper = UIAnchorWidget(anchor_x="left", anchor_y="top",
+                child=button, align_x=200, align_y=-50)
         wrapper.identity = float('inf')
         wrapper.true_x = 300
         wrapper.description = "None"
@@ -2657,75 +2930,80 @@ class UpgradeScienceMenu(arcade.View):
                 self.Money = p["Money"]
         except:
             saved = False
-
             self.Money = 0
 
         window = arcade.get_window()
         self.texts = []
         self.text = UpdatingText(f"{floor(self.Money)} History", self.Alphabet_Textures, float("inf"), scale=4, text_margin = 50, center_x = -400+window.width/2, center_y = 200+window.height/2)
 
-        
         with open("resources/GameBase copy.json", "r") as read_file:
-            ScienceMenuInfo = json.load(read_file)["ScienceMenu"]
-                
-
+            menu_config = json.load(read_file)
+            ScienceMenuInfo = menu_config["ScienceMenu"]
         id = 0
-        for button in ScienceMenuInfo:
-            label = button[0]
-            button_width = max(160, len(label) * 14)
-
+        for node in ScienceMenuInfo:
+            label = node[0]
+            badge_cfg = BadgeConfig(
+                text=str(node[7]),
+                texture="resources/gui/wood_circle.png",
+                anchor_x="right",
+                anchor_y="bottom",
+                padding_x=10,
+                padding_y=6,
+                offset_x=30,
+                offset_y=40,
+                text_scale=0.6,
+                text_margin=8,
+            )
             start_button = CustomUIFlatButton(
-                self.Alphabet_Textures,
-                click_sound=self.click_sound,
-                text=label,
-                width=button_width,
-                height=54,
-                x=0,
-                y=50,
-                text_margin=12,
-                text_offset_x=0,
-                text_offset_y=0,
-                offset_x=0,
-                offset_y=0,
+                self.Alphabet_Textures, click_sound=self.click_sound,
+                text=label, width=160, height=54, text_margin=12,
+                badge=badge_cfg,
             )
             start_button.on_click = self.on_buttonclick
             wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
-                child=start_button, align_x=button[1], align_y=button[2])
-            wrapper.true_x = button[1]
+                child=start_button, align_x=node[1], align_y=node[2])
+            wrapper.true_x = node[1]
             self.science_buttons.append(wrapper)
             
-            wrapper.description = button[4]+f"              Cost:{button[7]}"
+            wrapper.description = node[4]
             wrapper.identity = id
             wrapper.unlocked = False
 
-            start_button.affect = button[5]
-            start_button.connections = button[3]
-            start_button.cost = button[7]
+            start_button.affect = node[5]
+            start_button.connections = node[3]
+            start_button.cost = node[7]
+            start_button.set_badge_text(str(node[7]))
             start_button.wrapper = wrapper
-            button_names = button[3]
+            connection_names = node[3]
 
-            start_button.connections = [ScienceMenuInfo.index(button2) for button2 in ScienceMenuInfo if button2[0] in button_names]
+            start_button.connections = [
+                ScienceMenuInfo.index(entry)
+                for entry in ScienceMenuInfo
+                if entry[0] in connection_names
+            ]
 
             self.uimanager.add(wrapper)
 
-            if button[8] == 1:
+            if node[8] == 1:
                 start_button.unlocked = True
             elif saved:
                 start_button.unlocked = p["science_menu"][id]
             else:
                 start_button.unlocked = False
                 convert_button(start_button, self.silver_button_texture)
-                start_button.cost = button[7]
+                start_button.cost = node[7]
+                start_button.set_badge_text(str(node[7]))
             if start_button.unlocked:
                 start_button.cost = float("inf")
                 wrapper.identity = float("inf")
 
                 convert_button(start_button, self.gold_button_texture)
+                start_button.set_badge_text(None)
                 
             for i in start_button.connections:
                 endx = ScienceMenuInfo[i][1]+370#cameraView
                 endy = ScienceMenuInfo[i][2]+250
-                line = create_line(button[1]+370, button[2]+250, endx, endy, (0, 0, 0, 255), line_width=5)
+                line = create_line(node[1]+370, node[2]+250, endx, endy, (0, 0, 0, 255), line_width=5)
                 line.identity = id
                 self.lineList.append(line)
 
@@ -2744,7 +3022,6 @@ class UpgradeScienceMenu(arcade.View):
         self.lineList.center_y = height/2 - 250
         
 
-
     def on_key_press(self, key, modifiers):
         if key == arcade.key.A or key == arcade.key.LEFT:
             self.pressed_a = True
@@ -2761,23 +3038,25 @@ class UpgradeScienceMenu(arcade.View):
                 p = json.load(read_file)
         except:
             p = {"science_menu":[]}
-        
         with open("resources/game.json", "w") as write_file:
             p["Money"] = self.Money
             p["science_menu"] = []
             for button in self.science_buttons:
                 p["science_menu"].append(button.child.unlocked)
-
             json.dump(p, write_file)
-        
-        
+
         self.uimanager.disable()
         self.menu_view.uimanager.enable()
         self.window.show_view(self.menu_view)
     def on_question_click(self, event):
         window = arcade.get_window()
         if not self.question: 
-            text = CustomTextSprite("Use this menu to unlock more of the science tree in game.", self.Alphabet_Textures, width=-200, center_x=window.width/2+event.source.wrapper.align_x-150, center_y=window.height/2+event.source.wrapper.align_y+100, Background_offset_x=260, Background_offset_y=-35, Background_scale=1.5, Background_Texture="resources/gui/Small Text Background.png")
+            text = CustomTextSprite(
+                "Use this menu to unlock more of the science tree in game.", 
+                self.Alphabet_Textures, width=270,
+                center_x=event.source.wrapper.align_x+250, center_y=event.source.wrapper.align_y+750,
+                Background_offset_x=0, Background_offset_y=-55, Background_scale=1.05, Background_Texture="resources/gui/Small Text Background.png"
+            )
             self.question = text
         else:
             self.question = None
@@ -2788,7 +3067,7 @@ class UpgradeScienceMenu(arcade.View):
             string = "Not Unlocked. "
             if event.source.wrapper.unlocked:
                 string = "Unlocked.  "
-            text = UpdatingText(string+event.source.cost, self.Alphabet_Textures, .5, scale=1, center_x = event.source.wrapper.align_x+window.width/2, center_y = event.source.rapper.align_y+window.height/2)
+            text = UpdatingText(f"{string}{event.source.cost}", self.Alphabet_Textures, .5, scale=1, center_x = event.source.wrapper.align_x+window.width/2, center_y = event.source.rapper.align_y+window.height/2)
             self.texts.append(text)
             return
         self.handle_cost(event.source)
@@ -2816,10 +3095,9 @@ class UpgradeScienceMenu(arcade.View):
         self.handle_affect(source)        
     def handle_affect(self, source):
         convert_button(source, self.gold_button_texture)
-
-
         source.cost = float("inf")
         source.unlocked = True
+        source.set_badge_text(None)
     def check_backwards(self, source):
         if not source or source.unlocked:
             return 0
@@ -2850,6 +3128,10 @@ class UpgradeScienceMenu(arcade.View):
 
         self.lineList.draw()
         self.uimanager.draw()
+        for wrapper in self.science_buttons:
+            child = getattr(wrapper, "child", None)
+            if child and hasattr(child, "draw_badge_overlay"):
+                child.draw_badge_overlay()
         for text in self.texts:
             text.draw() 
         self.text.draw()
@@ -2862,7 +3144,9 @@ class UpgradeScienceMenu(arcade.View):
         """
         self.mouse_x = x
         self.mouse_y = y
-        
+        self.update_science_tooltip(x, y)
+
+    def update_science_tooltip(self, x, y):
         collided = False
         for button in self.science_buttons:
             child = getattr(button, "child", None)
@@ -2870,10 +3154,9 @@ class UpgradeScienceMenu(arcade.View):
             if not (rect.left <= x <= rect.right and rect.bottom <= y <= rect.top):
                 continue
             center_x = (rect.left + rect.right) / 2
-            text = button.description
-            provisional_center_y = rect.top + 40
+            provisional_center_y = rect.top + 20
             self.tooltip.update_text(
-                text,
+                button.description,
                 self.Alphabet_Textures,
                 center_x=center_x,
                 center_y=provisional_center_y,
@@ -2894,10 +3177,13 @@ class UpgradeScienceMenu(arcade.View):
         if self.pressed_a and self.x + 50 < -self.science_buttons[0].true_x:
             self.x += 1000*delta_time
             self.lineList.move(1000*delta_time, 0)
-            #self.lineList.move(0, 0)
+
+            self.update_science_tooltip(self.mouse_x, self.mouse_y)
         if self.pressed_d and self.x - 50 > -self.science_buttons[-1].true_x:
             self.x -= 1000*delta_time
             self.lineList.move(-1000*delta_time, 0)
+
+            self.update_science_tooltip(self.mouse_x, self.mouse_y)
 
         if self.pressed_a or self.pressed_d:
             for button2 in self.science_buttons:
@@ -2923,9 +3209,9 @@ class ScienceMenu(arcade.View):
         self.background = arcade.Sprite("resources/gui/Large Bulletin.png", scale=3.6, center_x=370, center_y=180)
         self.christmas_background = arcade.Sprite("resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
 
-        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 71, margin=1)
         self.Alphabet_Textures = {" ":None}
-        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
+        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_'"
         for i in range(len(string)):
             self.Alphabet_Textures[string[i]] = textures[i]
         self.gold_button_texture = arcade.load_texture("resources/gui/Gold Button.png")
@@ -2996,18 +3282,16 @@ class ScienceMenu(arcade.View):
     def pre_load(self):
         #NOTE: Determens if saved
         self.load()
-        
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Menu", width=140, height=50, x=0, y=50, text_offset_x = 24, text_offset_y = 35, offset_x=75, offset_y=25)
-        #start_button = arcade.gui.UIFlatButton(text="Menu",width=100, x=50, y=50)
+
+        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Back", width=140, height=50)
         start_button.on_click = self.exit
-        wrapper = UIAnchorWidget(anchor_x="right", anchor_y="top",
-            child=start_button, align_x=-50, align_y=-50)
+        wrapper = UIAnchorWidget(anchor_x="left", anchor_y="top",
+            child=start_button, align_x=20, align_y=-20)
         self.uimanager.add(wrapper)
         start_button.unlocked = True
 
         wrapper.true_x = 300
         wrapper.description = "None"
-
         self.menu_button = wrapper
     def load(self):
         saved = self.game_view.science_list != None
@@ -3017,18 +3301,28 @@ class ScienceMenu(arcade.View):
         
         with open("resources/GameBase copy.json", "r") as read_file:
             buttons = json.load(read_file)
-            
         ScienceMenuInfo = buttons["ScienceMenu"]
 
         id = 0
         for button in ScienceMenuInfo:
             label = button[0]
-            button_width = max(160, len(label) * 14)
+            badge_cfg = BadgeConfig(
+                text=str(button[6]),
+                texture="resources/gui/wood_circle.png",
+                anchor_x="right",
+                anchor_y="bottom",
+                padding_x=10,
+                padding_y=6,
+                offset_x=30,
+                offset_y=40,
+                text_scale=0.6,
+                text_margin=8,
+            )
             start_button = CustomUIFlatButton(
                 self.Alphabet_Textures,
                 click_sound=self.click_sound,
                 text=label,
-                width=button_width,
+                width=160,
                 height=54,
                 x=0,
                 y=50,
@@ -3037,6 +3331,7 @@ class ScienceMenu(arcade.View):
                 text_offset_y=0,
                 offset_x=0,
                 offset_y=0,
+                badge=badge_cfg,
             )
             start_button.on_click = self.on_buttonclick
             wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
@@ -3044,7 +3339,7 @@ class ScienceMenu(arcade.View):
             wrapper.true_x = button[1]
 
 
-            wrapper.description = button[4]+f"              Cost:{button[6]}"
+            wrapper.description = button[4]
             wrapper.identity = id
             if saved and self.game_view.science_list[id]: 
                 start_button.unlocked = self.game_view.science_list[id]
@@ -3055,6 +3350,7 @@ class ScienceMenu(arcade.View):
             
             start_button.affect = button[5]
             start_button.cost = button[6]
+            start_button.set_badge_text(str(button[6]))
 
             button_names = button[3]
 
@@ -3069,11 +3365,12 @@ class ScienceMenu(arcade.View):
                 start_button._style = {"bg_color":arcade.color.DIM_GRAY, "font_color":arcade.color.BLACK}
                 convert_button(start_button, self.silver_button_texture)
                 start_button.locked = True
+                start_button.set_badge_text(None)
 
 
             for i in start_button.connections:
-                endx = ScienceMenuInfo[i][1]+370#cameraView
-                endy = ScienceMenuInfo[i][2]+250#cameraView
+                endx = ScienceMenuInfo[i][1]+370
+                endy = ScienceMenuInfo[i][2]+250
 
                 line = create_line(button[1]+370, button[2]+250, endx, endy, (120, 100, 100, 200), line_width=5)
                 line.identity = id
@@ -3152,6 +3449,7 @@ class ScienceMenu(arcade.View):
 
         convert_button(source, self.gold_button_texture)
         source.unlocked = True
+        source.set_badge_text(None)
     def check_backwards(self, source):
         if not source or source.unlocked:
             return 0
@@ -3179,6 +3477,10 @@ class ScienceMenu(arcade.View):
         self.christmas_background.draw()
         self.lineList.draw()
         self.uimanager.draw()
+        for wrapper in self.science_buttons:
+            child = getattr(wrapper, "child", None)
+            if child and hasattr(child, "draw_badge_overlay"):
+                child.draw_badge_overlay()
         for text in self.texts:
             text.draw()
         if self.tooltip_visible:
@@ -3189,6 +3491,9 @@ class ScienceMenu(arcade.View):
         """
         self.mouse_x = x
         self.mouse_y = y
+        self.update_science_tooltip(x, y)
+
+    def update_science_tooltip(self, x, y):
         collided = False
         for button in self.science_buttons:
             child = getattr(button, "child", None)
@@ -3197,7 +3502,7 @@ class ScienceMenu(arcade.View):
                 continue
             center_x = (rect.left + rect.right) / 2
             text = button.description
-            provisional_center_y = rect.top + 40
+            provisional_center_y = rect.top + 20
             self.tooltip.update_text(
                 text,
                 self.Alphabet_Textures,
@@ -3239,8 +3544,8 @@ class VolumeMenu(arcade.View):
     def __init__(self, game_view):
         super().__init__()
         """ This is run once when we switch to this view """
-        arcade.set_background_color(arcade.color.BEIGE)
-        self.window.background_color = arcade.color.BEIGE
+        self._previous_background_color = getattr(arcade.get_window(), "background_color", arcade.color.BLACK)
+        self._set_background(arcade.color.BEIGE)
         reset_window_viewport(self.window)
         game_view.uimanager.disable()
         self.game_view = game_view
@@ -3248,6 +3553,9 @@ class VolumeMenu(arcade.View):
 
         window = arcade.get_window()
         self.on_resize(window.width, window.height)
+    def _set_background(self, color):
+        arcade.set_background_color(color)
+        self.window.background_color = color
     def set_up(self):
 
         self.uimanager = arcade.gui.UIManager()
@@ -3270,10 +3578,9 @@ class VolumeMenu(arcade.View):
             scale=max(self.window.width / 5001, self.window.height / 3334),
         )
 
-
-        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 70, margin=1)
+        textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 71, margin=1)
         self.Alphabet_Textures = {" ":None}
-        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_"
+        string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_'"
         for i in range(len(string)):
             self.Alphabet_Textures[string[i]] = textures[i]
         window = arcade.get_window()
@@ -3282,18 +3589,10 @@ class VolumeMenu(arcade.View):
             self.Alphabet_Textures,
             click_sound=self.click_sound,
             text="Back",
-            width=160,
-            height=60,
-            text_margin=20,
+            width=220, height=54
         )
         menu_button.on_click = self.exit
-        back_wrapper = UIAnchorWidget(
-            anchor_x="right",
-            anchor_y="top",
-            child=menu_button,
-            align_x=-40,
-            align_y=-40,
-        )
+        back_wrapper = UIAnchorWidget(anchor_x="left",anchor_y="top",child=menu_button, align_x=20, align_y=-20)
         self.uimanager.add(back_wrapper)
 
         self.texts = []
@@ -3302,7 +3601,7 @@ class VolumeMenu(arcade.View):
         self._slider_wrappers: list[UIAnchorWidget] = []
         ui_slider = CustomUISlider(max_value=200, value=self.game_view.audio_type_vols["Overall"]*100, width=360, height=35)
         label = CustomTextSprite(
-            f"Master Volume: {ui_slider.value:02.0f}%",
+            f"Master Volume: {ui_slider.value:.0f}%",
             self.Alphabet_Textures,
             center_x=window.width/2-170,
             center_y=window.height/2+130,
@@ -3313,7 +3612,7 @@ class VolumeMenu(arcade.View):
         @ui_slider.event()
         def on_change(event: UIOnChangeEvent):
             label.update_text(
-                f"Master Volume: {ui_slider.value:02.0f}%",
+                f"Master Volume: {ui_slider.value:.0f}%",
                 self.Alphabet_Textures,
                 center_x=window.width/2-170,
                 center_y=window.height/2+130,
@@ -3329,9 +3628,9 @@ class VolumeMenu(arcade.View):
 
 
 
-        ui_slider1 = CustomUISlider(max_value=200, value=self.game_view.audio_type_vols["UI"]*100, width=360, height=35)
+        ui_slider1 = CustomUISlider(max_value=200, value=max(1, self.game_view.audio_type_vols["UI"]*100) if self.game_view.audio_type_vols["UI"] else 100, width=360, height=35)
         label1 = CustomTextSprite(
-            f"UI Volume: {ui_slider1.value:02.0f}%",
+            f"UI Volume: {ui_slider1.value:.0f}%",
             self.Alphabet_Textures,
             center_x=window.width/2-170,
             center_y=window.height/2+30,
@@ -3342,7 +3641,7 @@ class VolumeMenu(arcade.View):
         @ui_slider1.event()
         def on_change(event: UIOnChangeEvent):
             label1.update_text(
-                f"UI Volume: {ui_slider1.value:02.0f}%",
+                f"UI Volume: {ui_slider1.value:.0f}%",
                 self.Alphabet_Textures,
                 center_x=window.width/2-170,
                 center_y=window.height/2+30,
@@ -3360,9 +3659,9 @@ class VolumeMenu(arcade.View):
 
 
 
-        ui_slider2 = CustomUISlider(max_value=200, value=self.game_view.audio_type_vols["Background"]*100, width=360, height=35)
+        ui_slider2 = CustomUISlider(max_value=200, value=max(1, self.game_view.audio_type_vols["Background"]*100) if self.game_view.audio_type_vols["Background"] else 100, width=360, height=35)
         label2 = CustomTextSprite(
-            f"Background Volume: {ui_slider2.value:02.0f}%",
+            f"Background Volume: {ui_slider2.value:.0f}%",
             self.Alphabet_Textures,
             center_x=window.width/2-170,
             center_y=window.height/2-70,
@@ -3373,7 +3672,7 @@ class VolumeMenu(arcade.View):
         @ui_slider2.event()
         def on_change(event: UIOnChangeEvent):
             label2.update_text(
-                f"Background Volume: {ui_slider2.value:02.0f}%",
+                f"Background Volume: {ui_slider2.value:.0f}%",
                 self.Alphabet_Textures,
                 center_x=window.width/2-170,
                 center_y=window.height/2-70,
@@ -3429,6 +3728,8 @@ class VolumeMenu(arcade.View):
 
         self.uimanager.disable()
         self.game_view.uimanager.enable()
+        if hasattr(self, "_previous_background_color"):
+            self._set_background(self._previous_background_color)
         self.window.show_view(self.game_view)
 class ShowMenu(arcade.View):
     def __init__(self, game_view):
@@ -3439,6 +3740,7 @@ class ShowMenu(arcade.View):
         game_view.uimanager.disable()
         self.game_view = game_view
         self.set_up()
+
     def set_up(self):
 
         self.uimanager = arcade.gui.UIManager()
@@ -3507,28 +3809,27 @@ class BuildingMenu(arcade.View):
 
         self.lineList = ShapeElementList()
         
-    def load(self):
-        with open("textInfo.json", "r") as read_file:
-            buttons = json.load(read_file)
-            
+    def load(self):            
         start_button = arcade.gui.UIFlatButton(text="Menu",width=100, x=50, y=50)
         start_button.on_click = self.exit
         wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
             child=start_button, align_x=300, align_y=200)
         self.uimanager.add(wrapper)
         wrapper.description = "None"
-                
-        for button in buttons["Selectables"]:
-            length = len(button[3])*11
-            start_button = arcade.gui.UIFlatButton(text=button[3],width=length, x=0, y=0)
+
+        with open("textInfo.json", "r") as read_file:
+            menu_config = json.load(read_file)
+        for node in menu_config["Selectables"]:
+            length = len(node[3])*11
+            start_button = arcade.gui.UIFlatButton(text=node[3],width=length, x=0, y=0)
             start_button.on_click = self.on_buttonclick
             wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
-                child=start_button, align_x=button[1], align_y=button[2])
+                child=start_button, align_x=node[1], align_y=node[2])
 
-            start_button.type = button[3]
-            wrapper.description = button[4]
-            start_button.requirements = button[5]
-            start_button.placement = button[6]
+            start_button.type = node[3]
+            wrapper.description = node[4]
+            start_button.requirements = node[5]
+            start_button.placement = node[6]
             start_button.wrapper = wrapper
 
             self.uimanager.add(wrapper)
@@ -3633,16 +3934,16 @@ class TrainingMenu(arcade.View):
         buttons = self.building.trainable
         self.ui_texts = arcade.SpriteList()
             
-        start_button = CustomUIFlatButton(self.game_view.Alphabet_Textures, click_sound = self.game_view.click_sound, text="Menu", width=140, height=50, x=0, y=50, text_offset_x = 24, text_offset_y = 35, offset_x=75, offset_y=25)
+        start_button = CustomUIFlatButton(self.game_view.Alphabet_Textures, click_sound = self.game_view.click_sound, text="Menu", width=140, height=50)
         start_button.on_click = self.exit
         wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
-            child=start_button, align_x=300, align_y=200)
+            child=start_button, align_x=0, align_y=0)
         self.uimanager.add(wrapper)
         wrapper.description = "None"
         
         x, y = 50, 0
         for button in buttons:
-            start_button = CustomUIFlatButton(self.game_view.Alphabet_Textures, click_sound = self.game_view.click_sound, text=button, width=140, height=50, x=0, y=50, margin=13, text_offset_x = -6, text_offset_y = 35, offset_x=75, offset_y=25)
+            start_button = CustomUIFlatButton(self.game_view.Alphabet_Textures, click_sound = self.game_view.click_sound, text=button, width=140, height=50)
             start_button.on_click = self.on_selectionclick
             wrapper = UIAnchorWidget(anchor_x="left", anchor_y="top",
                 child=start_button, align_x=x, align_y=y)
@@ -3666,8 +3967,9 @@ class TrainingMenu(arcade.View):
     def exit(self, event):
         if self.image:
             if isinstance(self.image, Person):
-                self.game_view.population += 1
-            self.image.destroy(self.game_view)
+                self.image.destroy(self.game_view, count_population=False)
+            else:
+                self.image.destroy(self.game_view)
             self.image = None
         arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
         self.game_view.uimanager.enable()
@@ -3692,7 +3994,6 @@ class TrainingMenu(arcade.View):
         string = "Costs:"
         for key, val in requirements[self.string].items():
             string += f" {val} {key},"
-        #self.ui_texts.append(arcade.create_text_sprite(descriptions[self.string]+f"       Time: {trainingtimes[self.string]}       "+string, 200, 100, arcade.color.BLACK, font_size=24))
         self.description = arcade.gui.UITextArea(x=250, y=180, width=400, height=60, scroll_speed=10, font_size=24,
                             text=descriptions[self.string]+f"Time: {trainingtimes[self.string]}           "+string, 
                             text_color=(0, 0, 0, 255))
@@ -3710,8 +4011,9 @@ class TrainingMenu(arcade.View):
 
         if self.image:
             if isinstance(self.image, Person):
-                self.game_view.population += 1
-            self.image.destroy(self.game_view)
+                self.image.destroy(self.game_view, count_population=False)
+            else:
+                self.image.destroy(self.game_view)
             self.image = None
         
 
@@ -3730,7 +4032,14 @@ class TrainingMenu(arcade.View):
             self.updating_texts.append(text)
     def handle_affect(self, source:arcade.gui.UIFlatButton):
         if len(self.building.list_of_people) == 0:
-            text = UpdatingText("No People to train", self.game_view.Alphabet_Textures, 1, width = 100, center_x=source.x, center_y=source.y)
+            text = UpdatingText(
+                "No People to train",
+                self.game_view.Alphabet_Textures,
+                1,
+                width=100,
+                center_x=source.wrapper.child.center_x,
+                center_y=source.wrapper.child.center_y,
+            )
             self.updating_texts.append(text)
             return
         variables = vars(self.game_view)
@@ -3741,7 +4050,14 @@ class TrainingMenu(arcade.View):
                 else: missing = "Missing: "
                 missing += f"{val-variables[key]} {key}"
         if missing:
-            text = UpdatingText(missing, self.game_view.Alphabet_Textures, 1, width = 100, center_x=source.x, center_y=source.y)
+            text = UpdatingText(
+                missing,
+                self.game_view.Alphabet_Textures,
+                1,
+                width=100,
+                center_x=source.wrapper.child.center_x,
+                center_y=source.wrapper.child.center_y,
+            )
             self.updating_texts.append(text)
             return
 
@@ -3785,9 +4101,9 @@ def retrieve_from_Science(world):
         return pickle.load(infile)['science_list']
     except:
         with open("resources/GameBase copy.json", "r") as read_file:
-            buttons = json.load(read_file)
+            menu_config = json.load(read_file)
         
-        return [bool(button[8]) for button in buttons["ScienceMenu"]]
+        return [bool(node[8]) for node in menu_config["ScienceMenu"]]
 def main():
     """Main method"""
     window = arcade.Window(1440, 900, "SantaFest Destiny", resizable=True)
