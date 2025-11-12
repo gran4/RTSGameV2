@@ -72,7 +72,7 @@ def create_text_texture(text: str,
     return texture
 
 
-texture = arcade.create_text_texture("BRRRRRRR")
+texture = create_text_texture("BRRRRRRR")
 print(type(texture))
 print(texture.width)
 print(texture.height)

@@ -21,6 +21,7 @@ from arcade.gui import Property, bind
 from arcade.types import Color, LBWH
 
 from pathlib import Path
+import time
 import pyglet.media as media
 
 
@@ -276,8 +277,16 @@ class Sound(arcade.Sound):
         except Exception:
             self.player = None
 
-def SOUND(file, volume, dist, volume_map=None, sound_type="UI"):
+_sound_cooldowns: dict[tuple[str, str], float] = {}
+
+def SOUND(file, volume, dist, volume_map=None, sound_type="UI", cooldown=0.1):
     """Play a one-shot sound with simple distance attenuation and global volume support."""
+    now = time.time()
+    key = (file, sound_type)
+    last = _sound_cooldowns.get(key, 0.0)
+    if cooldown and now - last < cooldown:
+        return None
+
     sound = arcade.load_sound(file)
 
     if dist > 1000:
@@ -301,6 +310,7 @@ def SOUND(file, volume, dist, volume_map=None, sound_type="UI"):
         player = arcade.play_sound(sound, volume=attenuated)
     except Exception:
         return None
+    _sound_cooldowns[key] = now
     return player
 
 class Handle_Christmas(object):
@@ -309,15 +319,15 @@ class Handle_Christmas(object):
         if self.timer >= 75:
             self.timer -= 75
         if self.timer >= 60:
-            t = self.timer-45
-            num = 15-t/15
-            self.Christmas_music.volume = self.Christmas_music.volume.true_volume*num#.1*delta_time
-            self.Background_music.volume = self.Background_music.volume.true_volume*t/15
+            t = self.timer - 45
+            num = max(0.0, 15 - t / 15)
+            self.Christmas_music.set_volume(self.Christmas_music.true_volume * num)
+            self.Background_music.set_volume(self.Background_music.true_volume * max(0.0, t / 15))
         elif self.timer >= 45:
-            t = self.timer-45
-            num = 15-t/15
-            self.Christmas_music.volume = self.Christmas_music.volume.true_volume*t/15
-            self.Background_music.volume = self.Background_music.volume.true_volume*num
+            t = self.timer - 45
+            num = max(0.0, 15 - t / 15)
+            self.Christmas_music.set_volume(self.Christmas_music.true_volume * max(0.0, t / 15))
+            self.Background_music.set_volume(self.Background_music.true_volume * num)
 
 class StateMachieneState(object):
     def __init__(self, state, accessable) -> None:

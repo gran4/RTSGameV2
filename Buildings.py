@@ -13,9 +13,13 @@ class BaseBuilding(arcade.Sprite):
 
         self.game = game
         self.texture = arcade.load_texture(texture)
+        self.texture_path = texture
         self.center_x = x
         self.center_y = y
         self.path = False
+
+        self.affects_enemy_spawns = True
+        self._spawn_registered = False
 
         self.dmg = dmg
         self.health = health
@@ -32,6 +36,14 @@ class BaseBuilding(arcade.Sprite):
         self.fire = None
         self.fire_resistence = .9
         self.vars = dict(self.produces)
+        self._builder_args = {
+            "health": health,
+            "dmg": dmg,
+            "range": range,
+            "max_len": max_len,
+            "texture": texture,
+            "scale": scale,
+        }
     def add(self, sprite):
         if len(self.list_of_people) == self.max_length:
             return True
@@ -41,6 +53,11 @@ class BaseBuilding(arcade.Sprite):
         sprite.health_bar.visible = False
         sprite.remove_from_sprite_lists()
         sprite.in_building = True
+        sprite.host_building = self
+        if getattr(self.game, "last", None) is sprite:
+            self.game.clear_uimanager()
+            self.game.last = None
+            self.game.selection_rectangle.position = (-1000000, -1000000)
         return False
     def remove(self):
         if len(self.list_of_people) == 0:
@@ -49,6 +66,9 @@ class BaseBuilding(arcade.Sprite):
         sprite.health_bar.visible = True
         sprite.in_building = False
         self.list_of_people.pop(0)
+        sprite.host_building = None
+        sprite.position = self.position
+        sprite.health_bar.position = sprite.position
         return sprite
     def destroy(self, game, menu_destroy = False):
         if menu_destroy:
@@ -64,7 +84,9 @@ class BaseBuilding(arcade.Sprite):
             game.clear_uimanager()
             game.last = Bad_Cannoe(game, 10000000, 1000000)
             game.selection_rectangle.position = (-1000000, -1000000)
-        game.BuildingChangeEnemySpawner(self.center_x, self.center_y, placing=-1, min_dist=150, max_dist=200)
+        if getattr(self, "affects_enemy_spawns", True) and getattr(self, "_spawn_registered", False):
+            game.BuildingChangeEnemySpawner(self.center_x, self.center_y, placing=-1, min_dist=150, max_dist=200)
+            self._spawn_registered = False
         self.remove_from_sprite_lists()
         self.health_bar.remove_from_sprite_lists()
 
@@ -147,8 +169,68 @@ class BaseBuilding(arcade.Sprite):
     def load(self, game):
         if self.enemy:
             self.enemy = game.Enemies[self.enemy]
-        game.health_bars.append(self.health_bar._background_box)
-        game.health_bars.append(self.health_bar._full_box)
+        if not getattr(self, "health_bar", None):
+            self.health_bar = HealthBar(game, position=self.position)
+        else:
+            game.health_bars.append(self.health_bar._background_box)
+            game.health_bars.append(self.health_bar._full_box)
+        self.health_bar.fullness = self.health / self.max_health if self.max_health else 1
+
+        texture_path = getattr(self, "_saved_texture_path", None) or getattr(self, "texture_path", None)
+        if texture_path:
+            try:
+                texture = arcade.load_texture(texture_path)
+                self.texture = texture
+            except Exception:
+                pass
+        if getattr(self, "texture", None):
+            try:
+                self.set_hit_box(self.texture.hit_box_points)
+            except Exception:
+                pass
+        if hasattr(self, "_saved_texture_path"):
+            delattr(self, "_saved_texture_path")
+
+    def serialize_state(self, person_ids: dict | None = None) -> dict:
+        building_id = getattr(self, "_state_id", None)
+        occupants: list[int] = []
+        if person_ids:
+            for person in self.list_of_people:
+                pid = person_ids.get(person)
+                if pid is not None:
+                    occupants.append(pid)
+        return {
+            "type": type(self).__name__,
+            "x": self.center_x,
+            "y": self.center_y,
+            "health": self.health,
+            "max_health": self.max_health,
+            "dmg": self.dmg,
+            "range": self.range,
+            "max_length": self.max_length,
+            "vars": dict(self.vars),
+            "occupants": occupants,
+            "id": building_id,
+        }
+
+    def apply_state(self, game, state: dict) -> None:
+        self.center_x = state.get("x", self.center_x)
+        self.center_y = state.get("y", self.center_y)
+        self.position = (self.center_x, self.center_y)
+        self.health = state.get("health", self.health)
+        self.max_health = state.get("max_health", self.max_health)
+        self.dmg = state.get("dmg", self.dmg)
+        self.range = state.get("range", self.range)
+        self.max_length = state.get("max_length", self.max_length)
+        stored_vars = state.get("vars")
+        if isinstance(stored_vars, dict):
+            self.vars = dict(stored_vars)
+        if not getattr(self, "health_bar", None):
+            self.health_bar = HealthBar(game, position=self.position)
+        self.health_bar.fullness = self.health / self.max_health if self.max_health else 1
+        self._pending_occupants = state.get("occupants", [])
+        self._state_id = state.get("id")
+
 class UNbuiltBuilding(BaseBuilding):
     def __init__(self, game, x: float, y: float, max_len: int=0, time: float=0, building: str="", scale=1):
         super().__init__(game, x, y, 10, 0, 0, max_len, "resources/Sprites/IN Progress.png", scale)
@@ -156,6 +238,9 @@ class UNbuiltBuilding(BaseBuilding):
         if self.max_length < 1:
             self.max_length
         self.building = building
+        target_cls = game.objects.get(building) if hasattr(game, "objects") else None
+        if target_cls is not None:
+            self.affects_enemy_spawns = getattr(target_cls, "affects_enemy_spawns", True)
     def on_build(self, game):
         while len(self.list_of_people) > 0:
             person = self.remove()
@@ -175,6 +260,9 @@ class UNbuiltBuilding(BaseBuilding):
         if self.fire: self.fire.obj = build
         self.fire = None
         game.Buildings.append(build)
+        if getattr(build, "affects_enemy_spawns", True):
+            game.BuildingChangeEnemySpawner(self.center_x, self.center_y, placing=1, min_dist=150, max_dist=200)
+            build._spawn_registered = True
     def update(self, delta_time, game):
         self.time -= delta_time*len(self.list_of_people)
         self.health_bar.fullness = self.health/self.max_health
@@ -191,6 +279,19 @@ class UNbuiltBuilding(BaseBuilding):
         game.extra_buttons.append(wrapper)
 
         game.uimanager.add(wrapper)
+
+    def serialize_state(self, person_ids: dict | None = None) -> dict:
+        state = super().serialize_state(person_ids)
+        state.update({
+            "time": self.time,
+            "build_target": self.building,
+        })
+        return state
+
+    def apply_state(self, game, state: dict) -> None:
+        super().apply_state(game, state)
+        self.time = state.get("time", self.time)
+        self.building = state.get("build_target", self.building)
 
 class ResearchShop(BaseBuilding):
     produces = {"science": .04}
@@ -266,7 +367,7 @@ class BlackSmith(BaseBuilding):
         
 
 class SnowTower(BaseBuilding):
-    produces = {}
+    produces: dict[str, float] = {}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 20, .5, 400, 1, "resources/Sprites/SnowTower.png")
         self.Updates = False
@@ -276,6 +377,38 @@ class SnowTower(BaseBuilding):
 
         self.snowballs = arcade.SpriteList()
         self.focused_on = None
+
+    def serialize_state(self, person_ids: dict | None = None) -> dict:
+        state = super().serialize_state(person_ids)
+        state.update({
+            "snowballs": [
+                {
+                    "x": snowball.center_x,
+                    "y": snowball.center_y,
+                    "dx": getattr(snowball, "_motion_dx", 0.0),
+                    "dy": getattr(snowball, "_motion_dy", 0.0),
+                    "time": getattr(snowball, "time", 0.0),
+                }
+                for snowball in self.snowballs
+            ]
+        })
+        return state
+
+    def apply_state(self, game, state: dict) -> None:
+        super().apply_state(game, state)
+        self.snowballs = arcade.SpriteList()
+        for entry in state.get("snowballs", []):
+            snowball = arcade.Sprite(
+                "resources/Sprites/Snowball.png",
+                scale=1,
+                center_x=entry.get("x", self.center_x),
+                center_y=entry.get("y", self.center_y),
+            )
+            snowball.time = entry.get("time", 0.0)
+            snowball._motion_dx = entry.get("dx", 0.0)
+            snowball._motion_dy = entry.get("dy", 0.0)
+            self.snowballs.append(snowball)
+            game.overParticles.append(snowball)
     def update(self, delta_time, game):
         if self.health <= 0:
             self.destroy(game)
@@ -337,6 +470,19 @@ class SnowTower(BaseBuilding):
         self.canAttack = False
         if self.focused_on and self.focused_on.health <= 0:
             self.focused_on = None
+
+    def save(self, game):
+        if self.focused_on and self.focused_on in game.Enemies:
+            self.focused_on = game.Enemies.index(self.focused_on)
+        super().save(game)
+
+    def load(self, game):
+        super().load(game)
+        if isinstance(self.focused_on, int):
+            if 0 <= self.focused_on < len(game.Enemies):
+                self.focused_on = game.Enemies[self.focused_on]
+            else:
+                self.focused_on = None
 
 
 class RaindeerFarm(BaseBuilding):

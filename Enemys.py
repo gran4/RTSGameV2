@@ -15,6 +15,7 @@ class BaseEnemy(arcade.Sprite):
     def __init__(self, file_name:str, x:float, y:float, health:float, damage:float, range:int, scale:float=1):
         super().__init__(file_name, center_x=x, center_y=y, scale=scale)
         self.texture = arcade.load_texture(file_name)
+        self.texture_path = file_name
         self.center_x = x
         self.center_y = y
 
@@ -31,6 +32,8 @@ class BaseEnemy(arcade.Sprite):
         self.create_statemachene()
         self.rotation = 0
         self.next_time = 1
+        self.focused_on = None
+        self.spawn_kwargs: dict = {}
 
     def destroy(self, game):
         self.remove_from_sprite_lists()
@@ -89,28 +92,82 @@ class BaseEnemy(arcade.Sprite):
         pass
     
     def save(self, game):
-        if not self.focused_on:
+        target = getattr(self, "focused_on", None)
+        if not target:
             return
-        if self.focused_on.__module__ == "Buildings":
-            index = game.Buildings.index(self.focused_on)
+        if target.__module__ == "Buildings":
+            index = game.Buildings.index(target)
             sprite_list_name = "Buildings"
-        elif self.focused_on.__module__ == "Player":
+        elif target.__module__ == "Player":
             try:
                 #if not boat except
-                self.focused_on.capacity
-                index = game.Boats.index(self.focused_on)
+                target.capacity
+                index = game.Boats.index(target)
                 sprite_list_name = "Boats"
             except:
-                index = game.People.index(self.focused_on)
+                index = game.People.index(target)
                 sprite_list_name = "People"
         return (sprite_list_name, index)
     def load(self, game):
         if self.focused_on:
             self.focused_on = game[self.focused_on[0]][self.focused_on[1]]
+        texture_path = getattr(self, "_saved_texture_path", None) or getattr(self, "texture_path", None)
+        if texture_path:
+            try:
+                texture = arcade.load_texture(texture_path)
+                self.texture = texture
+            except Exception:
+                pass
+        if getattr(self, "texture", None):
+            try:
+                self.set_hit_box(self.texture.hit_box_points)
+            except Exception:
+                pass
+    def serialize_state(self) -> dict:
+        state = {
+            "type": type(self).__name__,
+            "x": self.center_x,
+            "y": self.center_y,
+            "health": self.health,
+            "max_health": getattr(self, "max_health", self.health),
+            "damage": self.damage,
+            "range": self.range,
+            "state": getattr(self, "state", "Idle"),
+            "path": [list(pos) for pos in self.path],
+            "path_timer": self.path_timer,
+            "next_time": self.next_time,
+            "spawn": getattr(self, "spawn_kwargs", {}),
+        }
+        extra = self._serialize_extra_state()
+        if extra:
+            state["extra"] = extra
+        return state
+
+    def apply_state(self, game, state: dict) -> None:
+        self.center_x = state.get("x", self.center_x)
+        self.center_y = state.get("y", self.center_y)
+        self.position = (self.center_x, self.center_y)
+        self.health = state.get("health", self.health)
+        self.max_health = state.get("max_health", getattr(self, "max_health", self.health))
+        self.damage = state.get("damage", self.damage)
+        self.range = state.get("range", self.range)
+        self.state = state.get("state", getattr(self, "state", "Idle"))
+        self.spawn_kwargs = state.get("spawn", getattr(self, "spawn_kwargs", {}))
+        self.path = [tuple(pos) for pos in state.get("path", list(self.path))]
+        self.path_timer = state.get("path_timer", self.path_timer)
+        self.next_time = state.get("next_time", self.next_time)
+        self._apply_extra_state(game, state.get("extra"))
+
+    def _serialize_extra_state(self) -> dict:
+        return {}
+
+    def _apply_extra_state(self, game, extra_state: dict | None) -> None:
+        return
 
 class Child(BaseEnemy):
     def __init__(self, game, x, y, difficulty=1):
         super().__init__("resources/Sprites/enemy.png", x, y, 5*difficulty, 10*difficulty, 5, scale=1)
+        self.spawn_kwargs = {"difficulty": difficulty}
 
         self.building_bias = 1
         self.people_bias = .3
@@ -153,6 +210,7 @@ class Child(BaseEnemy):
 class Enemy_Swordsman(BaseEnemy):
     def __init__(self, x: float, y: float, difficulty = 1):
         super().__init__("resources/Sprites/NightBorneWarrior/NightBorne.png", x, y, 10*difficulty, 5*difficulty, 40, scale=1)
+        self.spawn_kwargs = {"difficulty": difficulty}
         self.textures = load_texture_grid("resources/Sprites/NightBorneWarrior/NightBorne.png", 80, 80, 22, 111, margin = 0)
         self.texture = self.textures[0]
         
@@ -213,6 +271,7 @@ class Enemy_Swordsman(BaseEnemy):
 class Enemy_Slinger(BaseEnemy):
     def __init__(self, game, x, y, difficulty=1):
         super().__init__("resources/Sprites/enemy.png", x, y, 5*difficulty, 10*difficulty, 325, scale=1)
+        self.spawn_kwargs = {"difficulty": difficulty}
         self.texture = arcade.load_texture("resources/Sprites/enemy.png")
 
         self.building_bias = 1
@@ -232,6 +291,8 @@ class Enemy_Slinger(BaseEnemy):
 
         self.arrows = arcade.SpriteList()#[]
         self.state = "Idle"
+        self._sfx_cooldown = 0.0
+        self._sfx_cooldown = 0.0
 
         self.front_texture = arcade.load_texture("resources/Sprites/Child Front.png")
         self.back_texture = arcade.load_texture("resources/Sprites/Child Back.png")
@@ -328,17 +389,21 @@ class Enemy_Slinger(BaseEnemy):
     def on_attack(self, game, delta_time):     
         if not self.bow.canAttack: 
             return
+        self._sfx_cooldown -= getattr(game, "real_delta_time", delta_time)
 
-        if not self.pull_back_sound:
+        self._sfx_cooldown -= getattr(game, "real_delta_time", delta_time)
+        if not self.pull_back_sound and self._sfx_cooldown <= 0:
             self.pull_back_sound = SOUND(
                 "resources/sound_effects/Arrow Shoot.wav",
                 1,
                 get_dist(self.position, game.player.position),
                 volume_map=getattr(game, "audio_type_vols", None),
                 sound_type="UI",
+                cooldown=0,
             )
             if getattr(self.pull_back_sound, "_timer", None):
                 self.pull_back_sound._timer.active = False
+            self._sfx_cooldown = 0.15
         if getattr(self.pull_back_sound, "_timer", None):
             self.pull_back_sound._timer.set_time(self.pull_back_sound._timer.get_time()+delta_time*.5)
         anim = self.bow.Attack_animation.updateAnim(delta_time, len(self.bow.Attack_textures))
@@ -386,34 +451,69 @@ class Enemy_Slinger(BaseEnemy):
             arrow.remove_from_sprite_lists()
         self.arrows = arcade.SpriteList()
         return super().destroy(game)
-    def save(self, game):
-        super().save(game)
-        
-        self.bow = arcade.Sprite(center_x=self.center_x, center_y=self.center_y, image_width=50, image_height=50)#Entity()
-        self.bow.Attack_animation = AnimationPlayer(.1)
-        self.bow.Attack_textures = load_texture_grid("resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
-        self.bow.texture = self.bow.Attack_textures[0]
-        self.bow.AttackAnimTimes = [.25, .125, .125, .125, .2, .1, .05, .025, .025]
-        self.bow.WaitToAttack = .2
-        self.bow.timer = 0
-        self.bow.canAttack = False
-        
-        arrows2 = []
+
+    def _serialize_extra_state(self) -> dict:
+        bow_state = {
+            "timer": getattr(self.bow, "timer", 0.0),
+            "can_attack": getattr(self.bow, "canAttack", False),
+            "angle": self.bow.angle,
+            "anim_index": getattr(self.bow.Attack_animation, "index", 0),
+            "anim_time": getattr(self.bow.Attack_animation, "time", 0.0),
+        }
+        arrows_state = []
         for arrow in self.arrows:
-            arrow2 = type(arrow).__new__(type(arrow))
-            arrow2.position = arrow.position
-            arrow2.time = arrow.time
-            arrow2.angle = arrow2.angle
-            arrows2.append(arrow2)
-        self.arrows2 = arrows2
-    def load(self, game):
-        self.arrows = self.arrows2
-        [game.overParticles.append(arrow) for arrow in self.arrows]
-        return super().load(game)
+            arrows_state.append(
+                {
+                    "x": arrow.center_x,
+                    "y": arrow.center_y,
+                    "dx": getattr(arrow, "_motion_dx", 0.0),
+                    "dy": getattr(arrow, "_motion_dy", 0.0),
+                    "time": getattr(arrow, "time", 0.0),
+                    "angle": arrow.angle,
+                    "hit": getattr(arrow, "hit", False),
+                    "destroy_timer": getattr(arrow, "destroy_timer", 0.0),
+                    "visible": arrow.visible,
+                }
+            )
+        return {
+            "bow": bow_state,
+            "arrows": arrows_state,
+        }
+
+    def _apply_extra_state(self, game, extra_state: dict | None) -> None:
+        if not extra_state:
+            return
+        bow_state = extra_state.get("bow", {})
+        self.bow.timer = bow_state.get("timer", getattr(self.bow, "timer", 0.0))
+        self.bow.canAttack = bow_state.get("can_attack", getattr(self.bow, "canAttack", False))
+        self.bow.angle = bow_state.get("angle", self.bow.angle)
+        self.bow.Attack_animation.index = bow_state.get("anim_index", self.bow.Attack_animation.index)
+        self.bow.Attack_animation.time = bow_state.get("anim_time", self.bow.Attack_animation.time)
+
+        self.arrows = arcade.SpriteList()
+        arrow_texture = "resources/Sprites/Arcane archer/projectile_cropped.png"
+        for entry in extra_state.get("arrows", []):
+            arrow = arcade.Sprite(
+                arrow_texture,
+                scale=1,
+                center_x=entry.get("x", self.center_x),
+                center_y=entry.get("y", self.center_y),
+                angle=entry.get("angle", 0.0),
+            )
+            arrow._motion_dx = entry.get("dx", 0.0)
+            arrow._motion_dy = entry.get("dy", 0.0)
+            arrow.time = entry.get("time", 0.0)
+            arrow.hit = entry.get("hit", False)
+            arrow.destroy_timer = entry.get("destroy_timer", 0.0)
+            arrow.visible = entry.get("visible", True)
+            self.arrows.append(arrow)
+            game.overParticles.append(arrow)
+
 
 class Arsonist(BaseEnemy):
     def __init__(self, game, x:float, y:float, difficulty=1):
         super().__init__("resources/Sprites/Player.png", x, y, 5*difficulty, 5*difficulty, 40, scale=1)
+        self.spawn_kwargs = {"difficulty": difficulty}
 
         self.front_texture = arcade.load_texture("resources/Sprites/Child Front.png")
         self.back_texture = arcade.load_texture("resources/Sprites/Child Back.png")
@@ -495,22 +595,38 @@ class Arsonist(BaseEnemy):
                 if obj.health <= 0:
                     obj.destroy(game)
             self.health = -100
-    def save(self, game):
-        x, y = self.position
-        self.Explosian2 = arcade.Sprite(center_x=x-10, center_y = y+10, scale = .25)
-        self.Explosian2.textures = load_texture_grid("resources/Sprites/Fire_Totem/Fire_Totem-full_Sheet.png", 64, 100, 14, 70)
-        self.Explosian2.texture = self.Explosian.textures[4]
-        self.Explosian2.AnimationPlayer = AnimationPlayer(.1)
-        self.Explosian2.AnimationPlayer.index = self.Explosian.AnimationPlayer.index
+    def _serialize_extra_state(self) -> dict:
+        anim = getattr(self.Explosian, "AnimationPlayer", None)
+        return {
+            "explosion": {
+                "x": self.Explosian.center_x,
+                "y": self.Explosian.center_y,
+                "scale": self.Explosian.scale,
+                "anim_index": getattr(anim, "index", 0),
+                "anim_time": getattr(anim, "time", 0.0),
+            },
+            "fire_strength": self.fire_strength,
+        }
 
+    def _apply_extra_state(self, game, extra_state: dict | None) -> None:
+        if not extra_state:
+            return
+        self.fire_strength = extra_state.get("fire_strength", self.fire_strength)
+        explosion_state = extra_state.get("explosion", {})
+        self.Explosian.center_x = explosion_state.get("x", self.Explosian.center_x)
+        self.Explosian.center_y = explosion_state.get("y", self.Explosian.center_y)
+        self.Explosian.scale = explosion_state.get("scale", self.Explosian.scale)
+        anim = getattr(self.Explosian, "AnimationPlayer", None)
+        if anim:
+            anim.index = explosion_state.get("anim_index", anim.index)
+            anim.time = explosion_state.get("anim_time", anim.time)
+        if self.Explosian not in game.overParticles:
+            game.overParticles.append(self.Explosian)
 
-        return super().save(game)
-    def load(self, game):
-        self.Explosian = self.Explosian2
-        game.overParticles.append(self.Explosian)
 class Golem(BaseEnemy):
     def __init__(self, game, x: float, y: float, difficulty=1):
         super().__init__("resources/Sprites/Stone Golem/Character_sheet.png", x, y, 10*difficulty, 10*difficulty, 40, scale=.8)
+        self.spawn_kwargs = {"difficulty": difficulty}
         textures = load_texture_grid("resources/Sprites/Stone Golem/Character_sheet.png", 100, 100, 10, 100, margin = 0)
         self.texture = textures[0]
         self.Idle = textures[:4]
@@ -597,17 +713,46 @@ class Golem(BaseEnemy):
             self.canAttack = False
             self.attack_time = 0
             self.attack_timer = 0
-    def save(self, game):
-        super().save(game)
-        self.affect = arcade.Sprite("resources/Sprites/Selection.png", center_x=100000, center_y=100000)
-        self.affect.textures = load_texture_grid("resources/Sprites/Free Pixel Effects Pack/10_weaponhit_spritesheet.png", 100, 100, 6, 31)[1:]
-        self.affect.animation_player = AnimationPlayer(.03)
-    def load(self, game):
-        super().save(game)
-        game.underParticals.append(self.affect)
+    def _serialize_extra_state(self) -> dict:
+        anim = getattr(self.affect, "animation_player", None)
+        return {
+            "affect": {
+                "x": self.affect.center_x,
+                "y": self.affect.center_y,
+                "scale": self.affect.scale,
+                "width": self.affect.width,
+                "height": self.affect.height,
+                "anim_index": getattr(anim, "index", 0),
+                "anim_time": getattr(anim, "time", 0.0),
+            },
+            "attack_timer": self.attack_timer,
+            "attack_time": self.attack_time,
+            "can_attack": self.canAttack,
+        }
+
+    def _apply_extra_state(self, game, extra_state: dict | None) -> None:
+        super()._apply_extra_state(game, extra_state)
+        if not extra_state:
+            return
+        affect_state = extra_state.get("affect", {})
+        self.affect.center_x = affect_state.get("x", self.affect.center_x)
+        self.affect.center_y = affect_state.get("y", self.affect.center_y)
+        self.affect.scale = affect_state.get("scale", self.affect.scale)
+        self.affect.width = affect_state.get("width", self.affect.width)
+        self.affect.height = affect_state.get("height", self.affect.height)
+        anim = getattr(self.affect, "animation_player", None)
+        if anim:
+            anim.index = affect_state.get("anim_index", anim.index)
+            anim.time = affect_state.get("anim_time", anim.time)
+        if self.affect not in game.underParticals:
+            game.underParticals.append(self.affect)
+        self.attack_timer = extra_state.get("attack_timer", self.attack_timer)
+        self.attack_time = extra_state.get("attack_time", self.attack_time)
+        self.canAttack = extra_state.get("can_attack", self.canAttack)
 class Wizard(BaseEnemy):
     def __init__(self, game, x: float, y: float, difficulty):
         super().__init__("resources/Sprites/Wizard/Idle.png", x, y, 5*difficulty, 2*difficulty, 200, scale=1)
+        self.spawn_kwargs = {"difficulty": difficulty}
 
         self.front_texture = arcade.load_texture("resources/Sprites/Child Front.png")
         self.back_texture = arcade.load_texture("resources/Sprites/Child Back.png")
@@ -729,32 +874,84 @@ class Wizard(BaseEnemy):
         self.wand.projectile.remove_from_sprite_lists()
         for projectile in self.projectiles:
             projectile.remove_from_sprite_lists()
-    def save(self, game):
-        x, y = self.position
-        self.wand2 = arcade.Sprite("resources/Sprites/Wand.png", scale=.35, center_x=x-10, center_y=y)
-        self.wand2.projectile = arcade.Sprite("resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-2.png", scale=0)
-        self.wand2.projectile.visible = self.wand.projectile.visible
-        self.projectiles2 = arcade.SpriteList()
+    def _serialize_extra_state(self) -> dict:
+        wand_state = {
+            "wand_x": self.wand.center_x,
+            "wand_y": self.wand.center_y,
+            "projectile_scale": self.wand.projectile.scale,
+            "projectile_visible": self.wand.projectile.visible,
+        }
+        projectiles_state = []
         for projectile in self.projectiles:
-            projectile2 = projectile
-            projectile2 = type(projectile).__new__(type(projectile))
-            projectile.position = projectile.position
-            projectile.time = projectile.time
-            projectile2.angle = projectile.angle
-            projectile2.destroy = projectile.destroy
-            self.projectiles2.append(projectile2)
-        return super().save(game)
-    def load(self, game):
-        game.overParticles.append(self.wand2)
-        game.overParticles.append(self.wand.projectile)
+            projectiles_state.append(
+                {
+                    "x": projectile.center_x,
+                    "y": projectile.center_y,
+                    "dx": getattr(projectile, "_motion_dx", 0.0),
+                    "dy": getattr(projectile, "_motion_dy", 0.0),
+                    "time": getattr(projectile, "time", 0.0),
+                    "maxtime": getattr(projectile, "maxtime", 0.0),
+                    "destroy": getattr(projectile, "destroy", False),
+                    "scale": projectile.scale,
+                    "angle": projectile.angle,
+                    "anim_index": getattr(getattr(projectile, "destructionAnim", None), "index", 0),
+                    "anim_time": getattr(getattr(projectile, "destructionAnim", None), "time", 0.0),
+                }
+            )
+        return {
+            "wand": wand_state,
+            "projectiles": projectiles_state,
+            "timer": self.timer,
+            "can_attack": self.canAttack,
+        }
 
-        self.projectiles = self.projectiles2
-        [game.overParticles.append(projectile) for projectile in self.projectiles]
-        return super().load(game)
+    def _apply_extra_state(self, game, extra_state: dict | None) -> None:
+        if not extra_state:
+            return
+        wand_state = extra_state.get("wand", {})
+        self.wand.center_x = wand_state.get("wand_x", self.wand.center_x)
+        self.wand.center_y = wand_state.get("wand_y", self.wand.center_y)
+        self.wand.projectile.scale = wand_state.get("projectile_scale", self.wand.projectile.scale)
+        self.wand.projectile.visible = wand_state.get("projectile_visible", self.wand.projectile.visible)
+        if self.wand not in game.overParticles:
+            game.overParticles.append(self.wand)
+        if self.wand.projectile not in game.overParticles:
+            game.overParticles.append(self.wand.projectile)
+
+        self.timer = extra_state.get("timer", self.timer)
+        self.canAttack = extra_state.get("can_attack", self.canAttack)
+
+        projectile_texture = "resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-2.png"
+        destruction_frames = [
+            arcade.load_texture(f"resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png")
+            for i in range(1, 5)
+        ]
+        self.projectiles = arcade.SpriteList()
+        for entry in extra_state.get("projectiles", []):
+            projectile = arcade.Sprite(
+                projectile_texture,
+                scale=entry.get("scale", 1.0),
+                angle=entry.get("angle", 0.0),
+                center_x=entry.get("x", self.center_x),
+                center_y=entry.get("y", self.center_y),
+            )
+            projectile._motion_dx = entry.get("dx", 0.0)
+            projectile._motion_dy = entry.get("dy", 0.0)
+            projectile.time = entry.get("time", 0.0)
+            projectile.maxtime = entry.get("maxtime", 0.0)
+            projectile.destroy = entry.get("destroy", False)
+            projectile.destruction = destruction_frames
+            projectile.destructionAnim = AnimationPlayer(.1)
+            projectile.destructionAnim.index = entry.get("anim_index", 0)
+            projectile.destructionAnim.time = entry.get("anim_time", 0.0)
+            self.projectiles.append(projectile)
+            game.overParticles.append(projectile)
+
 
 class Privateer(BaseEnemy):
     def __init__(self, game, x:float, y:float, difficulty=1):
         super().__init__("resources/Sprites/Boat.png", x, y, 20*difficulty, 5*difficulty, 150, .5)
+        self.spawn_kwargs = {"difficulty": difficulty}
         self.people_bias = 1
         self.building_bias = 1
         self.boat_bias = .2
@@ -877,27 +1074,55 @@ class Privateer(BaseEnemy):
         for arrow in self.arrows:
             arrow.remove_from_sprite_lists()
         return super().destroy(game)
-    def save(self, game):
-        super().save(game)
-        
-        self.bow = arcade.Sprite(center_x=self.center_x, center_y=self.center_y, image_width=50, image_height=50)#Entity()
-        self.bow.Attack_animation = AnimationPlayer(.1)
-        self.bow.Attack_textures = load_texture_grid("resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
-        self.bow.texture = self.bow.Attack_textures[0]
-        self.bow.AttackAnimTimes = [.25, .125, .125, .125, .2, .1, .05, .025, .025]
-        self.bow.WaitToAttack = .2
-        self.bow.timer = 0
-        self.bow.canAttack = False
-        
-        arrows2 = []
+    def _serialize_extra_state(self) -> dict:
+        bow_state = {
+            "timer": getattr(self.bow, "timer", 0.0),
+            "can_attack": getattr(self.bow, "canAttack", False),
+            "angle": self.bow.angle,
+            "anim_index": getattr(self.bow.Attack_animation, "index", 0),
+            "anim_time": getattr(self.bow.Attack_animation, "time", 0.0),
+        }
+        arrows_state = []
         for arrow in self.arrows:
-            arrow2 = type(arrow).__new__(type(arrow))
-            arrow2.position = arrow.position
-            arrow2.time = arrow.time
-            arrow2.angle = arrow2.angle
-            arrows2.append(arrow2)
-        self.arrows2 = arrows2
-    def load(self, game):
-        self.arrows = self.arrows2
-        [game.overParticles.append(arrow) for arrow in self.arrows]
-        return super().load(game)
+            arrows_state.append(
+                {
+                    "x": arrow.center_x,
+                    "y": arrow.center_y,
+                    "dx": getattr(arrow, "_motion_dx", 0.0),
+                    "dy": getattr(arrow, "_motion_dy", 0.0),
+                    "time": getattr(arrow, "time", 0.0),
+                    "angle": arrow.angle,
+                }
+            )
+        return {
+            "bow": bow_state,
+            "arrows": arrows_state,
+        }
+
+    def _apply_extra_state(self, game, extra_state: dict | None) -> None:
+        if not extra_state:
+            return
+        bow_state = extra_state.get("bow", {})
+        self.bow.timer = bow_state.get("timer", getattr(self.bow, "timer", 0.0))
+        self.bow.canAttack = bow_state.get("can_attack", getattr(self.bow, "canAttack", False))
+        self.bow.angle = bow_state.get("angle", self.bow.angle)
+        self.bow.Attack_animation.index = bow_state.get("anim_index", self.bow.Attack_animation.index)
+        self.bow.Attack_animation.time = bow_state.get("anim_time", self.bow.Attack_animation.time)
+        if self.bow not in game.overParticles:
+            game.overParticles.append(self.bow)
+
+        self.arrows = arcade.SpriteList()
+        arrow_texture = "resources/Sprites/Arcane archer/projectile_cropped.png"
+        for entry in extra_state.get("arrows", []):
+            arrow = arcade.Sprite(
+                arrow_texture,
+                scale=1,
+                center_x=entry.get("x", self.center_x),
+                center_y=entry.get("y", self.center_y),
+                angle=entry.get("angle", 0.0),
+            )
+            arrow._motion_dx = entry.get("dx", 0.0)
+            arrow._motion_dy = entry.get("dy", 0.0)
+            arrow.time = entry.get("time", 0.0)
+            self.arrows.append(arrow)
+            game.overParticles.append(arrow)

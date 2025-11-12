@@ -55,10 +55,42 @@ class Fire(arcade.Sprite):
     def destroy(self, game):
         self.remove_from_sprite_lists()
         del self.obj.fire
-    def save(self, game):
-        pass
-    def load(self, game):
-        pass
+    def save_state(self, building_lookup: dict, boat_lookup: dict) -> dict:
+        owner_id = None
+        owner_type = None
+        owner = getattr(self, "obj", None)
+        if owner in building_lookup:
+            owner_id = building_lookup[owner]
+            owner_type = "building"
+        elif owner in boat_lookup:
+            owner_id = boat_lookup[owner]
+            owner_type = "boat"
+        return {
+            "x": self.center_x,
+            "y": self.center_y,
+            "strength": self.strength,
+            "owner_id": owner_id,
+            "owner_type": owner_type,
+            "frame": floor(self.strength),
+            "time": self.fireUpdate,
+        }
+
+    @classmethod
+    def from_state(cls, game, state: dict, building_map: dict, boat_map: dict):
+        fire = cls(game, state.get("x", 0), state.get("y", 0), state.get("strength", 1))
+        fire.fireUpdate = state.get("time", 0)
+        owner_id = state.get("owner_id")
+        owner_type = state.get("owner_type")
+        owner = None
+        if owner_type == "building":
+            owner = building_map.get(owner_id)
+        elif owner_type == "boat":
+            owner = boat_map.get(owner_id)
+        if owner is None:
+            return None
+        fire.obj = owner
+        owner.fire = fire
+        return fire
 
 class BaseBoat(arcade.Sprite):
     def __init__(self, file_name, game, x:float, y:float, health:float, damage:float, range:int, capacity:int, scale:int=1):
@@ -80,6 +112,7 @@ class BaseBoat(arcade.Sprite):
         self.movelist = [2]
 
         self.timer = 0
+        self._pending_passengers: list[int] = []
         
     def add(self, sprite):
         if len(self.list) == self.capacity:
@@ -87,6 +120,7 @@ class BaseBoat(arcade.Sprite):
         sprite.remove_from_sprite_lists()
         sprite.health_bar.visible = False
         self.list.append(sprite)
+        sprite.host_boat = self
         return False
     def remove(self):
         if len(self.list) == 0:
@@ -95,6 +129,7 @@ class BaseBoat(arcade.Sprite):
         self.list.pop(0)
         sprite.position = self.position
         sprite.health_bar.visible = True
+        sprite.host_boat = None
         return sprite
     def update(self, game, delta_time):
         self.timer += delta_time
@@ -170,6 +205,33 @@ class BaseBoat(arcade.Sprite):
     def load(self, game):
         game.health_bars.append(self.health_bar._background_box)
         game.health_bars.append(self.health_bar._full_box)
+    def serialize_state(self, person_ids: dict | None = None) -> dict:
+        passengers: list[int] = []
+        if person_ids:
+            for person in self.list:
+                pid = person_ids.get(person)
+                if pid is not None:
+                    passengers.append(pid)
+        return {
+            "type": type(self).__name__,
+            "x": self.center_x,
+            "y": self.center_y,
+            "health": self.health,
+            "max_health": self.max_health,
+            "path": [list(pos) for pos in self.path],
+            "passengers": passengers,
+        }
+
+    def apply_state(self, game, state: dict) -> None:
+        self.center_x = state.get("x", self.center_x)
+        self.center_y = state.get("y", self.center_y)
+        self.position = (self.center_x, self.center_y)
+        self.health = state.get("health", self.health)
+        self.max_health = state.get("max_health", self.max_health)
+        self.path = [tuple(pos) for pos in state.get("path", list(self.path))]
+        self.health_bar.position = self.position
+        self.health_bar.fullness = self.health / self.max_health if self.max_health else 1
+        self._pending_passengers = state.get("passengers", [])
 class Bad_Cannoe(BaseBoat):
     def __init__(self, game, x:float, y:float):
         super().__init__("resources/Sprites/Arrow.png", game, x, y, 10, 0, 0, 2, scale=.5)
@@ -254,6 +316,7 @@ class Player(arcade.Sprite):
 class Person(arcade.Sprite):
     def __init__(self, game, x:float, y:float, scale = 1):
         super().__init__(center_x=x, center_y=y, scale=scale)
+        self.game = game
         textures = load_texture_grid("resources/Sprites/Elf Sprite Sheet.png", 24, 33, 4, 16)
         self._width = 24
         self._height = 33
@@ -270,10 +333,10 @@ class Person(arcade.Sprite):
         self.center_x = x
         self.center_y = y
 
-        self.health = 100
+        self._health = 100
         self.max_health = 100
         self.health_bar = HealthBar(game, position = self.position)
- 
+        self._update_health_bar_fullness()
         self.var = None
         self.amount = 0
 
@@ -292,6 +355,9 @@ class Person(arcade.Sprite):
         self.farming_skill = 1
         self.building_skill = 1
         self.movelist = [0]
+        self.in_building_id: int | None = None
+        self.host_building = None
+        self.host_boat = None
 
     def clicked(self, game):
         game.clear_uimanager()
@@ -339,7 +405,7 @@ class Person(arcade.Sprite):
                 case "D":
                     self.texture = self.D_Texture[self.index]
 
-        self.health_bar.fullness = self.health/self.max_health
+        self._update_health_bar_fullness()
     def update_movement(self, game):
         if self.path != []:
             if self.center_x<self.path[0][0]:
@@ -357,39 +423,65 @@ class Person(arcade.Sprite):
         else:
             self.key = "S"
     def update_self(self, game):  
-        if not game.graph[round(self.path[0][0]/50)][round(self.path[0][1]/50)] in self.movelist and not arcade.get_sprites_at_point(self.path[0], game.Buildings):
+        target = self.path[0]
+        tile = game.graph[round(target[0]/50)][round(target[1]/50)]
+        if tile not in self.movelist and not arcade.get_sprites_at_point(target, game.Buildings):
             self.path = []
             return
         self.position = self.path.pop(0)
         self.health_bar.position = self.position
 
         buildings_at_point = arcade.get_sprites_at_point(self.position, game.Buildings)
-        if len(buildings_at_point) > 0:
-            isMaxPeople = buildings_at_point[0].add(self)
+        if buildings_at_point:
+            buildings_at_point[0].add(self)
             refresh = getattr(game, "refresh_population", None)
             if callable(refresh):
                 refresh()
+            return
+
         ships_at_point = arcade.get_sprites_at_point(self.position, game.Boats)
-        if len(ships_at_point) > 0:
-            isMaxPeople = ships_at_point[0].add(self)
+        if ships_at_point:
+            ships_at_point[0].add(self)
             refresh = getattr(game, "refresh_population", None)
             if callable(refresh):
                 refresh()
-
-
-        wood_at_point = arcade.get_sprites_at_point(self.position, game.Trees)
-        if len(wood_at_point) > 0:
-            self.var = "wood"
-            self.skill = "lumbering_skill"
-            self.amount = .3
             return
 
-        food_at_point = arcade.get_sprites_at_point(self.position, game.BerryBushes)
-        if len(food_at_point) > 0:
-            self.var = "food"
-            self.skill = "farming_skill"
-            self.amount = 1.25
+        buildings_at_point = arcade.get_sprites_at_point(self.position, game.Buildings)
+        if buildings_at_point:
+            buildings_at_point[0].add(self)
+            refresh = getattr(game, "refresh_population", None)
+            if callable(refresh):
+                refresh()
             return
+
+        ships_at_point = arcade.get_sprites_at_point(self.position, game.Boats)
+        if ships_at_point:
+            ships_at_point[0].add(self)
+            refresh = getattr(game, "refresh_population", None)
+            if callable(refresh):
+                refresh()
+            return
+
+    @property
+    def health(self) -> float:
+        return getattr(self, "_health", 0)
+
+    @health.setter
+    def health(self, value: float) -> None:
+        self._health = value
+        self._update_health_bar_fullness()
+
+    def _update_health_bar_fullness(self) -> None:
+        if not getattr(self, "health_bar", None):
+            return
+        max_health = getattr(self, "max_health", 0)
+        if max_health:
+            fullness = max(0.0, min(1.0, self.health / max_health))
+        else:
+            fullness = 1.0
+        self.health_bar.fullness = fullness
+
     def harvest_resource(self, game):
         variables = vars(game)
         vars_self = vars(self)
@@ -404,6 +496,14 @@ class Person(arcade.Sprite):
 
     
     def destroy(self, game, *, count_population: bool = True):
+        host_building = getattr(self, "host_building", None)
+        if host_building and self in getattr(host_building, "list_of_people", []):
+            host_building.list_of_people.remove(self)
+        self.host_building = None
+        host_boat = getattr(self, "host_boat", None)
+        if host_boat and self in getattr(host_boat, "list", []):
+            host_boat.list.remove(self)
+        self.host_boat = None
         self.health_bar.remove_from_sprite_lists()
         self.remove_from_sprite_lists()
         self.health = -100
@@ -414,9 +514,48 @@ class Person(arcade.Sprite):
             refresh()
     def save(self, game):
         self.health_bar.remove_from_sprite_lists()
+    def serialize_state(self) -> dict:
+        return {
+            "type": type(self).__name__,
+            "x": self.center_x,
+            "y": self.center_y,
+            "health": self.health,
+            "max_health": self.max_health,
+            "var": self.var,
+            "amount": self.amount,
+            "skill": self.skill,
+            "skills": {
+                "laboring": self.laboring_skill,
+                "lumbering": self.lumbering_skill,
+                "mining": self.mining_skill,
+                "farming": self.farming_skill,
+                "building": self.building_skill,
+            },
+            "in_building": self.in_building_id,
+        }
     def load(self, game):
         game.health_bars.append(self.health_bar._background_box)
         game.health_bars.append(self.health_bar._full_box)
+    def apply_state(self, game, state: dict) -> None:
+        self.center_x = state.get("x", self.center_x)
+        self.center_y = state.get("y", self.center_y)
+        self.position = (self.center_x, self.center_y)
+        self.health = state.get("health", self.health)
+        self.max_health = state.get("max_health", self.max_health)
+        skills = state.get("skills", {})
+        self.laboring_skill = skills.get("laboring", self.laboring_skill)
+        self.lumbering_skill = skills.get("lumbering", self.lumbering_skill)
+        self.mining_skill = skills.get("mining", self.mining_skill)
+        self.farming_skill = skills.get("farming", self.farming_skill)
+        self.building_skill = skills.get("building", self.building_skill)
+        self.var = state.get("var", self.var)
+        self.amount = state.get("amount", self.amount)
+        self.skill = state.get("skill", self.skill)
+        self.in_building_id = state.get("in_building")
+        if not getattr(self, "health_bar", None):
+            self.health_bar = HealthBar(game, position=self.position)
+        self._update_health_bar_fullness()
+        self.health_bar.position = self.position
 class People_that_attack(Person):
     def __init__(self, game, filename, x, y, damage, range, health, scale=1):
         super().__init__(game, x, y, scale=scale)
@@ -474,6 +613,18 @@ class People_that_attack(Person):
         game.health_bars.append(self.health_bar._full_box)
     def state_update(self, game, state):
         pass
+    def serialize_state(self) -> dict:
+        state = super().serialize_state()
+        state.update({
+            "state": getattr(self, "state", None),
+            "state2": getattr(self, "state2", None),
+        })
+        return state
+
+    def apply_state(self, game, state: dict) -> None:
+        super().apply_state(game, state)
+        self.state = state.get("state", getattr(self, "state", "Idle"))
+        self.state2 = state.get("state2", getattr(self, "state2", None))
 class BadGifter(People_that_attack):
     def __init__(self, game, x, y):
         super().__init__(game, "resources/Sprites/enemy.png", x, y, 10, 500, 100, scale=1.5)
@@ -660,24 +811,53 @@ class BadGifter(People_that_attack):
                 game.underParticals.append(self.coal)
             else: game.overParticles.append(self.coal)
 
-    def save(self, game):
+    def serialize_state(self) -> dict:
+        state = super().serialize_state()
+        state.update({
+            "coal": {
+                "x": self.coal.center_x,
+                "y": self.coal.center_y,
+                "layer": "under" if self.coal in getattr(getattr(self, "game", None), "underParticals", []) else "over",
+            },
+            "gifts": [
+                {
+                    "x": gift.center_x,
+                    "y": gift.center_y,
+                    "dx": getattr(gift, "_motion_dx", 0.0),
+                    "dy": getattr(gift, "_motion_dy", 0.0),
+                    "time": getattr(gift, "time", 0.0),
+                }
+                for gift in self.gifts
+            ],
+        })
+        return state
+
+    def apply_state(self, game, state: dict) -> None:
+        super().apply_state(game, state)
+        coal_state = state.get("coal", {})
+        self.coal.center_x = coal_state.get("x", self.center_x)
+        self.coal.center_y = coal_state.get("y", self.center_y)
+        layer = coal_state.get("layer")
         self.coal.remove_from_sprite_lists()
-        
-        self.gifts2 = []
-        for coal in self.gifts:
-            coal.remove_from_sprite_lists()
-            self.gifts2.append(coal)
-        self.gifts = self.gifts2
-        return super().save(game)
-    def load(self, game):
-        self.gifts2 = arcade.SpriteList()
-        for coal in self.gifts: 
-            self.gifts2.append(coal)
-            game.overParticles.append(coal)
-        self.gifts = self.gifts2
-        game.overParticles.append(self.coal)
-        
-        return super().load(game)
+        if self.state2 == "Work":
+            pass
+        elif layer == "under":
+            game.underParticals.append(self.coal)
+        else:
+            game.overParticles.append(self.coal)
+        self.gifts = arcade.SpriteList()
+        for entry in state.get("gifts", []):
+            gift = arcade.Sprite(
+                "resources/Sprites/Coal.png",
+                scale=1,
+                center_x=entry.get("x", self.center_x),
+                center_y=entry.get("y", self.center_y),
+            )
+            gift.time = entry.get("time", 0.0)
+            gift._motion_dx = entry.get("dx", 0.0)
+            gift._motion_dy = entry.get("dy", 0.0)
+            self.gifts.append(gift)
+            game.overParticles.append(gift)
 class BadReporter(People_that_attack):
     def __init__(self, game, x, y):
         super().__init__(game, "resources/Sprites/enemy.png", x, y, 25, 500, 100, scale=1.5)
@@ -864,21 +1044,59 @@ class BadReporter(People_that_attack):
                 game.underParticals.append(self.paper)
             else: game.overParticles.append(self.paper)
 
+    def serialize_state(self) -> dict:
+        state = super().serialize_state()
+        game_ref = getattr(self, "game", None)
+        under_particles = getattr(game_ref, "underParticals", []) if game_ref else []
+        over_particles = getattr(game_ref, "overParticles", []) if game_ref else []
+        layer = None
+        if self.paper in under_particles:
+            layer = "under"
+        elif self.paper in over_particles:
+            layer = "over"
+        state.update({
+            "paper": {
+                "x": self.paper.center_x,
+                "y": self.paper.center_y,
+                "layer": layer,
+            },
+            "gifts": [
+                {
+                    "x": gift.center_x,
+                    "y": gift.center_y,
+                    "dx": getattr(gift, "_motion_dx", 0.0),
+                    "dy": getattr(gift, "_motion_dy", 0.0),
+                    "time": getattr(gift, "time", 0.0),
+                }
+                for gift in self.gifts
+            ],
+        })
+        return state
 
-    def save(self, game):
+    def apply_state(self, game, state: dict) -> None:
+        super().apply_state(game, state)
+        paper_state = state.get("paper", {})
+        self.paper.center_x = paper_state.get("x", self.center_x)
+        self.paper.center_y = paper_state.get("y", self.center_y)
+        layer = paper_state.get("layer")
         self.paper.remove_from_sprite_lists()
-        
-        self.gifts2 = []
-        for paper in self.gifts:
-            paper.remove_from_sprite_lists()
-            self.gifts2.append(paper)
-        self.gifts = self.gifts2
-        return super().save(game)
-    def load(self, game):
-        self.gifts2 = arcade.SpriteList()
-        for paper in self.gifts: 
-            self.gifts2.append(paper)
-            game.overParticles.append(paper)
-        self.gifts = self.gifts2
-        game.overParticles.append(self.paper)
-        
+        if self.state2 == "Work":
+            pass
+        elif layer == "under":
+            game.underParticals.append(self.paper)
+        else:
+            game.overParticles.append(self.paper)
+
+        self.gifts = arcade.SpriteList()
+        for entry in state.get("gifts", []):
+            gift = arcade.Sprite(
+                "resources/Sprites/Paper.png",
+                scale=1,
+                center_x=entry.get("x", self.center_x),
+                center_y=entry.get("y", self.center_y),
+            )
+            gift.time = entry.get("time", 0.0)
+            gift._motion_dx = entry.get("dx", 0.0)
+            gift._motion_dy = entry.get("dy", 0.0)
+            self.gifts.append(gift)
+            game.overParticles.append(gift)

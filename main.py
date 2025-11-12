@@ -47,6 +47,18 @@ from gui_compat import UIAnchorWidget
 from BackGround import *
 from Buildings import *
 from Enemys import *
+
+def _collect_subclasses(cls):
+    subs = set()
+    for sub in cls.__subclasses__():
+        subs.add(sub)
+        subs.update(_collect_subclasses(sub))
+    return subs
+
+ENEMY_CLASS_MAP = {c.__name__: c for c in _collect_subclasses(BaseEnemy) | {BaseEnemy}}
+BUILDING_CLASS_MAP = {c.__name__: c for c in _collect_subclasses(BaseBuilding) | {BaseBuilding}}
+
+ENEMY_CLASS_MAP = {cls.__name__: cls for cls in BaseEnemy.__subclasses__()}
 from CustomCellularAutomata import initialize_grid, create_grid, do_simulation_step
 from Player import *
 from TextInfo import *
@@ -226,8 +238,8 @@ class MyGame(arcade.View):
         self.EnemyBoats = arcade.SpriteList()
         self.spawnEnemy = -300
         self.hardness_multiplier = 1
-        self.OpenToEnemies = []
         self.EnemyMap = {}
+        self.OpenToEnemies = []
 
         self.boatUpdate = 0
         self.peopleUpdate = .1
@@ -902,6 +914,9 @@ class MyGame(arcade.View):
             if self.move:
                 source = self.last
                 
+                if source is None or source.health <= 0:
+                    self.move = False
+                    return
                 if not 750<x<self.x_line*50-750 or not 750<y<self.y_line*50-750:
                     if isinstance(source, BaseBoat):
                         info_sprite = UpdatingText("Out of Bounds", self.Alphabet_Textures, .5, width = 300, center_x=org_x, center_y=org_y)
@@ -958,6 +973,8 @@ class MyGame(arcade.View):
             string = "Must be 3 blocks from a Building or adjacent to an elf"
         elif arcade.get_sprites_at_point((x, y), self.Enemies):
             string = "Can not place on an Enemy"
+        elif get_closest_sprite((x, y), self.Enemies)[1] < 150:
+            string = "Too close to an enemy"
         elif (
             current_population >= self.max_pop
             and (
@@ -1017,9 +1034,9 @@ class MyGame(arcade.View):
                 
                 
                 if issubclass(self.objects[self.object], BaseBuilding):
-                    self.Buildings.append(UNbuiltBuilding(self, x, y, max_len=max_length[self.object], time=times[self.object], building=self.object))
-                    self.BuildingChangeEnemySpawner(x, y, placing=1, min_dist=150, max_dist=200)
-                    #2 bc created lowers it
+                    new_building = UNbuiltBuilding(self, x, y, max_len=max_length[self.object], time=times[self.object], building=self.object)
+                    self.Buildings.append(new_building)
+                    # Actual spawn map update happens when the building finishes
                 elif issubclass(self.objects[self.object], BaseBoat):
                     created = self.objects[self.object](self, x, y)
                     self.Boats.append(created)
@@ -1132,15 +1149,18 @@ class MyGame(arcade.View):
                 enemy.focuse_on = obj
                 self.calculate_enemy_path(enemy)
     def spawn_enemy(self):
-        spawn_pos = self.EnemySpawnPos()
-        if spawn_pos is None:
-            return
-        x, y = spawn_pos
         enemy_pick = "Enemy Archer"#random.choice(["Basic Enemy", "Privateer", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
         #while not self.unlocked[enemy_pick]:
         #    enemy_pick = random.choice(["Basic Enemy", "Privateer", "Enemy Swordsman", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
         enemy_class = {"Basic Enemy":Child, "Privateer":Privateer, "Enemy Archer":Enemy_Slinger, "Enemy Arsonist":Arsonist, "Enemy Wizard":Wizard}[enemy_pick]
-        enemy = enemy_class(self, x, y, difficulty=self.hardness_multiplier)
+        enemy = enemy_class(self, 0, 0, difficulty=self.hardness_multiplier)
+        spawn_pos = self.EnemySpawnPos(enemy.movelist)
+        if spawn_pos is None:
+            enemy.destroy(self)
+            return
+        x, y = spawn_pos
+        enemy.center_x = x
+        enemy.center_y = y
         enemy.focused_on = None
         
 
@@ -1150,7 +1170,7 @@ class MyGame(arcade.View):
             max_i = 1
         i = 0
         while self.graph[int(x/50)][int(y/50)] not in enemy.movelist:
-            pos = self.EnemySpawnPos()
+            pos = self.EnemySpawnPos(enemy.movelist)
             if pos is None:
                 enemy.destroy(self)
                 return
@@ -1162,15 +1182,13 @@ class MyGame(arcade.View):
                 #while not self.unlocked[enemy_pick]:
                 #    enemy_pick = random.choice(["Basic Enemy", "Privateer", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
                 enemy_class = {"Basic Enemy":Child, "Privateer":Privateer, "Enemy Archer":Enemy_Slinger, "Enemy Arsonist":Arsonist, "Enemy Wizard":Wizard}[enemy_pick]
-                enemy = enemy_class(self, x, y, difficulty=self.hardness_multiplier)
+                enemy = enemy_class(self, 0, 0, difficulty=self.hardness_multiplier)
                 enemy.focused_on = None
                 i = 0
-                spawn_pos = self.EnemySpawnPos()
+                spawn_pos = self.EnemySpawnPos(enemy.movelist)
                 if spawn_pos is None:
                     return
                 x, y = spawn_pos
-
-
 
         enemy.center_x = x
         enemy.center_y = y
@@ -1304,11 +1322,11 @@ class MyGame(arcade.View):
         self.camera.position = (target_x, target_y)
     
     def on_update(self, delta_time):
-        #print(1/delta_time)
         self.lacks = []
         if self.speed > 0:
             self.update_text(delta_time)
         [self.PopUps.remove(PopUp) for PopUp in self.PopUps if PopUp.update(delta_time)]
+        self.real_delta_time = delta_time
         delta_time *= self.speed
         if self._returning_to_menu:
             return
@@ -1342,7 +1360,6 @@ class MyGame(arcade.View):
             self._add_lack("food")
 
         
-            
         if self.population <= 1:
             self.End("All your elves have fallen. The workshop stands empty.")
         #Update
@@ -1356,9 +1373,7 @@ class MyGame(arcade.View):
         if self.player.boat: self.player.position = self.player.boat.position
         self.center_camera()
     
-        scaled_delta = delta_time * self.speed
-
-        self.spawnEnemy += scaled_delta
+        self.spawnEnemy += delta_time
         spawned = False
         while self.spawnEnemy >= 0:
             self.spawnEnemy -= 25
@@ -1631,7 +1646,6 @@ class MyGame(arcade.View):
         length *= 50
         self.EnemyMap = {}
         self.SnowMap = {}
-        self.OpenToEnemies = []
         x = 0
         y = 0
         while x <= width:
@@ -1644,22 +1658,81 @@ class MyGame(arcade.View):
 
             y = 0
             x += 50
-    def EnemySpawnPos(self):
+        self._rebuild_open_enemy_tiles()
+
+    def _rebuild_open_enemy_tiles(self) -> None:
+        self.OpenToEnemies = []
+        enemy_map = getattr(self, "EnemyMap", None)
+        if not enemy_map:
+            return
+        for x, column in enemy_map.items():
+            for y, count in column.items():
+                if count > 0 and self.graph[int(x/50)][int(y/50)] == 0:
+                    self.OpenToEnemies.append((x, y))
+    def _find_valid_spawn_near(self, anchor_x, anchor_y, allowed_tiles: list[int]) -> tuple[int, int] | None:
+        if not allowed_tiles:
+            return None
+        base_x = round(anchor_x / 50) * 50
+        base_y = round(anchor_y / 50) * 50
+        max_radius = 600
+        for radius in range(0, max_radius + 50, 50):
+            for dx in range(-radius, radius + 1, 50):
+                for dy in range(-radius, radius + 1, 50):
+                    if abs(dx) != radius and abs(dy) != radius and radius != 0:
+                        continue
+                    x = base_x + dx
+                    y = base_y + dy
+                    if not (0 <= x < len(self.graph.graph) * 50 and 0 <= y < len(self.graph.graph[0]) * 50):
+                        continue
+                    tile = self.graph[int(x / 50)][int(y / 50)]
+                    if tile in allowed_tiles:
+                        return x, y
+        return None
+
+    def EnemySpawnPos(self, allowed_tiles: list[int]):
         while self.OpenToEnemies:
             random_num = random.randrange(0, len(self.OpenToEnemies))
             x, y = self.OpenToEnemies[random_num]
-            if self.graph[int(x/50)][int(y/50)] == 0:
+            if self.graph[int(x/50)][int(y/50)] in allowed_tiles:
                 return x, y
             self.OpenToEnemies.pop(random_num)
+
+        anchors: list[tuple[float, float]] = []
         if len(self.People) > 0:
             person = self.People[random.randrange(0, len(self.People))]
-            return person.center_x, person.center_y
-        if self.population == 0:
-            self.End()
+            anchors.append((person.center_x, person.center_y))
+
+        building_occupants: list[arcade.Sprite] = []
+        for building in getattr(self, "Buildings", []):
+            building_occupants.extend(getattr(building, "list_of_people", []))
+        if building_occupants:
+            person = random.choice(building_occupants)
+            anchors.append((person.center_x, person.center_y))
+
+        boat_passengers: list[arcade.Sprite] = []
+        for boat in getattr(self, "Boats", []):
+            boat_passengers.extend(getattr(boat, "list", []))
+        if boat_passengers:
+            passenger = random.choice(boat_passengers)
+            anchors.append((passenger.center_x, passenger.center_y))
+
         if len(self.Boats) > 0:
             boat = self.Boats[random.randrange(0, len(self.Boats))]
-            return boat.center_x, boat.center_y
-        raise ReferenceError("BUG: Either no People in Spritelist or No place open to enemies")
+            anchors.append((boat.center_x, boat.center_y))
+
+        player = getattr(self, "player", None)
+        if player is not None:
+            anchors.append((player.center_x, player.center_y))
+
+        for anchor_x, anchor_y in anchors:
+            candidate = self._find_valid_spawn_near(anchor_x, anchor_y, allowed_tiles)
+            if candidate:
+                return candidate
+
+        if self.population == 0:
+            self.End()
+            return None
+        return None
     def BuildingChangeEnemySpawner(self, x, y, placing=1, min_dist=100, max_dist= 300):
         #NOTE: Placing=-1 is for destroying, keep at 1 if placing
         x = round(x/50)*50
@@ -1713,7 +1786,9 @@ class MyGame(arcade.View):
             "window", "camera", "key", "secondary_wrappers", "menu_buttons",
             "selectables", "ui_sprites", "player", "main_button", "menus_button",
             "selectables_button", "under_sprite", "extra_buttons", "text_sprites",
-            "audios", "underParticals", "overParticles", "health_bars"
+            "audios", "underParticals", "overParticles", "health_bars",
+            "Buildings", "People", "Boats", "Enemies", "Fires",
+            "Lands", "Stones", "Seas", "Trees", "BerryBushes",
         }
         for key, value in vars(self).items():
             if key in skip_keys:
@@ -1733,12 +1808,26 @@ class MyGame(arcade.View):
         variables["player_state"] = player_state
 
 
+        person_states, person_ids = self._serialize_people()
+        variables["people_state"] = person_states
         variables["EnemyMap"] = self.EnemyMap
-        variables["OpenToEnemies"] = self.OpenToEnemies
-        variables["graph"] = self.graph.graph
+        graph_rows: list[list[int]] = []
+        for column in getattr(self.graph, "graph", []):
+            graph_rows.append([int(cell) for cell in column])
+        variables["graph"] = graph_rows
+        variables["terrain_state"] = self._serialize_terrain()
+        boats_state, boat_lookup = self._serialize_boats(person_ids)
+        variables["boats_state"] = boats_state
+        buildings_state, building_lookup = self._serialize_buildings(person_ids)
+        variables["buildings_state"] = buildings_state
+        variables["fires_state"] = self._serialize_fires(building_lookup, boat_lookup)
+        variables["enemies_state"] = self._serialize_enemies()
+
+        for enemy in variables.get("Enemies", []):
+            self._strip_sprite_render_data(enemy)
         variables["x_line"] = getattr(self, "x_line", 0)
         variables["y_line"] = getattr(self, "y_line", 0)
-        print(type(self.graph.graph))
+        
 
         if not self.file_num:
             return
@@ -1746,7 +1835,15 @@ class MyGame(arcade.View):
         file_path = get_save_path(self.file_num)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with file_path.open('wb') as outfile:
-            pickle.dump(variables, outfile)
+            try:
+                pickle.dump(variables, outfile)
+            except Exception:
+                for key, val in variables.items():
+                    try:
+                        pickle.dumps(val)
+                    except Exception as err:
+                        print(f"Pickle failure: {key} -> {type(val)}: {err}")
+                raise
     def copy_SpriteList(self, sprite_list: arcade.SpriteList):
         """
         Copy(and convert) the spritelist into a list
@@ -1772,9 +1869,298 @@ class MyGame(arcade.View):
             for key, val in vars(sprite).items():
                 if isinstance(val, (int, float, bool, str, list, dict, tuple, type(None))):
                     variables[key] = val
+            if hasattr(sprite2, "sprite_lists"):
+                sprite2.sprite_lists = []
             sprite2.save(self)
+            health_bar = getattr(sprite2, "health_bar", None)
+            if health_bar is not None:
+                try:
+                    health_bar.remove_from_sprite_lists()
+                except Exception:
+                    pass
+                sprite2.health_bar = None
             sprite_list_copy.append(sprite2)
         return sprite_list_copy
+
+    def _strip_sprite_render_data(self, sprite: arcade.Sprite) -> None:
+        """Remove Arcade-specific rendering data so the sprite can be pickled."""
+        texture = getattr(sprite, "_texture", None)
+        texture_path = getattr(sprite, "texture_path", None)
+        if texture and not texture_path:
+            texture_path = getattr(texture, "file_path", None)
+            if texture_path:
+                sprite.texture_path = str(texture_path)
+        if texture_path:
+            sprite._saved_texture_path = texture_path
+
+        for attr in ("_texture", "_hit_box", "_vertex_list", "_geometry", "_sprite_list", "_sprite", "_buffer", "_ctx"):
+            if hasattr(sprite, attr):
+                try:
+                    setattr(sprite, attr, None)
+                except Exception:
+                    pass
+
+    def _serialize_buildings(self, person_ids: dict) -> tuple[list[dict], dict[arcade.Sprite, int]]:
+        obj_to_id: dict[arcade.Sprite, int] = {}
+        states: list[dict] = []
+        for idx, building in enumerate(getattr(self, "Buildings", [])):
+            building._state_id = idx
+            states.append(building.serialize_state(person_ids))
+            obj_to_id[building] = idx
+        return states, obj_to_id
+
+    def _load_buildings_from_state(self, states: list[dict], person_map: dict) -> dict:
+        id_map: dict[int, arcade.Sprite] = {}
+        self.Buildings = arcade.SpriteList(use_spatial_hash=True)
+        open_tiles: list[tuple[int, int]] = []
+        for state in states:
+            cls_name = state.get("type")
+            if not cls_name:
+                continue
+            cls = BUILDING_CLASS_MAP.get(cls_name) or self.objects.get(cls_name)
+            if not cls:
+                continue
+            x = state.get("x", 0)
+            y = state.get("y", 0)
+            try:
+                if cls_name == "UNbuiltBuilding":
+                    building = cls(
+                        self,
+                        x,
+                        y,
+                        max_len=state.get("max_length", 0),
+                        time=state.get("time", 0),
+                        building=state.get("build_target", ""),
+                    )
+                else:
+                    building = cls(self, x, y)
+            except TypeError:
+                building = cls.__new__(cls)
+                arcade.Sprite.__init__(building, None, center_x=x, center_y=y)
+                building.game = self
+            if hasattr(building, "apply_state"):
+                building.apply_state(self, state)
+            self.Buildings.append(building)
+            if isinstance(building, UNbuiltBuilding):
+                building._spawn_registered = False
+            else:
+                building._spawn_registered = getattr(building, "affects_enemy_spawns", True)
+            bid = state.get("id")
+            if bid is not None:
+                id_map[bid] = building
+        self._assign_people_to_buildings(person_map)
+        return id_map
+
+    def _assign_people_to_buildings(self, person_map: dict) -> None:
+        for building in getattr(self, "Buildings", []):
+            occupant_ids = getattr(building, "_pending_occupants", [])
+            for pid in occupant_ids:
+                person = person_map.get(pid)
+                if person:
+                    try:
+                        building.add(person)
+                    except Exception:
+                        continue
+            building._pending_occupants = []
+
+    def _serialize_people(self) -> tuple[list[dict], dict]:
+        people_states: list[dict] = []
+        id_map: dict[arcade.Sprite, int] = {}
+        seen: set[arcade.Sprite] = set()
+        ordered_people: list[arcade.Sprite] = []
+        for person in getattr(self, "People", []):
+            if person not in seen:
+                seen.add(person)
+                ordered_people.append(person)
+        for building in getattr(self, "Buildings", []):
+            for occupant in getattr(building, "list_of_people", []):
+                if occupant not in seen:
+                    seen.add(occupant)
+                    ordered_people.append(occupant)
+        for boat in getattr(self, "Boats", []):
+            for passenger in getattr(boat, "list", []):
+                if passenger not in seen:
+                    seen.add(passenger)
+                    ordered_people.append(passenger)
+
+        for idx, person in enumerate(ordered_people):
+            state = person.serialize_state()
+            state["id"] = idx
+            people_states.append(state)
+            id_map[person] = idx
+        return people_states, id_map
+
+    def _load_people_from_state(self, states: list[dict] | None) -> dict:
+        id_map: dict[int, arcade.Sprite] = {}
+        self.People = arcade.SpriteList()
+        if not states:
+            return id_map
+        for state in states:
+            cls_name = state.get("type", "Person")
+            cls = self.objects.get(cls_name)
+            if cls is None:
+                cls = globals().get(cls_name)
+            if cls is None:
+                cls = Person
+            x = state.get("x", 0)
+            y = state.get("y", 0)
+            try:
+                person = cls(self, x, y)
+            except TypeError:
+                person = cls.__new__(cls)
+                Person.__init__(person, self, x, y)
+            if hasattr(person, "apply_state"):
+                person.apply_state(self, state)
+            self.People.append(person)
+            pid = state.get("id")
+            if pid is not None:
+                id_map[pid] = person
+        return id_map
+
+    def _serialize_boats(self, person_ids: dict) -> tuple[list[dict], dict[arcade.Sprite, int]]:
+        obj_to_id: dict[arcade.Sprite, int] = {}
+        states: list[dict] = []
+        for idx, boat in enumerate(getattr(self, "Boats", [])):
+            boat._state_id = idx
+            states.append(boat.serialize_state(person_ids))
+            obj_to_id[boat] = idx
+        return states, obj_to_id
+
+    def _load_boats_from_state(self, states: list[dict] | None, person_map: dict) -> None:
+        id_map: dict[int, arcade.Sprite] = {}
+        if not states:
+            self.Boats = arcade.SpriteList()
+            return id_map
+        self.Boats = arcade.SpriteList()
+        for state in states:
+            cls_name = state.get("type")
+            if not cls_name:
+                continue
+            cls = self.objects.get(cls_name)
+            if not cls:
+                continue
+            x = state.get("x", 0)
+            y = state.get("y", 0)
+            try:
+                boat = cls(self, x, y)
+            except TypeError:
+                boat = cls.__new__(cls)
+                arcade.Sprite.__init__(boat, None, center_x=x, center_y=y)
+                boat.game = self
+            if hasattr(boat, "apply_state"):
+                boat.apply_state(self, state)
+            self.Boats.append(boat)
+            bid = state.get("id")
+            if bid is not None:
+                id_map[bid] = boat
+        self._assign_people_to_boats(person_map)
+        return id_map
+
+    def _assign_people_to_boats(self, person_map: dict) -> None:
+        for boat in getattr(self, "Boats", []):
+            passenger_ids = getattr(boat, "_pending_passengers", [])
+            for pid in passenger_ids:
+                person = person_map.get(pid)
+                if person:
+                    try:
+                        boat.add(person)
+                    except Exception:
+                        continue
+            boat._pending_passengers = []
+    def _serialize_fires(self, building_lookup: dict, boat_lookup: dict) -> list[dict]:
+        states: list[dict] = []
+        for fire in getattr(self, "Fires", []):
+            state = fire.save_state(building_lookup, boat_lookup)
+            if state.get("owner_type") is None:
+                continue
+            states.append(state)
+        return states
+
+    def _load_fires_from_state(self, states: list[dict] | None, building_id_map: dict, boat_id_map: dict) -> None:
+        self.Fires = arcade.SpriteList(use_spatial_hash=True)
+        if not states:
+            return
+        for state in states:
+            fire = Fire.from_state(self, state, building_id_map, boat_id_map)
+            if not fire:
+                continue
+            self.Fires.append(fire)
+
+    def _serialize_enemies(self) -> list[dict]:
+        return [enemy.serialize_state() for enemy in getattr(self, "Enemies", [])]
+
+    def _load_enemies_from_state(self, states: list[dict] | None) -> None:
+        self.Enemies = arcade.SpriteList()
+        if not states:
+            return
+        for state in states:
+            cls_name = state.get("type")
+            if not cls_name:
+                continue
+            cls = ENEMY_CLASS_MAP.get(cls_name)
+            if not cls:
+                continue
+            x = state.get("x", 0)
+            y = state.get("y", 0)
+            spawn = state.get("spawn", {})
+            enemy = None
+            try:
+                enemy = cls(self, x, y, **spawn)
+            except TypeError:
+                try:
+                    enemy = cls(x, y, **spawn)
+                except TypeError:
+                    pass
+            if enemy is None:
+                enemy = cls.__new__(cls)
+                arcade.Sprite.__init__(enemy, None, center_x=x, center_y=y)
+                enemy.game = self
+            if hasattr(enemy, "apply_state"):
+                enemy.apply_state(self, state)
+            self.Enemies.append(enemy)
+
+    def _serialize_terrain(self) -> dict:
+        terrain = {
+            "land": [tile.serialize_state() for tile in getattr(self, "Lands", [])],
+            "stone": [tile.serialize_state() for tile in getattr(self, "Stones", [])],
+            "sea": [tile.serialize_state() for tile in getattr(self, "Seas", [])],
+            "trees": [tile.serialize_state() for tile in getattr(self, "Trees", [])],
+            "berries": [tile.serialize_state() for tile in getattr(self, "BerryBushes", [])],
+        }
+        return terrain
+
+    def _load_terrain_from_state(self, state: dict) -> None:
+        self.Lands = arcade.SpriteList(use_spatial_hash=True)
+        self.Stones = arcade.SpriteList(use_spatial_hash=True)
+        self.Seas = arcade.SpriteList(use_spatial_hash=True)
+        self.Trees = arcade.SpriteList(use_spatial_hash=True)
+        self.BerryBushes = arcade.SpriteList(use_spatial_hash=True)
+
+        tile_factories = {
+            "Land": Land,
+            "Sand": Sand,
+            "Stone": Stone,
+            "Sea": Sea,
+            "Tree": Tree,
+            "BerryBush": BerryBush,
+        }
+
+        def _build_tiles(entries, target_list):
+            for data in entries:
+                tile_type = data.get("type")
+                factory = tile_factories.get(tile_type)
+                if not factory:
+                    continue
+                tile = factory(self, data.get("x", 0), data.get("y", 0))
+                if hasattr(tile, "apply_state"):
+                    tile.apply_state(data)
+                target_list.append(tile)
+
+        _build_tiles(state.get("land", []), self.Lands)
+        _build_tiles(state.get("stone", []), self.Stones)
+        _build_tiles(state.get("sea", []), self.Seas)
+        _build_tiles(state.get("trees", []), self.Trees)
+        _build_tiles(state.get("berries", []), self.BerryBushes)
     def load(self, file_num):
         file_path = get_save_path(file_num)
         with file_path.open('rb') as infile:
@@ -1782,6 +2168,29 @@ class MyGame(arcade.View):
 
         x_line = file.get("x_line", getattr(self, "x_line", 0))
         y_line = file.get("y_line", getattr(self, "y_line", 0))
+
+        person_map = self._load_people_from_state(file.get("people_state"))
+        boat_states = file.get("boats_state")
+        if boat_states:
+            boat_id_map = self._load_boats_from_state(boat_states, person_map)
+        else:
+            boat_id_map = {}
+        building_states = file.get("buildings_state")
+        if building_states:
+            building_id_map = self._load_buildings_from_state(building_states, person_map)
+        else:
+            building_id_map = {}
+        terrain_state = file.get("terrain_state")
+        if terrain_state:
+            self._load_terrain_from_state(terrain_state)
+        fires_state = file.get("fires_state")
+        if fires_state:
+            self._load_fires_from_state(fires_state, building_id_map, boat_id_map)
+        enemies_state = file.get("enemies_state")
+        if enemies_state:
+            self._load_enemies_from_state(enemies_state)
+
+        sprite_list_skip = {"Lands", "Stones", "Seas", "Trees", "BerryBushes"}
 
         for key, val in file.items():
             if isinstance(val, list): 
@@ -1791,14 +2200,22 @@ class MyGame(arcade.View):
                 elif key == "graph":
                     if x_line and y_line:
                         graph = LivingMap(x_line, y_line, x_line * y_line, tilesize=50)
-                        graph.graph = val
+                        for x, column in enumerate(val):
+                            for y, cell in enumerate(column):
+                                if x < len(graph.graph) and y < len(graph.graph[x]):
+                                    graph.graph[x][y] = cell
                         self.graph = graph
                         self.x_line = x_line
                         self.y_line = y_line
                     continue
+                elif key in {"buildings_state", "people_state", "boats_state", "terrain_state",
+                              "enemies_state", *sprite_list_skip}:
+                    continue
                 for sprite in val:
                     vars(self)[key].append(sprite)
             elif isinstance(val, arcade.SpriteList):
+                if key in sprite_list_skip:
+                    continue
                 for sprite in val:
                     vars(self)[key].append(sprite)
             else:
@@ -1806,12 +2223,10 @@ class MyGame(arcade.View):
                     vars(self)[key] = val
                     continue
                 vars(self)[key] = val
-        for key, val in vars(self).items():
-            if isinstance(val, arcade.SpriteList): 
-                if key == "health_bars":
-                    continue
-                for sprite in val:
-                    sprite.load(self)
+
+        if "EnemyMap" in file:
+            self.EnemyMap = file["EnemyMap"]
+            self._rebuild_open_enemy_tiles()
         player_state = file.get("player_state") or {}
         self.player = Player(center_x=player_state.get("center_x", 0), center_y=player_state.get("center_y", 0))
         if "health" in player_state:
@@ -1822,9 +2237,6 @@ class MyGame(arcade.View):
         self.graphlength = file["graphlength"]
 
         #graph = create_Map(self.graphlength, self.graphlength)
-        for stone in self.Stones:
-            x, y = stone.center_x/50, stone.center_y/50
-            self.graph[x][y] = 1
         for seas in self.Seas:
             x, y = seas.center_x/50, seas.center_y/50
             self.graph[x][y] = 2 """
@@ -1975,12 +2387,13 @@ class MyTutorial(MyGame):
             return
         super().on_mouse_press(x2, y2, button, modifiers)
     def on_draw(self):
-        self.sprites.draw()
         super().on_draw()
+
         self.camera.use()
+        self.sprites.draw()
         for mark in self.floating_question_marks:
             mark.draw()
-            if mark.text_sprites: 
+            if mark.text_sprites:
                 for sprite in mark.text_sprites:
                     sprite.draw()
 
@@ -1988,17 +2401,21 @@ class MyTutorial(MyGame):
         self.sprites.draw()
         self.indicators.draw()
 
-        if self.question: self.question.draw()
+        if self.question:
+            self.question.draw()
     def spawn_enemy(self):
-        spawn_pos = self.EnemySpawnPos()
-        if spawn_pos is None:
-            return
-        x, y = spawn_pos
         enemy_pick = random.choice(["Basic Enemy", "Privateer", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
         while not self.unlocked[enemy_pick]:
             enemy_pick = random.choice(["Basic Enemy", "Privateer", "Enemy Swordsman", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
         enemy_class = {"Basic Enemy":Child, "Privateer":Privateer, "Enemy Archer":Enemy_Slinger, "Enemy Arsonist":Arsonist, "Enemy Wizard":Wizard}[enemy_pick]
-        enemy = enemy_class(self, x, y, difficulty=self.hardness_multiplier)
+        enemy = enemy_class(self, 0, 0, difficulty=self.hardness_multiplier)
+        spawn_pos = self.EnemySpawnPos(enemy.movelist)
+        if spawn_pos is None:
+            enemy.destroy(self)
+            return
+        x, y = spawn_pos
+        enemy.center_x = x
+        enemy.center_y = y
         enemy.focused_on = None
         
 
@@ -2008,7 +2425,7 @@ class MyTutorial(MyGame):
             max_i = 1
         i = 0
         while self.graph[int(x/50)][int(y/50)] not in enemy.movelist:
-            pos = self.EnemySpawnPos()
+            pos = self.EnemySpawnPos(enemy.movelist)
             if pos is None:
                 enemy.destroy(self)
                 return
@@ -2020,10 +2437,10 @@ class MyTutorial(MyGame):
                 while not self.unlocked[enemy_pick]:
                     enemy_pick = random.choice(["Basic Enemy", "Privateer", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
                 enemy_class = {"Basic Enemy":Child, "Privateer":Privateer, "Enemy Archer":Enemy_Slinger, "Enemy Arsonist":Arsonist, "Enemy Wizard":Wizard}[enemy_pick]
-                enemy = enemy_class(self, x, y, difficulty=self.hardness_multiplier)
+                enemy = enemy_class(self, 0, 0, difficulty=self.hardness_multiplier)
                 enemy.focused_on = None
                 i = 0
-                spawn_pos = self.EnemySpawnPos()
+                spawn_pos = self.EnemySpawnPos(enemy.movelist)
                 if spawn_pos is None:
                     return
                 x, y = spawn_pos
@@ -2246,8 +2663,9 @@ class EndMenu(arcade.View):
     def on_exit(self, _event):
         self.uimanager.disable()
         self.window.show_view(startMenu())
-    def on_show(self):
-        """ This is run once when we switch to this view """
+    def on_show_view(self):
+        """Called when this view becomes active."""
+        super().on_show_view()
         arcade.set_background_color(arcade.color.BEIGE)
         reset_window_viewport(self.window)
     def on_draw(self):
@@ -2550,8 +2968,8 @@ class startMenu(arcade.View):
         scienceMenu = UpgradeScienceMenu(self)
         self.uimanager.disable()
         self.window.show_view(scienceMenu)
-    def on_show(self):
-        """ This is run once when we switch to this view """
+    def on_show_view(self):
+        super().on_show_view()
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
         reset_window_viewport(self.window)
     def on_draw(self):
@@ -2761,8 +3179,8 @@ class CreateWorld(arcade.View):
             apply_audio_volume(audio, self.audio_type_vols)
 
 
-    def on_show(self):
-        """ This is run once when we switch to this view """
+    def on_show_view(self):
+        super().on_show_view()
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
 
         # Reset the viewport, necessary if we have a scrolling game and we need
@@ -3113,8 +3531,8 @@ class UpgradeScienceMenu(arcade.View):
             self.unlock_backwards(self.science_buttons[i].child)
         self.handle_affect(source)
         #self.uimanager.children[0].pop(-1)    
-    def on_show(self):
-        """ This is run once when we switch to this view """
+    def on_show_view(self):
+        super().on_show_view()
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
 
         reset_window_viewport(self.window)
@@ -3464,8 +3882,8 @@ class ScienceMenu(arcade.View):
             self.unlock_backwards(self.science_buttons[i].child)
         self.handle_affect(source)
     
-    def on_show(self):
-        """ This is run once when we switch to this view """
+    def on_show_view(self):
+        super().on_show_view()
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
 
         reset_window_viewport(self.window)
@@ -3870,8 +4288,8 @@ class BuildingMenu(arcade.View):
         self.game_view.object_placement = source.placement
        
         
-    def on_show(self):
-        """ This is run once when we switch to this view """
+    def on_show_view(self):
+        super().on_show_view()
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
 
         reset_window_viewport(self.window)
@@ -4074,8 +4492,8 @@ class TrainingMenu(arcade.View):
         for text in self.updating_texts:
             text.update(delta_time)
         return super().on_update(delta_time)    
-    def on_show(self):
-        """ This is run once when we switch to this view """
+    def on_show_view(self):
+        super().on_show_view()
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
 
         reset_window_viewport(self.window)
