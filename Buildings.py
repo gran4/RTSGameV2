@@ -78,7 +78,7 @@ class BaseBuilding(arcade.Sprite):
         else:
             game.population -= len(self.list_of_people)
             for person in self.list_of_people:
-                person.health_bar.remove_from_sprite_lists
+                person.health_bar.remove_from_sprite_lists()
                 person.remove_from_sprite_lists()
         if self is game.last:
             game.clear_uimanager()
@@ -131,8 +131,18 @@ class BaseBuilding(arcade.Sprite):
     def clicked_override(self, game):
         pass
     def update(self, delta_time, game):
+        if not self.list_of_people or not self.vars:
+            self.on_update(delta_time, game)
+            return
+
+        capacity = max(1, self.max_length or 0)
+        worker_ratio = len(self.list_of_people) / capacity
+        overall = getattr(game, "overall_multiplier", 1)
         for resource, amount in self.vars.items():
-            vars(game)[resource] += amount*delta_time*vars(game)[resource+"_multiplier"]/self.max_length*len(self.list_of_people)*game.overall_multiplier
+            base = getattr(game, resource, 0)
+            multiplier = getattr(game, f"{resource}_multiplier", 1)
+            delta = amount * delta_time * multiplier * worker_ratio * overall
+            setattr(game, resource, base + delta)
         self.on_update(delta_time, game)
     def on_update(self, delta_time, game):
         if self.health <= 0:
@@ -162,35 +172,6 @@ class BaseBuilding(arcade.Sprite):
             if enemy in game.Enemies:
                 game.Enemies.remove(enemy)
             enemy.destroy(game)
-    def save(self, game):
-        if self.enemy:
-            self.enemy = game.Enemies.index(self.enemy)
-        self.health_bar.remove_from_sprite_lists()
-    def load(self, game):
-        if self.enemy:
-            self.enemy = game.Enemies[self.enemy]
-        if not getattr(self, "health_bar", None):
-            self.health_bar = HealthBar(game, position=self.position)
-        else:
-            game.health_bars.append(self.health_bar._background_box)
-            game.health_bars.append(self.health_bar._full_box)
-        self.health_bar.fullness = self.health / self.max_health if self.max_health else 1
-
-        texture_path = getattr(self, "_saved_texture_path", None) or getattr(self, "texture_path", None)
-        if texture_path:
-            try:
-                texture = arcade.load_texture(texture_path)
-                self.texture = texture
-            except Exception:
-                pass
-        if getattr(self, "texture", None):
-            try:
-                self.set_hit_box(self.texture.hit_box_points)
-            except Exception:
-                pass
-        if hasattr(self, "_saved_texture_path"):
-            delattr(self, "_saved_texture_path")
-
     def serialize_state(self, person_ids: dict | None = None) -> dict:
         building_id = getattr(self, "_state_id", None)
         occupants: list[int] = []
@@ -238,6 +219,7 @@ class UNbuiltBuilding(BaseBuilding):
         if self.max_length < 1:
             self.max_length
         self.building = building
+        self.fire = None
         target_cls = game.objects.get(building) if hasattr(game, "objects") else None
         if target_cls is not None:
             self.affects_enemy_spawns = getattr(target_cls, "affects_enemy_spawns", True)
@@ -471,20 +453,6 @@ class SnowTower(BaseBuilding):
         if self.focused_on and self.focused_on.health <= 0:
             self.focused_on = None
 
-    def save(self, game):
-        if self.focused_on and self.focused_on in game.Enemies:
-            self.focused_on = game.Enemies.index(self.focused_on)
-        super().save(game)
-
-    def load(self, game):
-        super().load(game)
-        if isinstance(self.focused_on, int):
-            if 0 <= self.focused_on < len(game.Enemies):
-                self.focused_on = game.Enemies[self.focused_on]
-            else:
-                self.focused_on = None
-
-
 class RaindeerFarm(BaseBuilding):
     produces = {"food": 1.4}
     def __init__(self, game, x:float, y:float):
@@ -500,12 +468,11 @@ class Farm(BaseBuilding):
         self.textures = load_texture_grid("resources/Sprites/Farm Pixilart Sprite Sheet.png", 50, 50, 50, 2)
         self.texture = self.textures[0]
     def update(self, delta_time, game):
-        super().update()
         if len(self.list_of_people) > 0:
             anim = self.AnimationPlayer.updateAnim(delta_time, len(self.textures))
             if anim is not None:
                 self.texture = self.textures[anim]
-        self.on_update(delta_time, game)
+        super().update(delta_time, game)
     def remove(self):
         if len(self.list_of_people) == 0:
             return

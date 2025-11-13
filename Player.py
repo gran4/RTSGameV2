@@ -32,20 +32,22 @@ class Fire(arcade.Sprite):
             reach = round(self.strength/2)
             if reach == 0:
                 return
-            x = random.randrange(-reach, reach)*50
-            y = random.randrange(-reach, reach)*50
-            buildings = arcade.get_sprites_at_point((x+obj.center_x, y+obj.center_y), game.Buildings)
-            if len(buildings) > 0:
-                try:
-                    buildings[0].fire
-                except:
-                    game.LightOnFire(buildings[0], self.strength/5)
-            boats = arcade.get_sprites_at_point((x, y), game.Boats)
-            if len(boats) > 0:
-                try:
-                    boats[0].fire
-                except:
-                    game.LightOnFire(boats[0], self.strength/5)
+            offset_x = random.randrange(-reach, reach)*50
+            offset_y = random.randrange(-reach, reach)*50
+            world_x = obj.center_x + offset_x
+            world_y = obj.center_y + offset_y
+
+            buildings = arcade.get_sprites_at_point((world_x, world_y), game.Buildings)
+            if buildings:
+                target = buildings[0]
+                if not getattr(target, "fire", None):
+                    game.LightOnFire(target, self.strength/5)
+
+            boats = arcade.get_sprites_at_point((world_x, world_y), game.Boats)
+            if boats:
+                target = boats[0]
+                if not getattr(target, "fire", None):
+                    game.LightOnFire(target, self.strength/5)
         self.fireUpdate += delta_time
         if self.fireUpdate >= 1:
             self.fireUpdate -= 1
@@ -98,6 +100,7 @@ class BaseBoat(arcade.Sprite):
         self.texture = arcade.load_texture(file_name)
         self.center_x = x
         self.center_y = y
+        self.game = game
 
         self.damage = damage
         self.health = health
@@ -117,10 +120,16 @@ class BaseBoat(arcade.Sprite):
     def add(self, sprite):
         if len(self.list) == self.capacity:
             return True
+        if sprite in getattr(self.game, "People", []):
+            self.game.People.remove(sprite)
         sprite.remove_from_sprite_lists()
         sprite.health_bar.visible = False
         self.list.append(sprite)
         sprite.host_boat = self
+        if getattr(self.game, "last", None) is sprite:
+            self.game.clear_uimanager()
+            self.game.last = None
+            self.game.selection_rectangle.position = (-1000000, -1000000)
         return False
     def remove(self):
         if len(self.list) == 0:
@@ -130,6 +139,8 @@ class BaseBoat(arcade.Sprite):
         sprite.position = self.position
         sprite.health_bar.visible = True
         sprite.host_boat = None
+        if sprite not in getattr(self.game, "People", []):
+            self.game.People.append(sprite)
         return sprite
     def update(self, game, delta_time):
         self.timer += delta_time
@@ -166,7 +177,7 @@ class BaseBoat(arcade.Sprite):
         game.extra_buttons.append(wrapper)
         
         button = CustomUIFlatButton(game.Alphabet_Textures, text="Destroy", width=140, height=50)
-        button.on_click = game.leave
+        button.on_click = game.clean_destroy
         button.obj = self
         wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
             child=button, align_x=300, align_y=0)
@@ -176,9 +187,10 @@ class BaseBoat(arcade.Sprite):
         self.clicked_override(game)
     def clicked_override(self, game):
         pass
-    def destroy(self, game):
-        for person in self.list:
-            person.health_bar.remove_from_sprite_lists()
+    def destroy(self, game, menu_destroy: bool = False):
+        for person in list(self.list):
+            self._disembark_person(game, person)
+        self.list.clear()
         self.health_bar.remove_from_sprite_lists()
         self.remove_from_sprite_lists()
         if getattr(game, "player", None) and game.player.boat is self:
@@ -198,13 +210,26 @@ class BaseBoat(arcade.Sprite):
         if getattr(game, "last", None) is self:
             game.clear_uimanager()
             game.last = None
-            game.selection_rectangle.position = (-1000000, -1000000)
-        game.population -= len(self.list)
-    def save(self, game):
-        self.health_bar.remove_from_sprite_lists()
-    def load(self, game):
-        game.health_bars.append(self.health_bar._background_box)
-        game.health_bars.append(self.health_bar._full_box)
+
+    def _disembark_person(self, game, person):
+        tile = None
+        if getattr(game, "graph", None):
+            try:
+                tile = game.graph[int(self.center_x/50)][int(self.center_y/50)]
+            except (IndexError, TypeError):
+                tile = None
+        if tile == 0:
+            target_pos = (self.center_x, self.center_y)
+        else:
+            land, _ = get_closest_sprite(self.position, getattr(game, "Lands", []))
+            target_pos = land.position if land else (self.center_x, self.center_y)
+
+        person.host_boat = None
+        person.position = target_pos
+        person.health_bar.visible = True
+        person.health_bar.position = target_pos
+        if person not in getattr(game, "People", []):
+            game.People.append(person)
     def serialize_state(self, person_ids: dict | None = None) -> dict:
         passengers: list[int] = []
         if person_ids:
@@ -333,7 +358,7 @@ class Person(arcade.Sprite):
         self.center_x = x
         self.center_y = y
 
-        self._health = 100
+        self._health = 1000000000
         self.max_health = 100
         self.health_bar = HealthBar(game, position = self.position)
         self._update_health_bar_fullness()
@@ -366,13 +391,13 @@ class Person(arcade.Sprite):
             return 
         game.last = self
 
-        button = CustomUIFlatButton(game.Alphabet_Textures, text="Move", width=140, height=50 )
-        
-        button.on_click = game.Move
-        wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
-            child=button, align_x=0, align_y=0)
-        game.uimanager.add(wrapper)
-        game.extra_buttons.append(wrapper)
+        if self.host_boat is None:
+            button = CustomUIFlatButton(game.Alphabet_Textures, text="Move", width=140, height=50 )
+            button.on_click = game.Move
+            wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
+                child=button, align_x=0, align_y=0)
+            game.uimanager.add(wrapper)
+            game.extra_buttons.append(wrapper)
 
         self.clicked_override(game)
     def clicked_override(self, game):
@@ -423,44 +448,44 @@ class Person(arcade.Sprite):
         else:
             self.key = "S"
     def update_self(self, game):  
+        prev_pos = self.position
         target = self.path[0]
         tile = game.graph[round(target[0]/50)][round(target[1]/50)]
-        if tile not in self.movelist and not arcade.get_sprites_at_point(target, game.Buildings):
+        buildings_at_target = arcade.get_sprites_at_point(target, game.Buildings)
+        boats_at_target = arcade.get_sprites_at_point(target, game.Boats)
+        if tile not in self.movelist and not buildings_at_target and not boats_at_target:
             self.path = []
+            game.show_move_feedback("Can't move there", target[0], target[1])
             return
         self.position = self.path.pop(0)
         self.health_bar.position = self.position
+        destination = self.position
 
-        buildings_at_point = arcade.get_sprites_at_point(self.position, game.Buildings)
+        refresh = getattr(game, "refresh_population", None)
+        buildings_at_point = buildings_at_target if target == self.position else arcade.get_sprites_at_point(self.position, game.Buildings)
         if buildings_at_point:
-            buildings_at_point[0].add(self)
-            refresh = getattr(game, "refresh_population", None)
-            if callable(refresh):
-                refresh()
+            if not buildings_at_point[0].add(self):
+                if callable(refresh):
+                    refresh()
+                return
+            # Building full; stay on previous tile
+            self.position = prev_pos
+            self.health_bar.position = self.position
+            self.path = []
+            game.show_move_feedback("Building is full", destination[0], destination[1])
             return
 
-        ships_at_point = arcade.get_sprites_at_point(self.position, game.Boats)
+        ships_at_point = boats_at_target if target == self.position else arcade.get_sprites_at_point(self.position, game.Boats)
         if ships_at_point:
-            ships_at_point[0].add(self)
-            refresh = getattr(game, "refresh_population", None)
-            if callable(refresh):
-                refresh()
-            return
-
-        buildings_at_point = arcade.get_sprites_at_point(self.position, game.Buildings)
-        if buildings_at_point:
-            buildings_at_point[0].add(self)
-            refresh = getattr(game, "refresh_population", None)
-            if callable(refresh):
-                refresh()
-            return
-
-        ships_at_point = arcade.get_sprites_at_point(self.position, game.Boats)
-        if ships_at_point:
-            ships_at_point[0].add(self)
-            refresh = getattr(game, "refresh_population", None)
-            if callable(refresh):
-                refresh()
+            if not ships_at_point[0].add(self):
+                if callable(refresh):
+                    refresh()
+                return
+            # Boat full; move back to previous safe tile
+            self.position = prev_pos
+            self.health_bar.position = self.position
+            self.path = []
+            game.show_move_feedback("Boat is full", destination[0], destination[1])
             return
 
     @property
@@ -512,8 +537,6 @@ class Person(arcade.Sprite):
         refresh = getattr(game, "refresh_population", None)
         if callable(refresh):
             refresh()
-    def save(self, game):
-        self.health_bar.remove_from_sprite_lists()
     def serialize_state(self) -> dict:
         return {
             "type": type(self).__name__,
@@ -533,9 +556,6 @@ class Person(arcade.Sprite):
             },
             "in_building": self.in_building_id,
         }
-    def load(self, game):
-        game.health_bars.append(self.health_bar._background_box)
-        game.health_bars.append(self.health_bar._full_box)
     def apply_state(self, game, state: dict) -> None:
         self.center_x = state.get("x", self.center_x)
         self.center_y = state.get("y", self.center_y)
@@ -602,15 +622,6 @@ class People_that_attack(Person):
                     child=button, align_x=150, align_y=0)
         game.extra_buttons.append(wrapper)
         game.uimanager.add(wrapper)
-    def save(self, game):
-        if self.focused_on: 
-            self.focused_on = game.Enemies.index(self.focused_on)
-        self.health_bar.remove_from_sprite_lists()
-    def load(self, game):
-        if self.focused_on:
-            self.focused_on = game.Enemies[self.focused_on]  
-        game.health_bars.append(self.health_bar._background_box)
-        game.health_bars.append(self.health_bar._full_box)
     def state_update(self, game, state):
         pass
     def serialize_state(self) -> dict:

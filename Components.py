@@ -257,27 +257,50 @@ class AnimationPlayer(object):
             return self.index
         return None
 class Sound(arcade.Sound):
-    """
-    An arcade.sound wrapper to make sounds easier
-    """
+    """Arcade ``Sound`` wrapper that tolerates load/play failures and tracks volume."""
+
     def __init__(self, file_name: Union[str, Path], streaming: bool = False):
-        super().__init__(file_name, streaming)
+        try:
+            super().__init__(file_name, streaming)
+        except Exception:
+            # Keep a stub so higher-level code doesn't crash; playback will just no-op
+            self.source = None
         self.player = None
-        self.volume = 1
-    def play(self, pan: float = 0, loop: bool = False) -> None:
-        self.player = super().play(self.volume, pan, loop)
-    
-    def set_volume(self, volume):
-        if volume < 0: volume = 0
+        self.volume = 1.0
+
+    def set_volume(self, volume: float) -> None:
+        volume = max(0.0, volume)
         self.volume = volume
-        if self.player: self.player.volume = volume
-    def play(self, pan: float = 0, loop: bool = False) -> None:
+        if self.player:
+            try:
+                self.player.volume = volume
+            except Exception:
+                self.player = None
+
+    def play(self, pan: float = 0, loop: bool = False) -> None:  # type: ignore[override]
         try:
             self.player = super().play(self.volume, pan, loop)
         except Exception:
             self.player = None
 
 _sound_cooldowns: dict[tuple[str, str], float] = {}
+_sound_cache: dict[str, Optional[arcade.Sound]] = {}
+_active_sound_players: dict[str, list] = {}
+_ACTIVE_SOUND_LIMIT = 8
+
+
+def _get_sound(file: str) -> Optional[arcade.Sound]:
+    if file in _sound_cache:
+        return _sound_cache[file]
+    try:
+        sound = arcade.load_sound(file)
+    except Exception as exc:
+        logging.getLogger(__name__).warning("Failed to load sound %s: %s", file, exc)
+        _sound_cache[file] = None
+        return None
+    _sound_cache[file] = sound
+    return sound
+
 
 def SOUND(file, volume, dist, volume_map=None, sound_type="UI", cooldown=0.1):
     """Play a one-shot sound with simple distance attenuation and global volume support."""
@@ -287,7 +310,9 @@ def SOUND(file, volume, dist, volume_map=None, sound_type="UI", cooldown=0.1):
     if cooldown and now - last < cooldown:
         return None
 
-    sound = arcade.load_sound(file)
+    sound = _get_sound(file)
+    if sound is None:
+        return None
 
     if dist > 1000:
         attenuated = 0.0
@@ -306,10 +331,20 @@ def SOUND(file, volume, dist, volume_map=None, sound_type="UI", cooldown=0.1):
     if attenuated <= 0.0:
         return None
 
+    players = _active_sound_players.setdefault(file, [])
+    players = [p for p in players if getattr(p, 'playing', False)]
+    if len(players) >= _ACTIVE_SOUND_LIMIT:
+        _active_sound_players[file] = players
+        return None
+
     try:
         player = arcade.play_sound(sound, volume=attenuated)
-    except Exception:
+    except Exception as exc:
+        logging.getLogger(__name__).warning("Error playing sound '%s': %s", file, exc)
         return None
+
+    players.append(player)
+    _active_sound_players[file] = players
     _sound_cooldowns[key] = now
     return player
 

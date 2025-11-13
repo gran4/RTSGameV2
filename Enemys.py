@@ -57,6 +57,8 @@ class BaseEnemy(arcade.Sprite):
             self.destroy(game)
             return 
         self.on_update(game, delta_time)
+        if self.focused_on is None and not self.path:
+            game.calculate_enemy_path(self)
         self.update_movement(game, delta_time)
     #NOTE: Always call on_update in update
     def on_update(self, game, delta_time):
@@ -91,26 +93,7 @@ class BaseEnemy(arcade.Sprite):
     def On_Focused_on(self):
         pass
     
-    def save(self, game):
-        target = getattr(self, "focused_on", None)
-        if not target:
-            return
-        if target.__module__ == "Buildings":
-            index = game.Buildings.index(target)
-            sprite_list_name = "Buildings"
-        elif target.__module__ == "Player":
-            try:
-                #if not boat except
-                target.capacity
-                index = game.Boats.index(target)
-                sprite_list_name = "Boats"
-            except:
-                index = game.People.index(target)
-                sprite_list_name = "People"
-        return (sprite_list_name, index)
     def load(self, game):
-        if self.focused_on:
-            self.focused_on = game[self.focused_on[0]][self.focused_on[1]]
         texture_path = getattr(self, "_saved_texture_path", None) or getattr(self, "texture_path", None)
         if texture_path:
             try:
@@ -187,24 +170,20 @@ class Child(BaseEnemy):
             self.destroy(game)
             return 
         self.on_update(game, delta_time)
+        if self.focused_on is None and not self.path:
+            game.calculate_enemy_path(self)
     def update_movement(self, game, delta_time):
-        self.path_timer += delta_time
-        if self.path_timer < self.next_time:
-            return
-        pos = self.get_path()
-        if pos is not None:
-            self.position = pos
-        self.path_timer -= self.next_time
-
-        prev_pos = self.position
+        prev_x, prev_y = self.position
         super().update_movement(game, delta_time)
-        if prev_pos[0] < self.position[0]:
+        if prev_x == self.center_x and prev_y == self.center_y:
+            return
+        if prev_x < self.center_x:
             self.texture = self.back_texture
-        elif prev_pos[0] > self.position[0]:
+        elif prev_x > self.center_x:
             self.texture = self.front_texture
-        elif prev_pos[1] < self.position[1]:
+        elif prev_y < self.center_y:
             self.texture = self.right_texture
-        elif prev_pos[1] > self.position[1]:
+        elif prev_y > self.center_y:
             self.texture = self.left_texture
 
 class Enemy_Swordsman(BaseEnemy):
@@ -335,13 +314,14 @@ class Enemy_Slinger(BaseEnemy):
                 continue
             elif arcade_math.get_distance(arrow.center_x, arrow.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
                 arrow.hit = True
-                arrow.hit_sound = SOUND(
-                    "resources/sound_effects/arrow-impact.wav",
-                    .25,
-                    get_dist(self.position, game.player.position),
-                    volume_map=getattr(game, "audio_type_vols", None),
-                    sound_type="UI",
-                )
+                if getattr(game, "speed", 1) > 0:
+                    arrow.hit_sound = SOUND(
+                        "resources/sound_effects/arrow-impact.wav",
+                        .25,
+                        get_dist(self.position, game.player.position),
+                        volume_map=getattr(game, "audio_type_vols", None),
+                        sound_type="UI",
+                    )
                 if getattr(arrow, "hit_sound", None) and getattr(arrow.hit_sound, "_timer", None):
                     arrow.hit_sound._timer.active = False
                 arrow.visible = False
@@ -367,23 +347,17 @@ class Enemy_Slinger(BaseEnemy):
         self.bow.timer -= self.bow.WaitToAttack
         self.bow.canAttack = True
     def update_movement(self, game, delta_time):
-        self.path_timer += delta_time
-        if self.path_timer < self.next_time:
-            return
-        pos = self.get_path()
-        if pos is not None:
-            self.position = pos
-        self.path_timer -= self.next_time
-
-        prev_pos = self.position
+        prev_x, prev_y = self.position
         super().update_movement(game, delta_time)
-        if prev_pos[0] < self.position[0]:
+        if prev_x == self.center_x and prev_y == self.center_y:
+            return
+        if prev_x < self.center_x:
             self.texture = self.back_texture
-        elif prev_pos[0] > self.position[0]:
+        elif prev_x > self.center_x:
             self.texture = self.front_texture
-        elif prev_pos[1] < self.position[1]:
+        elif prev_y < self.center_y:
             self.texture = self.right_texture
-        elif prev_pos[1] > self.position[1]:
+        elif prev_y > self.center_y:
             self.texture = self.left_texture
 
     def on_attack(self, game, delta_time):     
@@ -392,6 +366,14 @@ class Enemy_Slinger(BaseEnemy):
         self._sfx_cooldown -= getattr(game, "real_delta_time", delta_time)
 
         self._sfx_cooldown -= getattr(game, "real_delta_time", delta_time)
+        if getattr(game, "speed", 1) <= 0:
+            if self.pull_back_sound:
+                try:
+                    self.pull_back_sound.pause()
+                except Exception:
+                    pass
+                self.pull_back_sound = None
+            return
         if not self.pull_back_sound and self._sfx_cooldown <= 0:
             self.pull_back_sound = SOUND(
                 "resources/sound_effects/Arrow Shoot.wav",
@@ -548,24 +530,18 @@ class Arsonist(BaseEnemy):
             self.Explosian.position = self.position
             self.attack(game, delta_time)
     def update_movement(self, game, delta_time):
-        self.path_timer += delta_time
-        if self.path_timer < 1:
-            return
-        pos = self.get_path()
-        if pos is not None:
-            self.position = pos
-            self.Explosian.position = self.center_x-10, self.center_y+10
-        self.path_timer -= 1
-
-        prev_pos = self.position
+        prev_x, prev_y = self.position
         super().update_movement(game, delta_time)
-        if prev_pos[0] < self.position[0]:
+        self.Explosian.position = self.center_x-10, self.center_y+10
+        if prev_x == self.center_x and prev_y == self.center_y:
+            return
+        if prev_x < self.center_x:
             self.texture = self.back_texture
-        elif prev_pos[0] > self.position[0]:
+        elif prev_x > self.center_x:
             self.texture = self.front_texture
-        elif prev_pos[1] < self.position[1]:
+        elif prev_y < self.center_y:
             self.texture = self.right_texture
-        elif prev_pos[1] > self.position[1]:
+        elif prev_y > self.center_y:
             self.texture = self.left_texture
         
 
@@ -586,14 +562,12 @@ class Arsonist(BaseEnemy):
                 obj.health -= self.damage
                 if obj.health <= 0:
                     obj.destroy(game)
+                    continue
                 if obj.__module__ == "Buildings":
                     try:
                         obj.fire.strength += 1
                     except:
                         game.LightOnFire(obj, self.fire_strength)
-                obj.health -= self.damage
-                if obj.health <= 0:
-                    obj.destroy(game)
             self.health = -100
     def _serialize_extra_state(self) -> dict:
         anim = getattr(self.Explosian, "AnimationPlayer", None)
@@ -808,8 +782,12 @@ class Wizard(BaseEnemy):
                     projectile.destroy = True
             else:
                 anim = projectile.destructionAnim.updateAnim(delta_time, len(projectile.destruction))
-                scalevar = .15*random.random()*delta_time
-                projectile.scale += scalevar
+                scalevar = 0.15 * random.random() * delta_time
+                if isinstance(projectile.scale, tuple):
+                    new_scale = projectile.scale[1] + scalevar
+                    projectile.scale = (new_scale, new_scale)
+                else:
+                    projectile.scale += scalevar
                 if anim == 0:
                     hit = arcade.check_for_collision_with_lists(projectile, [game.Buildings, game.People, game.Boats], method=3)
                     for obj in hit:
@@ -827,10 +805,15 @@ class Wizard(BaseEnemy):
         Attack1 = arcade.get_distance_between_sprites(self, self.focused_on) > 200
         
         self.wand.projectile.visible = True
-        self.wand.projectile.scale += delta_time/2
+        scale_x, scale_y = self.wand.projectile.scale
+        new_scale = scale_y + float(delta_time)/2
+        self.wand.projectile.scale = (new_scale, new_scale)
 
         
-        if self.wand.projectile.scale < 1:
+        current_scale = self.wand.projectile.scale
+        if isinstance(current_scale, tuple):
+            current_scale = current_scale[1]
+        if current_scale < 1:
             return
         if Attack1: self.create_projectile(game)
         else: self.create_projectile(game, maxtime=3, maxrotation=22, num = 5)
@@ -838,7 +821,7 @@ class Wizard(BaseEnemy):
         self.canAttack = False
         self.timer = 0
         self.state = "Idle"
-        self.wand.projectile.scale = 0
+        self.wand.projectile.scale = (0, 0)
     def create_projectile(self, game, maxtime=15, maxrotation=5, num=1):
         for i in range(num):
             heading = heading_towards(

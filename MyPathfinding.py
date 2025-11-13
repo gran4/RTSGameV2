@@ -82,7 +82,9 @@ def get_dist(pos, pos2):
     return math.sqrt((pos[0]-pos2[0])**2+(pos[1]- pos2[1])**2)
 
 
-def _AStarSearch(Map:LivingMap, start:tuple, end:tuple, allow_diagonal_movement:bool=True, movelist=[], min_dist=0):
+def _AStarSearch(Map:LivingMap, start:tuple, end:tuple, allow_diagonal_movement:bool=True, movelist=None, min_dist=0):
+    if movelist is None:
+        movelist = [0]
     tilesize = Map.tilesize
     start = (int(start[0]/tilesize), int(start[1]/tilesize))
     end = (int(end[0]/tilesize), int(end[1]/tilesize))
@@ -144,10 +146,10 @@ def _AStarSearch(Map:LivingMap, start:tuple, end:tuple, allow_diagonal_movement:
         for neighbour in neighbours:
             if neighbour in closed_vertices:
                 continue  # We have already processed this node exhaustively
-            elif neighbour[0] < 0 or neighbour[1] < 0 or neighbour[0] >= 100 or neighbour[1] >= 100:
+            elif neighbour[0] < 0 or neighbour[1] < 0 or neighbour[0] >= len(graph) or neighbour[1] >= len(graph[0]):
                 continue
 
-            if not graph[neighbour[0]][neighbour[1]] in movelist:
+            if graph[neighbour[0]][neighbour[1]] not in movelist:
                 continue
 
 
@@ -169,7 +171,9 @@ def _AStarSearch(Map:LivingMap, start:tuple, end:tuple, allow_diagonal_movement:
 
 
 
-def SearchTilesAround(Map:LivingMap, start:tuple, allow_diagonal_movement:bool=True, movelist=[]):
+def SearchTilesAround(Map:LivingMap, start:tuple, allow_diagonal_movement:bool=True, movelist=None):
+    if movelist is None:
+        movelist = [0]
     tilesize = Map.tilesize
     start = (int(start[0]/tilesize), int(start[1]/tilesize))
 
@@ -201,10 +205,10 @@ def SearchTilesAround(Map:LivingMap, start:tuple, allow_diagonal_movement:bool=T
 
         # Update scores for vertices near the current position
         for neighbour in neighbours:
-            if neighbour[0] < 0 or neighbour[1] < 0 or neighbour[0] >= 100 or neighbour[1] >= 100:
+            if neighbour[0] < 0 or neighbour[1] < 0 or neighbour[0] >= len(graph) or neighbour[1] >= len(graph[0]):
                 continue
 
-            if not graph[neighbour[0]][neighbour[1]] in movelist:
+            if graph[neighbour[0]][neighbour[1]] not in movelist:
                 continue
             if neighbour in closed_vertices:
                 continue

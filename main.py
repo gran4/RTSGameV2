@@ -4,31 +4,15 @@ TODO: add sound based on distince
 
 BUG: FIX RESIZE BUG
 You can see out of bounds in full screen
-Doesn't load saves
 
 Perlin noise for map generation
 Buildings span more than 1 tile
 Make Tiles smaller?
 """
 
-"""
-NOTE: Enemy Spawning uses a Dictionary to see how many buildings reference a spot
-If the spot is referenced the spot is un reachable.
-Another Dictionary is which spots are reachable.
-len in dict
-
->0 is spawnable
-
-NOTE: __getattr__ is obj.item
-NOTE: __getitem__ is obj[item]
-"""
-
 #python3.10 -m PyInstaller MainTestResizable.py --noconsole --onefile --add-data "resources:resources"
 #python3.10 -m PyInstaller MainTestResizable.py --windowed --noconsole --onefile --add-data "resources:resources" --icon="resources/Sprites/Icon.png"
 
-# saving is broken
-# You lack housing pop-up is broken
-# Tutorial Menu is broken
 
 import sys, os
 from pathlib import Path
@@ -40,6 +24,7 @@ if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
 
 from math import sqrt, floor, ceil
 import arcade, json, random, arcade.gui, time, pickle, atexit
+from collections import defaultdict, deque
 from arcade import math as arcade_math
 
 from arcade.gui import UILabel, UIFlatButton
@@ -57,8 +42,6 @@ def _collect_subclasses(cls):
 
 ENEMY_CLASS_MAP = {c.__name__: c for c in _collect_subclasses(BaseEnemy) | {BaseEnemy}}
 BUILDING_CLASS_MAP = {c.__name__: c for c in _collect_subclasses(BaseBuilding) | {BaseBuilding}}
-
-ENEMY_CLASS_MAP = {cls.__name__: cls for cls in BaseEnemy.__subclasses__()}
 from CustomCellularAutomata import initialize_grid, create_grid, do_simulation_step
 from Player import *
 from TextInfo import *
@@ -236,10 +219,14 @@ class MyGame(arcade.View):
 
         self.Enemies = arcade.SpriteList()
         self.EnemyBoats = arcade.SpriteList()
-        self.spawnEnemy = -300
+        self.spawnEnemy = -200
         self.hardness_multiplier = 1
+        self.min_enemy_spawn_distance = 200
         self.EnemyMap = {}
         self.OpenToEnemies = []
+        self._enemy_spawn_counts: dict[tuple[int, int], int] = defaultdict(int)
+        self._enemy_spawn_history: deque[tuple[int, int]] = deque()
+        self._max_spawn_history = 200
 
         self.boatUpdate = 0
         self.peopleUpdate = .1
@@ -273,12 +260,19 @@ class MyGame(arcade.View):
         self.last = None
         self.selection_rectangle = arcade.Sprite("resources/Sprites/Selection.png", scale=1.2, center_x=-100000, center_y=-100000)
 
-        #self.load(file_num)
         try:
             self.load(file_num)
-        except:
+        except FileNotFoundError:
+            logging.info("Save slot %s not found; generating new world", file_num)
             self.generateWorld(100, 100, world_gen)
             self.generateEnemySpawner(100, 100)
+        except (EOFError, pickle.UnpicklingError) as exc:
+            logging.warning("Save slot %s is corrupt or empty (%s); regenerating world", file_num, exc)
+            self.generateWorld(100, 100, world_gen)
+            self.generateEnemySpawner(100, 100)
+        except Exception:
+            logging.exception("Failed to load save slot %s", file_num)
+            raise
 
         
         self.center_camera()   
@@ -670,6 +664,31 @@ class MyGame(arcade.View):
             vertical_align='top',
         )
         self.selection_panel_visible = True
+
+    def _world_to_screen(self, world_x: float, world_y: float) -> tuple[float, float]:
+        camera = getattr(self, "camera", None)
+        player = getattr(self, "player", None)
+        if not camera or not player:
+            return world_x, world_y
+        screen_x = world_x - player.center_x + (camera.viewport_width / 2)
+        screen_y = world_y - player.center_y + (camera.viewport_height / 2)
+        margin = 30
+        if screen_x < margin:
+            screen_x = margin
+        elif screen_x > camera.viewport_width - margin:
+            screen_x = camera.viewport_width - margin
+        if screen_y < margin:
+            screen_y = margin
+        elif screen_y > camera.viewport_height - margin:
+            screen_y = camera.viewport_height - margin
+        return screen_x, screen_y
+
+    def show_move_feedback(self, message: str, world_x: float | None = None, world_y: float | None = None, duration: float = 0.8) -> None:
+        if world_x is None or world_y is None:
+            world_x, world_y = getattr(self.player, "position", (0, 0))
+        screen_x, screen_y = self._world_to_screen(world_x, world_y)
+        info_sprite = UpdatingText(message, self.Alphabet_Textures, duration, width=260, center_x=screen_x, center_y=screen_y)
+        self.PopUps.append(info_sprite)
 
     def show_lack_popup(self, text, screen_x, screen_y, duration=3):
         self.lack_popup_timer = time.time() + duration
@@ -1190,13 +1209,16 @@ class MyGame(arcade.View):
                     return
                 x, y = spawn_pos
 
-        enemy.center_x = x
-        enemy.center_y = y
-        
+        base_x, base_y = x, y
+        jittered_x, jittered_y = self._apply_spawn_jitter(base_x, base_y, enemy.movelist)
+        enemy.center_x = jittered_x
+        enemy.center_y = jittered_y
+
         self.calculate_enemy_path(enemy)
         enemy.check = True
         self.Enemies.append(enemy)
-        
+        self._register_enemy_spawn_point(base_x, base_y)
+
         for person in self.People:
             person.check = True
 
@@ -1241,11 +1263,20 @@ class MyGame(arcade.View):
             obj2 = boat
 
 
-        path = _AStarSearch(self.graph, enemy.position, obj2.position, allow_diagonal_movement=True, movelist=enemy.movelist, min_dist=enemy.range)
+        path = _AStarSearch(
+            self.graph,
+            enemy.position,
+            obj2.position,
+            allow_diagonal_movement=True,
+            movelist=enemy.movelist,
+            min_dist=enemy.range,
+        )
         if not path:
-            pass
-        elif arcade.get_distance_between_sprites(enemy, obj2) > enemy.range:        
-            pass
+            enemy.check = True
+            enemy.path = []
+            return
+        if arcade.get_distance_between_sprites(enemy, obj2) > enemy.range:
+            enemy.check = True
         if num == bias1:
             enemy.focused_on = building
         elif num == bias2:
@@ -1310,9 +1341,18 @@ class MyGame(arcade.View):
         fire.obj = obj
     def leave(self, event):
         person = event.source.obj.remove()
-        if person != None:
-            self.People.append(person)
-            self.refresh_population()
+        if person is None:
+            return
+        if person not in self.People:
+            try:
+                self.People.append(person)
+            except ValueError:
+                pass
+        person.in_building = False
+        person.host_building = None
+        person.health_bar.visible = True
+        person.health_bar.position = person.position
+        self.refresh_population()
     def print_attr(self, event):
         print(vars(event.source.obj))
     def center_camera(self):
@@ -1373,10 +1413,10 @@ class MyGame(arcade.View):
         if self.player.boat: self.player.position = self.player.boat.position
         self.center_camera()
     
-        self.spawnEnemy += delta_time
+        self.spawnEnemy += delta_time * getattr(self, "speed", 1)
         spawned = False
         while self.spawnEnemy >= 0:
-            self.spawnEnemy -= 25
+            self.spawnEnemy -= 1
             self.spawn_enemy()  
             self.difficulty *= 1.02
             spawned = True
@@ -1676,6 +1716,7 @@ class MyGame(arcade.View):
         base_y = round(anchor_y / 50) * 50
         max_radius = 600
         for radius in range(0, max_radius + 50, 50):
+            ring_candidates: list[tuple[int, int]] = []
             for dx in range(-radius, radius + 1, 50):
                 for dy in range(-radius, radius + 1, 50):
                     if abs(dx) != radius and abs(dy) != radius and radius != 0:
@@ -1686,16 +1727,25 @@ class MyGame(arcade.View):
                         continue
                     tile = self.graph[int(x / 50)][int(y / 50)]
                     if tile in allowed_tiles:
-                        return x, y
+                        ring_candidates.append((x, y))
+            if ring_candidates:
+                return self._choose_low_usage_spawn(ring_candidates)
         return None
 
     def EnemySpawnPos(self, allowed_tiles: list[int]):
-        while self.OpenToEnemies:
-            random_num = random.randrange(0, len(self.OpenToEnemies))
-            x, y = self.OpenToEnemies[random_num]
-            if self.graph[int(x/50)][int(y/50)] in allowed_tiles:
-                return x, y
-            self.OpenToEnemies.pop(random_num)
+        if self.OpenToEnemies:
+            valid_tiles: list[tuple[int, int]] = []
+            invalid_tiles: list[tuple[int, int]] = []
+            for x, y in self.OpenToEnemies:
+                if self.graph[int(x/50)][int(y/50)] in allowed_tiles:
+                    valid_tiles.append((x, y))
+                else:
+                    invalid_tiles.append((x, y))
+            if invalid_tiles:
+                invalid_set = set(invalid_tiles)
+                self.OpenToEnemies = [tile for tile in self.OpenToEnemies if tile not in invalid_set]
+            if valid_tiles:
+                return self._choose_low_usage_spawn(valid_tiles)
 
         anchors: list[tuple[float, float]] = []
         if len(self.People) > 0:
@@ -1724,6 +1774,7 @@ class MyGame(arcade.View):
         if player is not None:
             anchors.append((player.center_x, player.center_y))
 
+        random.shuffle(anchors)
         for anchor_x, anchor_y in anchors:
             candidate = self._find_valid_spawn_near(anchor_x, anchor_y, allowed_tiles)
             if candidate:
@@ -1733,6 +1784,71 @@ class MyGame(arcade.View):
             self.End()
             return None
         return None
+    def _choose_low_usage_spawn(self, candidates: list[tuple[int, int]]) -> tuple[int, int] | None:
+        if not candidates:
+            return None
+
+        safe_candidates = [pos for pos in candidates if not self._is_near_protected_structures(pos)]
+        pool = safe_candidates or candidates
+
+        weights = []
+        for x, y in pool:
+            tile = (round(x / 50) * 50, round(y / 50) * 50)
+            count = self._enemy_spawn_counts.get(tile, 0)
+            weights.append(1 / (count + 1))
+        total = sum(weights)
+        pick = random.random() * total
+        for candidate, weight in zip(pool, weights):
+            pick -= weight
+            if pick <= 0:
+                return candidate
+        return pool[-1]
+
+    def _is_near_protected_structures(self, pos: tuple[int, int]) -> bool:
+        threshold = getattr(self, "min_enemy_spawn_distance", 0) or 0
+        if threshold <= 0:
+            return False
+        x, y = pos
+        for building in getattr(self, "Buildings", []):
+            if arcade_math.get_distance(building.center_x, building.center_y, x, y) < threshold:
+                return True
+        player = getattr(self, "player", None)
+        if player and arcade_math.get_distance(player.center_x, player.center_y, x, y) < threshold:
+            return True
+        return False
+
+    def _register_enemy_spawn_point(self, x: float, y: float) -> None:
+        tile = (round(x / 50) * 50, round(y / 50) * 50)
+        self._enemy_spawn_counts[tile] += 1
+        self._enemy_spawn_history.append(tile)
+        while len(self._enemy_spawn_history) > self._max_spawn_history:
+            old = self._enemy_spawn_history.popleft()
+            self._enemy_spawn_counts[old] -= 1
+            if self._enemy_spawn_counts[old] <= 0:
+                self._enemy_spawn_counts.pop(old, None)
+
+    def _apply_spawn_jitter(self, x: float, y: float, allowed_tiles: list[int], max_offset: int = 18) -> tuple[float, float]:
+        tile_size = getattr(self.graph, "tilesize", 50)
+        max_x = len(self.graph.graph) * tile_size if self.graph.graph else 0
+        max_y = len(self.graph.graph[0]) * tile_size if self.graph.graph else 0
+        for _ in range(8):
+            offset_x = x + random.randint(-max_offset, max_offset)
+            offset_y = y + random.randint(-max_offset, max_offset)
+            if not (0 <= offset_x < max_x and 0 <= offset_y < max_y):
+                continue
+            tile_x = int(offset_x / tile_size)
+            tile_y = int(offset_y / tile_size)
+            if self.graph[tile_x][tile_y] not in allowed_tiles:
+                continue
+            if self._spawn_position_is_free(offset_x, offset_y):
+                return offset_x, offset_y
+        return x, y
+
+    def _spawn_position_is_free(self, x: float, y: float, min_distance: float = 18.0) -> bool:
+        for enemy in self.Enemies:
+            if arcade_math.get_distance(x, y, enemy.center_x, enemy.center_y) < min_distance:
+                return False
+        return True
     def BuildingChangeEnemySpawner(self, x, y, placing=1, min_dist=100, max_dist= 300):
         #NOTE: Placing=-1 is for destroying, keep at 1 if placing
         x = round(x/50)*50
@@ -1779,6 +1895,18 @@ class MyGame(arcade.View):
                     land[0].texture = arcade.load_texture("resources/Sprites/Snow.png")
 
     def save(self, event): 
+        if getattr(self, "is_tutorial", False):
+            toast = UpdatingText(
+                "Saving is disabled in the tutorial.",
+                self.Alphabet_Textures,
+                2.0,
+                center_x=self.camera.viewport_width / 2,
+                center_y=self.camera.viewport_height - 80,
+                Background_Texture="resources/gui/Small Text Background.png",
+                width=320,
+            )
+            self.texts.append(toast)
+            return
         variables = {}
         self.ui_sprites.clear()
 
@@ -1793,9 +1921,7 @@ class MyGame(arcade.View):
         for key, value in vars(self).items():
             if key in skip_keys:
                 continue
-            if isinstance(value, arcade.SpriteList):
-                variables[key] = self.copy_SpriteList(value)
-            elif isinstance(value, (int, float, dict, list)):
+            if isinstance(value, (int, float, dict, list)):
                 variables[key] = value
 
         # Capture only primitive player state for serialization
@@ -1844,44 +1970,6 @@ class MyGame(arcade.View):
                     except Exception as err:
                         print(f"Pickle failure: {key} -> {type(val)}: {err}")
                 raise
-    def copy_SpriteList(self, sprite_list: arcade.SpriteList):
-        """
-        Copy(and convert) the spritelist into a list
-
-        So it won't break pickle
-        
-        :Parameters:
-            :sprite_list: arcade.SpriteList
-                SpriteList to convert
-
-        :rtype: list
-        :return: Converted SpriteList
-        """
-        sprite_list_copy = []
-        state_attrs = ("max_pop", "food_storage", "mcsStorage")
-        for sprite in sprite_list:
-            state_snapshot = {attr: getattr(self, attr, None) for attr in state_attrs}
-            sprite2 = type(sprite)(self, sprite.center_x, sprite.center_y)
-            for attr, value in state_snapshot.items():
-                if value is not None:
-                    setattr(self, attr, value)
-            variables = vars(sprite2)
-            for key, val in vars(sprite).items():
-                if isinstance(val, (int, float, bool, str, list, dict, tuple, type(None))):
-                    variables[key] = val
-            if hasattr(sprite2, "sprite_lists"):
-                sprite2.sprite_lists = []
-            sprite2.save(self)
-            health_bar = getattr(sprite2, "health_bar", None)
-            if health_bar is not None:
-                try:
-                    health_bar.remove_from_sprite_lists()
-                except Exception:
-                    pass
-                sprite2.health_bar = None
-            sprite_list_copy.append(sprite2)
-        return sprite_list_copy
-
     def _strip_sprite_render_data(self, sprite: arcade.Sprite) -> None:
         """Remove Arcade-specific rendering data so the sprite can be pickled."""
         texture = getattr(sprite, "_texture", None)
@@ -2162,7 +2250,11 @@ class MyGame(arcade.View):
         _build_tiles(state.get("trees", []), self.Trees)
         _build_tiles(state.get("berries", []), self.BerryBushes)
     def load(self, file_num):
+        if not file_num:
+            raise FileNotFoundError("Save slot empty")
         file_path = get_save_path(file_num)
+        if not file_path.exists() or file_path.stat().st_size == 0:
+            raise FileNotFoundError("Save slot empty")
         with file_path.open('rb') as infile:
             file = pickle.load(infile)
 
@@ -2309,11 +2401,6 @@ class MyTutorial(MyGame):
             indicator.center_y = y+button.align_y
     
     
-    def save(self, event):
-        self.indicator_update(event)
-    def load(self):
-        raise ValueError("")
-
     def on_question_click(self, event):
         window = arcade.get_window()
         if not self.question: 
@@ -2445,12 +2532,15 @@ class MyTutorial(MyGame):
                     return
                 x, y = spawn_pos
 
-        enemy.center_x = x
-        enemy.center_y = y
+        base_x, base_y = x, y
+        jittered_x, jittered_y = self._apply_spawn_jitter(base_x, base_y, enemy.movelist)
+        enemy.center_x = jittered_x
+        enemy.center_y = jittered_y
         
         self.calculate_enemy_path(enemy)
         enemy.check = True
         self.Enemies.append(enemy)
+        self._register_enemy_spawn_point(base_x, base_y)
         
         for person in self.People:
             person.check = True
@@ -2834,26 +2924,26 @@ class startMenu(arcade.View):
         self.texts.append(self.title_text)
 
   
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World 1", width=220, height=54)
-        start_button.on_click = self.Start
-        start_button.world_num = 1
-        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y", child=start_button, align_x=0, align_y=150)
-        start_button.wrapper = wrapper
-        self.uimanager.add(wrapper)
+        self.world_buttons: list[CustomUIFlatButton] = []
+        self.world_clear_buttons: list[CustomUIFlatButton] = []
+        for idx, align_y in enumerate((150, 70, -10), start=1):
+            play_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound=self.click_sound, text="", width=220, height=54)
+            play_button.on_click = self.Start
+            play_button.world_num = idx
+            wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y", child=play_button, align_x=-40, align_y=align_y)
+            play_button.wrapper = wrapper
+            self.uimanager.add(wrapper)
+            self.world_buttons.append(play_button)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World 2", width=220, height=54)
-        start_button.on_click = self.Start
-        start_button.world_num = 2
-        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=70)
-        start_button.wrapper = wrapper
-        self.uimanager.add(wrapper)
+            clear_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound=self.click_sound, text="Clear", width=100, height=40)
+            clear_button.on_click = self.ClearSlot
+            clear_button.world_num = idx
+            wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y", child=clear_button, align_x=150, align_y=align_y+5)
+            clear_button.wrapper = wrapper
+            self.uimanager.add(wrapper)
+            self.world_clear_buttons.append(clear_button)
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="World 3", width=220, height=54)
-        start_button.on_click = self.Start
-        start_button.world_num = 3
-        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-10)
-        start_button.wrapper = wrapper
-        self.uimanager.add(wrapper)
+        self._refresh_world_buttons()
 
 
 
@@ -2946,10 +3036,24 @@ class startMenu(arcade.View):
             text = UpdatingText(f"Starts the Game.", self.Alphabet_Textures, 10, center_x=x, center_y = y, width = 200, Background_Texture="resources/gui/Small Text Background.png")
             self.texts.append(text)
             return
+        slot = getattr(event.source, "world_num", 1)
         arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
         self.uimanager.disable()
-        Game = CreateWorld(self, event.source.world_num)
+        if self._slot_has_save(slot):
+            Game = MyGame(self, file_num=slot, world_gen="Normal", difficulty=1)
+        else:
+            Game = CreateWorld(self, slot)
         self.window.show_view(Game)
+
+    def ClearSlot(self, event):
+        slot = getattr(event.source, "world_num", 1)
+        path = get_save_path(slot)
+        try:
+            if path.exists():
+                path.unlink()
+        except Exception:
+            logging.exception("Unable to clear save slot %s", slot)
+        self._refresh_world_buttons()
     def start_Tutorial(self, event):
         arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
         self.uimanager.disable()
@@ -2972,6 +3076,7 @@ class startMenu(arcade.View):
         super().on_show_view()
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
         reset_window_viewport(self.window)
+        self._refresh_world_buttons()
     def on_draw(self):
         """ Draw this view """
         self.clear(self._background_color)
@@ -2989,6 +3094,23 @@ class startMenu(arcade.View):
             if text.update(delta_time):
                 self.texts.remove(text)
         return super().on_update(delta_time)
+
+    def _slot_has_save(self, slot: int) -> bool:
+        path = get_save_path(slot)
+        return path.exists() and path.stat().st_size > 0
+
+    def _refresh_world_buttons(self) -> None:
+        for button in getattr(self, "world_buttons", []):
+            slot = getattr(button, "world_num", 1)
+            label = f"World {slot}"
+            if not self._slot_has_save(slot):
+                label += " (Empty)"
+            button.set_text(label, self.Alphabet_Textures)
+        for button in getattr(self, "world_clear_buttons", []):
+            slot = getattr(button, "world_num", 1)
+            has_save = self._slot_has_save(slot)
+            button.enabled = has_save
+            button.visible = True
 class CreateWorld(arcade.View):
 
     def __init__(self, menu, file_num):
@@ -3080,12 +3202,6 @@ class CreateWorld(arcade.View):
         self.uimanager.add(wrapper)
 
 
-        start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Clear Data", width=140, height=50)
-        start_button.on_click = self.Delete_data
-        wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-50)
-        start_button.wrapper = wrapper
-        self.uimanager.add(wrapper)
-
         start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound = self.click_sound, text="Start", width=140, height=50)
         start_button.on_click = self.Start
         wrapper = UIAnchorWidget(anchor_x="center_x",anchor_y="center_y",child=start_button, align_x=0, align_y=-100)
@@ -3127,27 +3243,6 @@ class CreateWorld(arcade.View):
             text.update_text(text.text, self.Alphabet_Textures, center_x = text.center_x, center_y = text.center_y)        
         return super().on_resize(width, height)
 
-    def Delete_data(self, event):
-        rect = event.source.rect
-        center_x = (rect.left + rect.right) / 2
-        tooltip_y = rect.top + 40
-        text = UpdatingText(
-            "Deletes save file if there is one.",
-            self.Alphabet_Textures,
-            2.0,
-            center_x=center_x,
-            center_y=tooltip_y,
-            Background_offset_y=-40,
-            width=300,
-            Background_Texture="resources/gui/Small Text Background.png",
-        )
-        self.texts.append(text)
-
-        if self.file_num:
-            file_path = get_save_path(self.file_num)
-            file_path.touch(exist_ok=True)
-            with file_path.open("r+") as save_file:
-                save_file.truncate()
     def Generation_change(self, event):
         step = getattr(event.source, "direction", 1)
         self.gen_list_index = (self.gen_list_index + step) % len(self.gen_list)

@@ -1,0 +1,68 @@
+2025-11-12 15:23:29,929 WARNING Save slot 1 is corrupt or empty (Ran out of input); regenerating world
+2025-11-12 15:51:54,031 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 15:57:11,136 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 16:21:32,660 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 17:16:36,246 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 17:27:34,837 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 17:38:13,876 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 17:57:30,278 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 18:03:18,225 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 19:08:13,439 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 19:23:40,104 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 19:29:17,571 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 19:29:28,530 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 19:47:17,147 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 20:12:17,725 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 20:25:49,187 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 21:09:39,696 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 21:10:22,488 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 21:20:57,036 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 21:24:09,630 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 21:37:18,917 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 21:50:00,759 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 21:58:33,299 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 22:13:16,568 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 22:16:53,587 ERROR Failed to load save slot None
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 263, in setup
+    self.load(file_num)
+TypeError: MyTutorial.load() takes 1 positional argument but 2 were given
+2025-11-12 22:17:14,922 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 22:27:27,463 WARNING Save slot 1 is corrupt or empty (Save file empty); regenerating world
+2025-11-12 22:28:51,980 ERROR Failed to load save slot None
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 263, in setup
+    self.load(file_num)
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 2215, in load
+    if not file_path.exists() or file_path.stat().st_size == 0:
+           ^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'exists'
+2025-11-12 22:38:45,527 INFO Save slot None not found; generating new world
+2025-11-12 22:43:00,223 INFO Save slot None not found; generating new world
+2025-11-12 22:53:28,568 INFO Save slot None not found; generating new world
+2025-11-12 22:53:59,687 INFO Save slot 1 not found; generating new world
+2025-11-12 22:54:54,486 INFO Save slot None not found; generating new world
+2025-11-12 22:56:00,838 INFO Save slot None not found; generating new world
+2025-11-12 22:56:15,183 INFO Save slot None not found; generating new world
+2025-11-12 23:29:05,697 INFO Save slot None not found; generating new world
+2025-11-12 23:29:27,880 INFO Save slot None not found; generating new world
+2025-11-12 23:32:46,756 INFO Save slot None not found; generating new world
+2025-11-12 23:44:57,899 INFO Save slot None not found; generating new world
+2025-11-12 23:45:43,325 INFO Save slot None not found; generating new world
+2025-11-12 23:46:49,055 INFO Save slot None not found; generating new world
+2025-11-13 00:37:15,735 INFO Save slot 1 not found; generating new world
+2025-11-13 00:41:22,605 INFO Save slot 1 not found; generating new world
+2025-11-13 00:41:57,609 INFO Save slot 1 not found; generating new world
+2025-11-13 00:44:46,439 INFO Save slot 1 not found; generating new world
+2025-11-13 01:05:12,690 INFO Save slot 1 not found; generating new world
+2025-11-13 08:58:48,832 INFO Save slot None not found; generating new world
+2025-11-13 09:44:40,531 INFO Save slot None not found; generating new world
+2025-11-13 09:55:27,610 INFO Save slot None not found; generating new world
+2025-11-13 09:55:47,387 INFO Save slot None not found; generating new world
+2025-11-13 09:55:54,913 INFO Save slot None not found; generating new world
+2025-11-13 09:56:11,570 INFO Save slot None not found; generating new world
+2025-11-13 10:06:54,058 INFO Save slot None not found; generating new world
+2025-11-13 10:07:35,210 INFO Save slot None not found; generating new world
+2025-11-13 10:37:02,461 INFO Save slot None not found; generating new world
+2025-11-13 10:37:16,524 INFO Save slot None not found; generating new world
+2025-11-13 10:37:25,642 INFO Save slot None not found; generating new world
