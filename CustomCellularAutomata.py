@@ -1,7 +1,8 @@
-import random
-import arcade
-import timeit
 import os
+import random
+import timeit
+
+import arcade
 
 from Components import set_scroll_viewport
 
@@ -75,7 +76,7 @@ def do_simulation_step(old_grid, new_grid):
     """ Run a step of the cellular automaton. """
     height = len(old_grid)
     width = len(old_grid[0])
-    #new_grid = create_grid(width, height)
+    # new_grid = create_grid(width, height)
     for x in range(width):
         for y in range(height):
             alive_neighbors = count_alive_neighbors(old_grid, x, y)
@@ -129,13 +130,14 @@ class MyGame(arcade.Window):
 
         grid_template = create_grid(GRID_WIDTH, GRID_HEIGHT)
         for step in range(NUMBER_OF_STEPS):
-            self.grid, grid_template = do_simulation_step(self.grid, grid_template)
-
+            self.grid, grid_template = do_simulation_step(
+                self.grid, grid_template)
 
         self.grid2 = create_grid(GRID_WIDTH, GRID_HEIGHT)
         initialize_grid(self.grid2)
         for step in range(NUMBER_OF_STEPS):
-            self.grid2, grid_template = do_simulation_step(self.grid2, grid_template)
+            self.grid2, grid_template = do_simulation_step(
+                self.grid2, grid_template)
 
         # Create sprites based on 2D grid
         if not MERGE_SPRITES:
@@ -150,12 +152,14 @@ class MyGame(arcade.Window):
                             wall.center_y = row * SPRITE_SIZE + SPRITE_SIZE / 2
                             self.wall_list.append(wall)
                         else:
-                            wall = arcade.Sprite(":resources:images/tiles/grassCenter.png", SPRITE_SCALING)
+                            wall = arcade.Sprite(
+                                ":resources:images/tiles/grassCenter.png", SPRITE_SCALING)
                             wall.center_x = column * SPRITE_SIZE + SPRITE_SIZE / 2
                             wall.center_y = row * SPRITE_SIZE + SPRITE_SIZE / 2
                             self.wall_list.append(wall)
                     elif self.grid[row][column] == 1:
-                        wall = arcade.Sprite(":resources:images/tiles/grassCenter.png", SPRITE_SCALING)
+                        wall = arcade.Sprite(
+                            ":resources:images/tiles/grassCenter.png", SPRITE_SCALING)
                         wall.center_x = column * SPRITE_SIZE + SPRITE_SIZE / 2
                         wall.center_y = row * SPRITE_SIZE + SPRITE_SIZE / 2
                         self.wall_list.append(wall)
@@ -200,7 +204,8 @@ class MyGame(arcade.Window):
             self.player_sprite.center_y = random.randrange(max_y)
 
             # Are we in a wall?
-            walls_hit = arcade.check_for_collision_with_list(self.player_sprite, self.wall_list)
+            walls_hit = arcade.check_for_collision_with_list(
+                self.player_sprite, self.wall_list)
             if len(walls_hit) == 0:
                 # Not in a wall! Success!
                 placed = True
@@ -267,7 +272,8 @@ class MyGame(arcade.Window):
 
     def on_resize(self, width, height):
 
-        set_scroll_viewport(self.view_left, self.view_bottom, self.width, self.height)
+        set_scroll_viewport(self.view_left, self.view_bottom,
+                            self.width, self.height)
 
     def on_update(self, delta_time):
         """ Movement and game logic """
@@ -309,7 +315,8 @@ class MyGame(arcade.Window):
             changed = True
 
         if changed:
-            set_scroll_viewport(self.view_left, self.view_bottom, self.width, self.height)
+            set_scroll_viewport(
+                self.view_left, self.view_bottom, self.width, self.height)
 
         # Save the time it took to do this.
         self.processing_time = timeit.default_timer() - start_time

@@ -1,6 +1,10 @@
-import arcade, random
+import random
+
+import arcade
 from arcade import math as arcade_math
+
 from Components import *
+
 """
 OBJECT x
 
@@ -12,7 +16,7 @@ use unlocked to expand enemies and ui
 
 
 class BaseEnemy(arcade.Sprite):
-    def __init__(self, file_name:str, x:float, y:float, health:float, damage:float, range:int, scale:float=1):
+    def __init__(self, file_name: str, x: float, y: float, health: float, damage: float, range: int, scale: float = 1):
         super().__init__(file_name, center_x=x, center_y=y, scale=scale)
         self.texture = arcade.load_texture(file_name)
         self.texture_path = file_name
@@ -38,6 +42,7 @@ class BaseEnemy(arcade.Sprite):
     def destroy(self, game):
         self.remove_from_sprite_lists()
         self.health = -100
+
     def get_path(self):
         if type(self.path) != list:
             return None
@@ -47,20 +52,23 @@ class BaseEnemy(arcade.Sprite):
         path = self.path[0]
         self.path.pop(0)
         return path
+
     def create_statemachene(self):
         self.idle = False
         self.tracking = False
         self.attacking = False
-    #NOTE: over ride the function
+    # NOTE: over ride the function
+
     def update(self, game, delta_time):
         if self.health <= 0:
             self.destroy(game)
-            return 
+            return
         self.on_update(game, delta_time)
         if self.focused_on is None and not self.path:
             game.calculate_enemy_path(self)
         self.update_movement(game, delta_time)
-    #NOTE: Always call on_update in update
+    # NOTE: Always call on_update in update
+
     def on_update(self, game, delta_time):
 
         if self.state == "Attack":
@@ -80,6 +88,7 @@ class BaseEnemy(arcade.Sprite):
         if self.check:
             game.calculate_enemy_path(self)
         return True
+
     def update_movement(self, game, delta_time):
         self.path_timer += delta_time
         if self.path_timer > self.next_time:
@@ -87,14 +96,18 @@ class BaseEnemy(arcade.Sprite):
             if pos is not None:
                 self.position = pos
             self.path_timer -= self.next_time
-            #self.next_time = difficulty[game["map"][round(self.center_x/50)][round(self.center_y/50)]]
+            # self.next_time = difficulty[game["map"][round(self.center_x/50)][round(self.center_y/50)]]
+
     def on_attack(self, game, delta_time):
-        self.focused_on.health -= self.damage*delta_time*random.random()*random.random()*4
+        self.focused_on.health -= self.damage * \
+            delta_time*random.random()*random.random()*4
+
     def On_Focused_on(self):
         pass
-    
+
     def load(self, game):
-        texture_path = getattr(self, "_saved_texture_path", None) or getattr(self, "texture_path", None)
+        texture_path = getattr(self, "_saved_texture_path", None) or getattr(
+            self, "texture_path", None)
         if texture_path:
             try:
                 texture = arcade.load_texture(texture_path)
@@ -103,6 +116,7 @@ class BaseEnemy(arcade.Sprite):
                 pass
         if getattr(self, "texture", None):
             set_sprite_hit_box(self, self.texture.hit_box_points)
+
     def serialize_state(self) -> dict:
         state = {
             "type": type(self).__name__,
@@ -128,11 +142,13 @@ class BaseEnemy(arcade.Sprite):
         self.center_y = state.get("y", self.center_y)
         self.position = (self.center_x, self.center_y)
         self.health = state.get("health", self.health)
-        self.max_health = state.get("max_health", getattr(self, "max_health", self.health))
+        self.max_health = state.get(
+            "max_health", getattr(self, "max_health", self.health))
         self.damage = state.get("damage", self.damage)
         self.range = state.get("range", self.range)
         self.state = state.get("state", getattr(self, "state", "Idle"))
-        self.spawn_kwargs = state.get("spawn", getattr(self, "spawn_kwargs", {}))
+        self.spawn_kwargs = state.get(
+            "spawn", getattr(self, "spawn_kwargs", {}))
         self.path = [tuple(pos) for pos in state.get("path", list(self.path))]
         self.path_timer = state.get("path_timer", self.path_timer)
         self.next_time = state.get("next_time", self.next_time)
@@ -144,9 +160,11 @@ class BaseEnemy(arcade.Sprite):
     def _apply_extra_state(self, game, extra_state: dict | None) -> None:
         return
 
+
 class Child(BaseEnemy):
     def __init__(self, game, x, y, difficulty=1):
-        super().__init__("resources/Sprites/enemy.png", x, y, 5*difficulty, 10*difficulty, 5, scale=1)
+        super().__init__("resources/Sprites/enemy.png", x,
+                         y, 5*difficulty, 10*difficulty, 5, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
 
         self.building_bias = 1
@@ -154,10 +172,13 @@ class Child(BaseEnemy):
         self.boat_bias = 1
 
         self.movelist = [0, 2]
-        
-        self.front_texture = arcade.load_texture("resources/Sprites/Child Front.png")
-        self.back_texture = arcade.load_texture("resources/Sprites/Child Back.png")
-        self.left_texture = arcade.load_texture("resources/Sprites/Child Left.png")
+
+        self.front_texture = arcade.load_texture(
+            "resources/Sprites/Child Front.png")
+        self.back_texture = arcade.load_texture(
+            "resources/Sprites/Child Back.png")
+        self.left_texture = arcade.load_texture(
+            "resources/Sprites/Child Left.png")
         self.right_texture = self.left_texture.flip_left_right()
 
         self.texture = self.front_texture
@@ -165,10 +186,11 @@ class Child(BaseEnemy):
     def update(self, game, delta_time):
         if self.health <= 0:
             self.destroy(game)
-            return 
+            return
         self.on_update(game, delta_time)
         if self.focused_on is None and not self.path:
             game.calculate_enemy_path(self)
+
     def update_movement(self, game, delta_time):
         prev_x, prev_y = self.position
         super().update_movement(game, delta_time)
@@ -183,13 +205,16 @@ class Child(BaseEnemy):
         elif prev_y > self.center_y:
             self.texture = self.left_texture
 
+
 class Enemy_Swordsman(BaseEnemy):
-    def __init__(self, x: float, y: float, difficulty = 1):
-        super().__init__("resources/Sprites/NightBorneWarrior/NightBorne.png", x, y, 10*difficulty, 5*difficulty, 40, scale=1)
+    def __init__(self, x: float, y: float, difficulty=1):
+        super().__init__("resources/Sprites/NightBorneWarrior/NightBorne.png",
+                         x, y, 10*difficulty, 5*difficulty, 40, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
-        self.textures = load_texture_grid("resources/Sprites/NightBorneWarrior/NightBorne.png", 80, 80, 22, 111, margin = 0)
+        self.textures = load_texture_grid(
+            "resources/Sprites/NightBorneWarrior/NightBorne.png", 80, 80, 22, 111, margin=0)
         self.texture = self.textures[0]
-        
+
         self.Idle = self.textures[:7]
         self.IdleAnim = AnimationPlayer(.1)
 
@@ -208,14 +233,16 @@ class Enemy_Swordsman(BaseEnemy):
         self.building_bias = 10
         self.people_bias = .1
         self.movelist = [0]
+
     def destroy(self, game):
         self.state = "Death"
         self.can_attack = False
+
     def update(self, game, delta_time):
         if self.health <= 0:
             self.state = "Death"
         self.on_update(game, delta_time)
-        
+
         if self.state == "Idle":
             anim = self.IdleAnim.updateAnim(delta_time, len(self.Idle))
             if anim is not None:
@@ -244,9 +271,12 @@ class Enemy_Swordsman(BaseEnemy):
             self.attack_time = 0
             self.attack_timer = 0
             self.can_attack = False
+
+
 class Enemy_Slinger(BaseEnemy):
     def __init__(self, game, x, y, difficulty=1):
-        super().__init__("resources/Sprites/enemy.png", x, y, 5*difficulty, 10*difficulty, 325, scale=1)
+        super().__init__("resources/Sprites/enemy.png", x,
+                         y, 5*difficulty, 10*difficulty, 325, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
         self.texture = arcade.load_texture("resources/Sprites/enemy.png")
 
@@ -256,32 +286,39 @@ class Enemy_Slinger(BaseEnemy):
 
         self.movelist = [0]
 
-        self.bow = arcade.Sprite(center_x=self.center_x, center_y=self.center_y, image_width=50, image_height=50)#Entity()
+        self.bow = arcade.Sprite(
+            center_x=self.center_x, center_y=self.center_y, image_width=50, image_height=50)  # Entity()
         self.bow.Attack_animation = AnimationPlayer(.1)
-        self.bow.Attack_textures = load_texture_grid("resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
+        self.bow.Attack_textures = load_texture_grid(
+            "resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
         self.bow.texture = self.bow.Attack_textures[0]
-        self.bow.AttackAnimTimes = [.25, .125, .125, .125, .2, .1, .05, .025, .025]
+        self.bow.AttackAnimTimes = [.25, .125,
+                                    .125, .125, .2, .1, .05, .025, .025]
         self.bow.WaitToAttack = .2
         self.bow.timer = 0
         self.bow.canAttack = False
 
-        self.arrows = arcade.SpriteList()#[]
+        self.arrows = arcade.SpriteList()  # []
         self.state = "Idle"
         self._sfx_cooldown = 0.0
         self._sfx_cooldown = 0.0
 
-        self.front_texture = arcade.load_texture("resources/Sprites/Child Front.png")
-        self.back_texture = arcade.load_texture("resources/Sprites/Child Back.png")
-        self.left_texture = arcade.load_texture("resources/Sprites/Child Left.png")
+        self.front_texture = arcade.load_texture(
+            "resources/Sprites/Child Front.png")
+        self.back_texture = arcade.load_texture(
+            "resources/Sprites/Child Back.png")
+        self.left_texture = arcade.load_texture(
+            "resources/Sprites/Child Left.png")
         self.right_texture = self.left_texture.flip_left_right()
         self.texture = self.front_texture
 
         self.pull_back_sound = None
         game.overParticles.append(self.bow)
+
     def update(self, game, delta_time):
         if self.health <= 0:
             self.destroy(game)
-            return 
+            return
         self.on_update(game, delta_time)
 
         if self.focused_on:
@@ -322,7 +359,7 @@ class Enemy_Slinger(BaseEnemy):
                 if getattr(arrow, "hit_sound", None) and getattr(arrow.hit_sound, "_timer", None):
                     arrow.hit_sound._timer.active = False
                 arrow.visible = False
-                
+
             if arrow.hit:
                 arrow.destroy_timer += delta_time
                 if arrow.destroy_timer > .5:
@@ -334,8 +371,9 @@ class Enemy_Slinger(BaseEnemy):
                         pass
                     continue
                 if getattr(arrow, "hit_sound", None) and getattr(arrow.hit_sound, "_timer", None):
-                    arrow.hit_sound._timer.set_time(arrow.hit_sound._timer.get_time()+.5)
-            #else:
+                    arrow.hit_sound._timer.set_time(
+                        arrow.hit_sound._timer.get_time()+.5)
+            # else:
             #    arrow.pull_back_sound._timer.set_time(arrow.pull_back_sound._timer.get_time()+delta_time)
 
         self.bow.timer += delta_time
@@ -343,6 +381,7 @@ class Enemy_Slinger(BaseEnemy):
             return
         self.bow.timer -= self.bow.WaitToAttack
         self.bow.canAttack = True
+
     def update_movement(self, game, delta_time):
         prev_x, prev_y = self.position
         super().update_movement(game, delta_time)
@@ -357,8 +396,8 @@ class Enemy_Slinger(BaseEnemy):
         elif prev_y > self.center_y:
             self.texture = self.left_texture
 
-    def on_attack(self, game, delta_time):     
-        if not self.bow.canAttack: 
+    def on_attack(self, game, delta_time):
+        if not self.bow.canAttack:
             return
         self._sfx_cooldown -= getattr(game, "real_delta_time", delta_time)
 
@@ -384,8 +423,10 @@ class Enemy_Slinger(BaseEnemy):
                 self.pull_back_sound._timer.active = False
             self._sfx_cooldown = 0.15
         if getattr(self.pull_back_sound, "_timer", None):
-            self.pull_back_sound._timer.set_time(self.pull_back_sound._timer.get_time()+delta_time*.5)
-        anim = self.bow.Attack_animation.updateAnim(delta_time, len(self.bow.Attack_textures))
+            self.pull_back_sound._timer.set_time(
+                self.pull_back_sound._timer.get_time()+delta_time*.5)
+        anim = self.bow.Attack_animation.updateAnim(
+            delta_time, len(self.bow.Attack_textures))
         if anim is None:
             return
         elif anim == 0:
@@ -416,8 +457,9 @@ class Enemy_Slinger(BaseEnemy):
 
         self.bow.texture = self.bow.Attack_textures[anim]
         self.bow.Attack_animation.timetoupdate = self.bow.AttackAnimTimes[anim]
-            
+
         self.bow.timer = 0
+
     def destroy(self, game):
         if self.bow in game.overParticles:
             game.overParticles.remove(self.bow)
@@ -463,11 +505,15 @@ class Enemy_Slinger(BaseEnemy):
         if not extra_state:
             return
         bow_state = extra_state.get("bow", {})
-        self.bow.timer = bow_state.get("timer", getattr(self.bow, "timer", 0.0))
-        self.bow.canAttack = bow_state.get("can_attack", getattr(self.bow, "canAttack", False))
+        self.bow.timer = bow_state.get(
+            "timer", getattr(self.bow, "timer", 0.0))
+        self.bow.canAttack = bow_state.get(
+            "can_attack", getattr(self.bow, "canAttack", False))
         self.bow.angle = bow_state.get("angle", self.bow.angle)
-        self.bow.Attack_animation.index = bow_state.get("anim_index", self.bow.Attack_animation.index)
-        self.bow.Attack_animation.time = bow_state.get("anim_time", self.bow.Attack_animation.time)
+        self.bow.Attack_animation.index = bow_state.get(
+            "anim_index", self.bow.Attack_animation.index)
+        self.bow.Attack_animation.time = bow_state.get(
+            "anim_time", self.bow.Attack_animation.time)
 
         self.arrows = arcade.SpriteList()
         arrow_texture = "resources/Sprites/Arcane archer/projectile_cropped.png"
@@ -490,42 +536,49 @@ class Enemy_Slinger(BaseEnemy):
 
 
 class Arsonist(BaseEnemy):
-    def __init__(self, game, x:float, y:float, difficulty=1):
-        super().__init__("resources/Sprites/Player.png", x, y, 5*difficulty, 5*difficulty, 40, scale=1)
+    def __init__(self, game, x: float, y: float, difficulty=1):
+        super().__init__("resources/Sprites/Player.png", x,
+                         y, 5*difficulty, 5*difficulty, 40, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
 
-        self.front_texture = arcade.load_texture("resources/Sprites/Child Front.png")
-        self.back_texture = arcade.load_texture("resources/Sprites/Child Back.png")
-        self.left_texture = arcade.load_texture("resources/Sprites/Child Left.png")
+        self.front_texture = arcade.load_texture(
+            "resources/Sprites/Child Front.png")
+        self.back_texture = arcade.load_texture(
+            "resources/Sprites/Child Back.png")
+        self.left_texture = arcade.load_texture(
+            "resources/Sprites/Child Left.png")
         self.right_texture = self.left_texture.flip_left_right()
         self.texture = self.front_texture
 
         self.building_bias = 1
-        self.people_bias = 100#float("inf")
+        self.people_bias = 100  # float("inf")
         self.boat_bias = 100
 
         self.movelist = [0]
         self.fire_strength = 1
 
-        self.Explosian = arcade.Sprite(center_x=x-10, center_y = y+10, scale = .25)
-        self.Explosian.textures = load_texture_grid("resources/Sprites/Fire_Totem/Fire_Totem-full_Sheet.png", 64, 100, 14, 70)
+        self.Explosian = arcade.Sprite(center_x=x-10, center_y=y+10, scale=.25)
+        self.Explosian.textures = load_texture_grid(
+            "resources/Sprites/Fire_Totem/Fire_Totem-full_Sheet.png", 64, 100, 14, 70)
         self.Explosian.texture = self.Explosian.textures[4]
         self.Explosian.AnimationPlayer = AnimationPlayer(.1)
         game.overParticles.append(self.Explosian)
 
     def destroy(self, game):
-        super().destroy(game) 
-        self.Explosian.remove_from_sprite_lists()   
+        super().destroy(game)
+        self.Explosian.remove_from_sprite_lists()
+
     def update(self, game, delta_time):
         if self.health <= 0:
             self.destroy(game)
-            return 
+            return
         self.on_update(game, delta_time)
         self.update_movement(game, delta_time)
-        
-        if self.state == "Attack": 
+
+        if self.state == "Attack":
             self.Explosian.position = self.position
             self.attack(game, delta_time)
+
     def update_movement(self, game, delta_time):
         prev_x, prev_y = self.position
         super().update_movement(game, delta_time)
@@ -540,21 +593,22 @@ class Arsonist(BaseEnemy):
             self.texture = self.right_texture
         elif prev_y > self.center_y:
             self.texture = self.left_texture
-        
 
     def on_attack(self, game, delta_time):
         self.Explosian.scale = 1
         self.state = "Attack"
+
     def attack(self, game, delta_time):
         anim = self.Explosian.AnimationPlayer.updateAnim(delta_time, 10)
         if anim is not None:
             self.Explosian.texture = self.Explosian.textures[60:70][anim]
-        
+
         if anim == 0:
             self.destroy(game)
             self.remove_from_sprite_lists()
 
-            hit = arcade.check_for_collision_with_lists(self, [game.Buildings, game.People, game.Boats], method=3)
+            hit = arcade.check_for_collision_with_lists(
+                self, [game.Buildings, game.People, game.Boats], method=3)
             for obj in hit:
                 obj.health -= self.damage
                 if obj.health <= 0:
@@ -566,6 +620,7 @@ class Arsonist(BaseEnemy):
                     except:
                         game.LightOnFire(obj, self.fire_strength)
             self.health = -100
+
     def _serialize_extra_state(self) -> dict:
         anim = getattr(self.Explosian, "AnimationPlayer", None)
         return {
@@ -582,11 +637,15 @@ class Arsonist(BaseEnemy):
     def _apply_extra_state(self, game, extra_state: dict | None) -> None:
         if not extra_state:
             return
-        self.fire_strength = extra_state.get("fire_strength", self.fire_strength)
+        self.fire_strength = extra_state.get(
+            "fire_strength", self.fire_strength)
         explosion_state = extra_state.get("explosion", {})
-        self.Explosian.center_x = explosion_state.get("x", self.Explosian.center_x)
-        self.Explosian.center_y = explosion_state.get("y", self.Explosian.center_y)
-        self.Explosian.scale = explosion_state.get("scale", self.Explosian.scale)
+        self.Explosian.center_x = explosion_state.get(
+            "x", self.Explosian.center_x)
+        self.Explosian.center_y = explosion_state.get(
+            "y", self.Explosian.center_y)
+        self.Explosian.scale = explosion_state.get(
+            "scale", self.Explosian.scale)
         anim = getattr(self.Explosian, "AnimationPlayer", None)
         if anim:
             anim.index = explosion_state.get("anim_index", anim.index)
@@ -594,11 +653,14 @@ class Arsonist(BaseEnemy):
         if self.Explosian not in game.overParticles:
             game.overParticles.append(self.Explosian)
 
+
 class Golem(BaseEnemy):
     def __init__(self, game, x: float, y: float, difficulty=1):
-        super().__init__("resources/Sprites/Stone Golem/Character_sheet.png", x, y, 10*difficulty, 10*difficulty, 40, scale=.8)
+        super().__init__("resources/Sprites/Stone Golem/Character_sheet.png",
+                         x, y, 10*difficulty, 10*difficulty, 40, scale=.8)
         self.spawn_kwargs = {"difficulty": difficulty}
-        textures = load_texture_grid("resources/Sprites/Stone Golem/Character_sheet.png", 100, 100, 10, 100, margin = 0)
+        textures = load_texture_grid(
+            "resources/Sprites/Stone Golem/Character_sheet.png", 100, 100, 10, 100, margin=0)
         self.texture = textures[0]
         self.Idle = textures[:4]
         self.Idle_animation = AnimationPlayer(.1)
@@ -609,8 +671,7 @@ class Golem(BaseEnemy):
         self.Death = textures[73:84]
         self.Death_animation = AnimationPlayer(.1)
 
-        self.attacking = textures[13] 
-
+        self.attacking = textures[13]
 
         self.attack_timer = 0
         self.WaitToAttack = 2
@@ -624,18 +685,22 @@ class Golem(BaseEnemy):
 
         self.movelist = [0]
 
-        self.affect = arcade.Sprite("resources/Sprites/Selection.png", center_x=100000, center_y=100000)
-        self.affect.textures = load_texture_grid("resources/Sprites/Free Pixel Effects Pack/10_weaponhit_spritesheet.png", 100, 100, 6, 31)[1:]
+        self.affect = arcade.Sprite(
+            "resources/Sprites/Selection.png", center_x=100000, center_y=100000)
+        self.affect.textures = load_texture_grid(
+            "resources/Sprites/Free Pixel Effects Pack/10_weaponhit_spritesheet.png", 100, 100, 6, 31)[1:]
         self.affect.animation_player = AnimationPlayer(.03)
         game.underParticals.append(self.affect)
+
     def destroy(self, game):
         self.state = "Death"
         self.canAttack = False
+
     def update(self, game, delta_time):
         if self.health <= 0:
             self.state = "Death"
         self.on_update(game, delta_time)
-        
+
         if self.state == "Idle":
             anim = self.Idle_animation.updateAnim(delta_time, len(self.Idle))
             if anim is not None:
@@ -650,6 +715,7 @@ class Golem(BaseEnemy):
                 self.remove_from_sprite_lists()
             if anim is not None:
                 self.texture = self.Death[anim]
+
     def on_attack(self, game, delta_time):
         if not self.canAttack:
             return
@@ -661,16 +727,18 @@ class Golem(BaseEnemy):
         self.affect.center_y = self.center_y
 
         self.affect.scale += 0.15 * random.random()
-        anim = self.affect.animation_player.updateAnim(delta_time, len(self.affect.textures))
+        anim = self.affect.animation_player.updateAnim(
+            delta_time, len(self.affect.textures))
         if anim is not None:
             self.affect.texture = self.affect.textures[anim]
 
-
         if self.attack_time >= 1:
-            hit = arcade.check_for_collision_with_lists(self.affect, [game.Buildings, game.People], method=3)
+            hit = arcade.check_for_collision_with_lists(
+                self.affect, [game.Buildings, game.People], method=3)
             for thing in hit:
                 thing.health -= self.damage
-                if thing.health <= 0: thing.destroy(game)
+                if thing.health <= 0:
+                    thing.destroy(game)
             self.affect.width = 64
             self.affect.height = 64
             self.affect.scale = 1
@@ -679,11 +747,12 @@ class Golem(BaseEnemy):
             self.affect.animation_player.index = 0
             self.affect.animation_player.time = 0
             self.affect.texture = self.affect.textures[0]
-            
+
             self.texture = self.Idle[0]
             self.canAttack = False
             self.attack_time = 0
             self.attack_timer = 0
+
     def _serialize_extra_state(self) -> dict:
         anim = getattr(self.affect, "animation_player", None)
         return {
@@ -720,25 +789,31 @@ class Golem(BaseEnemy):
         self.attack_timer = extra_state.get("attack_timer", self.attack_timer)
         self.attack_time = extra_state.get("attack_time", self.attack_time)
         self.canAttack = extra_state.get("can_attack", self.canAttack)
+
+
 class Wizard(BaseEnemy):
     def __init__(self, game, x: float, y: float, difficulty):
-        super().__init__("resources/Sprites/Wizard/Idle.png", x, y, 5*difficulty, 2*difficulty, 200, scale=1)
+        super().__init__("resources/Sprites/Wizard/Idle.png",
+                         x, y, 5*difficulty, 2*difficulty, 200, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
 
-        self.front_texture = arcade.load_texture("resources/Sprites/Child Front.png")
-        self.back_texture = arcade.load_texture("resources/Sprites/Child Back.png")
-        self.left_texture = arcade.load_texture("resources/Sprites/Child Left.png")
+        self.front_texture = arcade.load_texture(
+            "resources/Sprites/Child Front.png")
+        self.back_texture = arcade.load_texture(
+            "resources/Sprites/Child Back.png")
+        self.left_texture = arcade.load_texture(
+            "resources/Sprites/Child Left.png")
         self.right_texture = self.left_texture.flip_horizontally()
         self.texture = self.front_texture
 
-
-        self.wand = arcade.Sprite("resources/Sprites/Wand.png", scale=.35, center_x=x-10, center_y=y)
-        self.wand.projectile = arcade.Sprite("resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-2.png", scale=0)
+        self.wand = arcade.Sprite(
+            "resources/Sprites/Wand.png", scale=.35, center_x=x-10, center_y=y)
+        self.wand.projectile = arcade.Sprite(
+            "resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-2.png", scale=0)
         self.wand.projectile.visible = False
 
         game.overParticles.append(self.wand)
         game.overParticles.append(self.wand.projectile)
-
 
         self.movelist = [0]
         self.building_bias = 10
@@ -752,12 +827,12 @@ class Wizard(BaseEnemy):
         self.WaitToAttack = 1
         self.timer = 0
         self.canAttack = False
-        
+
     def update(self, game, delta_time):
         if self.health <= 0:
             self.state = "Death"
         self.on_update(game, delta_time)
-        
+
         if self.state == "Idle":
             self.timer += delta_time
             if self.timer > self.WaitToAttack:
@@ -778,7 +853,8 @@ class Wizard(BaseEnemy):
                 if self.focused_on and arcade_math.get_distance(projectile.center_x, projectile.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
                     projectile.destroy = True
             else:
-                anim = projectile.destructionAnim.updateAnim(delta_time, len(projectile.destruction))
+                anim = projectile.destructionAnim.updateAnim(
+                    delta_time, len(projectile.destruction))
                 scalevar = 0.15 * random.random() * delta_time
                 if isinstance(projectile.scale, tuple):
                     new_scale = projectile.scale[1] + scalevar
@@ -786,7 +862,8 @@ class Wizard(BaseEnemy):
                 else:
                     projectile.scale += scalevar
                 if anim == 0:
-                    hit = arcade.check_for_collision_with_lists(projectile, [game.Buildings, game.People, game.Boats], method=3)
+                    hit = arcade.check_for_collision_with_lists(
+                        projectile, [game.Buildings, game.People, game.Boats], method=3)
                     for obj in hit:
                         obj.health -= self.damage
                         if obj.health > 0:
@@ -795,30 +872,34 @@ class Wizard(BaseEnemy):
                     projectile.remove_from_sprite_lists()
                 if anim is not None:
                     projectile.texture = projectile.destruction[anim]
+
     def on_attack(self, game, delta_time):
         if not self.canAttack:
             return
         self.state = "Attack"
-        Attack1 = arcade.get_distance_between_sprites(self, self.focused_on) > 200
-        
+        Attack1 = arcade.get_distance_between_sprites(
+            self, self.focused_on) > 200
+
         self.wand.projectile.visible = True
         scale_x, scale_y = self.wand.projectile.scale
         new_scale = scale_y + float(delta_time)/2
         self.wand.projectile.scale = (new_scale, new_scale)
 
-        
         current_scale = self.wand.projectile.scale
         if isinstance(current_scale, tuple):
             current_scale = current_scale[1]
         if current_scale < 1:
             return
-        if Attack1: self.create_projectile(game)
-        else: self.create_projectile(game, maxtime=3, maxrotation=22, num = 5)
+        if Attack1:
+            self.create_projectile(game)
+        else:
+            self.create_projectile(game, maxtime=3, maxrotation=22, num=5)
 
         self.canAttack = False
         self.timer = 0
         self.state = "Idle"
         self.wand.projectile.scale = (0, 0)
+
     def create_projectile(self, game, maxtime=15, maxrotation=5, num=1):
         for i in range(num):
             heading = heading_towards(
@@ -835,18 +916,20 @@ class Wizard(BaseEnemy):
             )
             game.overParticles.append(projectile)
             self.projectiles.append(projectile)
-            
+
             projectile.time = 0
             projectile.maxtime = maxtime
             projectile.destruction = []
             for i in range(1, 5):
-                projectile.destruction.append(arcade.load_texture(f"resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png"))
+                projectile.destruction.append(arcade.load_texture(
+                    f"resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png"))
             projectile.destructionAnim = AnimationPlayer(.1)
             projectile.destroy = False
 
             projectile.position = self.position
             set_sprite_motion(projectile, heading, 50)
             projectile.update()
+
     def destroy(self, game):
         super().destroy(game)
         self.remove_from_sprite_lists()
@@ -854,6 +937,7 @@ class Wizard(BaseEnemy):
         self.wand.projectile.remove_from_sprite_lists()
         for projectile in self.projectiles:
             projectile.remove_from_sprite_lists()
+
     def _serialize_extra_state(self) -> dict:
         wand_state = {
             "wand_x": self.wand.center_x,
@@ -891,8 +975,10 @@ class Wizard(BaseEnemy):
         wand_state = extra_state.get("wand", {})
         self.wand.center_x = wand_state.get("wand_x", self.wand.center_x)
         self.wand.center_y = wand_state.get("wand_y", self.wand.center_y)
-        self.wand.projectile.scale = wand_state.get("projectile_scale", self.wand.projectile.scale)
-        self.wand.projectile.visible = wand_state.get("projectile_visible", self.wand.projectile.visible)
+        self.wand.projectile.scale = wand_state.get(
+            "projectile_scale", self.wand.projectile.scale)
+        self.wand.projectile.visible = wand_state.get(
+            "projectile_visible", self.wand.projectile.visible)
         if self.wand not in game.overParticles:
             game.overParticles.append(self.wand)
         if self.wand.projectile not in game.overParticles:
@@ -903,7 +989,8 @@ class Wizard(BaseEnemy):
 
         projectile_texture = "resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-2.png"
         destruction_frames = [
-            arcade.load_texture(f"resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png")
+            arcade.load_texture(
+                f"resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png")
             for i in range(1, 5)
         ]
         self.projectiles = arcade.SpriteList()
@@ -929,30 +1016,35 @@ class Wizard(BaseEnemy):
 
 
 class Privateer(BaseEnemy):
-    def __init__(self, game, x:float, y:float, difficulty=1):
-        super().__init__("resources/Sprites/Boat.png", x, y, 20*difficulty, 5*difficulty, 150, .5)
+    def __init__(self, game, x: float, y: float, difficulty=1):
+        super().__init__("resources/Sprites/Boat.png",
+                         x, y, 20*difficulty, 5*difficulty, 150, .5)
         self.spawn_kwargs = {"difficulty": difficulty}
         self.people_bias = 1
         self.building_bias = 1
         self.boat_bias = .2
         self.movelist = [2]
 
-        self.bow = arcade.Sprite(center_x=self.center_x, center_y=self.center_y, image_width=50, image_height=50)#Entity()
+        self.bow = arcade.Sprite(
+            center_x=self.center_x, center_y=self.center_y, image_width=50, image_height=50)  # Entity()
         self.bow.Attack_animation = AnimationPlayer(.1)
-        self.bow.Attack_textures = load_texture_grid("resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
+        self.bow.Attack_textures = load_texture_grid(
+            "resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
         self.bow.texture = self.bow.Attack_textures[0]
-        self.bow.AttackAnimTimes = [.25, .125, .125, .125, .2, .1, .05, .025, .025]
+        self.bow.AttackAnimTimes = [.25, .125,
+                                    .125, .125, .2, .1, .05, .025, .025]
         self.bow.WaitToAttack = .2
         self.bow.timer = 0
         self.bow.canAttack = False
         game.overParticles.append(self.bow)
 
-        self.arrows = arcade.SpriteList()#[]
+        self.arrows = arcade.SpriteList()  # []
         self.state = "Idle"
+
     def update(self, game, delta_time):
         if self.health <= 0:
             self.destroy(game)
-            return 
+            return
         self.on_update(game, delta_time)
 
         if self.focused_on:
@@ -968,7 +1060,7 @@ class Privateer(BaseEnemy):
         self.bow.center_y = self.center_y
 
         self.update_movement(game, delta_time)
-        
+
         for arrow in list(self.arrows):
             advance_sprite(arrow, delta_time)
             arrow.update()
@@ -1009,16 +1101,18 @@ class Privateer(BaseEnemy):
             if pos is not None:
                 self.position = pos
             self.path_timer -= self.next_time
-    def on_attack(self, game, delta_time):  
+
+    def on_attack(self, game, delta_time):
         self.angle = heading_towards(
             self.center_x,
             self.center_y,
             self.focused_on.center_x,
             self.focused_on.center_y,
         ) - 90
-        if not self.bow.canAttack: 
+        if not self.bow.canAttack:
             return
-        anim = self.bow.Attack_animation.updateAnim(delta_time, len(self.bow.Attack_textures))
+        anim = self.bow.Attack_animation.updateAnim(
+            delta_time, len(self.bow.Attack_textures))
         if anim is None:
             return
         elif anim == 0:
@@ -1045,8 +1139,9 @@ class Privateer(BaseEnemy):
             arrow.update()
         self.bow.texture = self.bow.Attack_textures[anim]
         self.bow.Attack_animation.timetoupdate = self.bow.AttackAnimTimes[anim]
-            
+
         self.bow.timer = 0
+
     def destroy(self, game):
         self.bow.remove_from_sprite_lists()
         self.bow = None
@@ -1054,6 +1149,7 @@ class Privateer(BaseEnemy):
         for arrow in self.arrows:
             arrow.remove_from_sprite_lists()
         return super().destroy(game)
+
     def _serialize_extra_state(self) -> dict:
         bow_state = {
             "timer": getattr(self.bow, "timer", 0.0),
@@ -1083,11 +1179,15 @@ class Privateer(BaseEnemy):
         if not extra_state:
             return
         bow_state = extra_state.get("bow", {})
-        self.bow.timer = bow_state.get("timer", getattr(self.bow, "timer", 0.0))
-        self.bow.canAttack = bow_state.get("can_attack", getattr(self.bow, "canAttack", False))
+        self.bow.timer = bow_state.get(
+            "timer", getattr(self.bow, "timer", 0.0))
+        self.bow.canAttack = bow_state.get(
+            "can_attack", getattr(self.bow, "canAttack", False))
         self.bow.angle = bow_state.get("angle", self.bow.angle)
-        self.bow.Attack_animation.index = bow_state.get("anim_index", self.bow.Attack_animation.index)
-        self.bow.Attack_animation.time = bow_state.get("anim_time", self.bow.Attack_animation.time)
+        self.bow.Attack_animation.index = bow_state.get(
+            "anim_index", self.bow.Attack_animation.index)
+        self.bow.Attack_animation.time = bow_state.get(
+            "anim_time", self.bow.Attack_animation.time)
         if self.bow not in game.overParticles:
             game.overParticles.append(self.bow)
 

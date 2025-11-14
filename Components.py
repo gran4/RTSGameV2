@@ -1,33 +1,25 @@
-import arcade, math, itertools
-
+import itertools
+import math
+import time
 from dataclasses import dataclass
-from typing import Optional, Tuple, Union, Literal, Sequence
+from pathlib import Path
+from typing import Literal, Optional, Sequence, Tuple, Union
 
-from pyglet.event import EVENT_HANDLED, EVENT_UNHANDLED
-
-from arcade import load_spritesheet as _arcade_load_spritesheet, Rect
+import arcade
+import pyglet.media as media
+from arcade import Rect
+from arcade import load_spritesheet as _arcade_load_spritesheet
+from arcade.gui import (Property, Surface, UIEvent, UIMouseDragEvent,
+                        UIMouseMovementEvent, UIMousePressEvent,
+                        UIMouseReleaseEvent, UIWidget, bind)
+from arcade.gui.events import UIOnChangeEvent, UIOnClickEvent
 from arcade.hitbox import HitBox
 from arcade.texture import Texture
-from arcade.gui import (
-    UIWidget,
-    Surface,
-    UIEvent,
-    UIMouseMovementEvent,
-    UIMouseDragEvent,
-    UIMousePressEvent,
-    UIMouseReleaseEvent,
-)
-from arcade.gui.events import UIOnChangeEvent, UIOnClickEvent
-from arcade.gui import Property, bind
-from arcade.types import Color, LBWH
+from arcade.types import LBWH, Color
+from pyglet.event import EVENT_HANDLED, EVENT_UNHANDLED
 
-from pathlib import Path
-import time
-import pyglet.media as media
-
-
-trainingtimes = {"Bad Gifter":5, "Bad Reporter":10}
-movement = {0:1, 1:2, 2:1}
+trainingtimes = {"Bad Gifter": 5, "Bad Reporter": 10}
+movement = {0: 1, 1: 2, 2: 1}
 
 if not hasattr(arcade.Sprite, "draw"):
     def _compat_sprite_draw(self):
@@ -40,6 +32,7 @@ if not hasattr(arcade.Sprite, "draw"):
 
     arcade.Sprite.draw = _compat_sprite_draw  # type: ignore[attr-defined]
 
+
 def reset_window_viewport(
     window: Optional[arcade.Window] = None,
     *,
@@ -49,8 +42,10 @@ def reset_window_viewport(
     height: Optional[float] = None,
 ) -> None:
     win = window or arcade.get_window()
-    default_width = getattr(win, "width", 0) or getattr(win, "size", (0, 0))[0] or 1
-    default_height = getattr(win, "height", 0) or getattr(win, "size", (0, 0))[1] or 1
+    default_width = getattr(win, "width", 0) or getattr(
+        win, "size", (0, 0))[0] or 1
+    default_height = getattr(win, "height", 0) or getattr(
+        win, "size", (0, 0))[1] or 1
 
     viewport_width = width if width is not None else default_width
     viewport_height = height if height is not None else default_height
@@ -78,6 +73,7 @@ def set_scroll_viewport(
         height=height,
     )
 
+
 def load_texture_grid(
     path: str,
     width: int,
@@ -93,7 +89,8 @@ def load_texture_grid(
 
     if isinstance(margin, tuple):
         if len(margin) != 4:
-            raise ValueError("margin tuple must contain four values: (left, right, bottom, top)")
+            raise ValueError(
+                "margin tuple must contain four values: (left, right, bottom, top)")
         margin_left, margin_right, margin_bottom, margin_top = margin
     else:
         margin_left = margin_right = margin_bottom = margin_top = margin
@@ -135,10 +132,12 @@ def set_sprite_hit_box(
     if not points:
         return
 
-    hit_box = HitBox(points, sprite.position, getattr(sprite, "_scale", (1.0, 1.0)))
+    hit_box = HitBox(points, sprite.position,
+                     getattr(sprite, "_scale", (1.0, 1.0)))
     angle = getattr(sprite, "_angle", 0.0)
     sprite._hit_box = hit_box.create_rotatable(angle=angle)
     sprite.update_spatial_hash()
+
 
 def get_closest_sprite(pos, sprite_list):
     lowest_dist = float("inf")
@@ -149,6 +148,8 @@ def get_closest_sprite(pos, sprite_list):
             lowest_dist = dist
             save = sprite
     return save, lowest_dist
+
+
 def rotation(x, y, x2, y2, angle=0, max_turn=5):
     x_diff = x2 - x
     y_diff = y2 - y
@@ -157,9 +158,9 @@ def rotation(x, y, x2, y2, angle=0, max_turn=5):
         target_angle_radians += 2 * math.pi
     actual_angle_radians = math.radians(angle)
     rot_speed_radians = math.radians(max_turn)
-        # What is the difference between what we want, and where we are?
+    # What is the difference between what we want, and where we are?
     angle_diff_radians = target_angle_radians - actual_angle_radians
-        # Figure out if we rotate clockwise or counter-clockwise
+    # Figure out if we rotate clockwise or counter-clockwise
     if abs(angle_diff_radians) <= rot_speed_radians:
         actual_angle_radians = target_angle_radians
         clockwise = None
@@ -208,8 +209,12 @@ def advance_sprite(sprite: arcade.Sprite, delta_time: float) -> None:
 
 def get_dist(pos, pos2):
     return math.hypot(pos[0] - pos2[0], pos[1] - pos2[1])
+
+
 def sprites_in_range(range, pos, sprite_list):
     return [sprite for sprite in sprite_list if get_dist(pos, sprite.position) < range and sprite.position != pos]
+
+
 def convert_button(
     button: "CustomUIFlatButton",
     button_texture: Union[str, arcade.Texture],
@@ -223,7 +228,8 @@ def convert_button(
 
     base_texture = _ensure_texture(button_texture)
     hovered = _ensure_texture(hovered_texture or button_texture)
-    pressed = _ensure_texture(pressed_texture or hovered_texture or button_texture)
+    pressed = _ensure_texture(
+        pressed_texture or hovered_texture or button_texture)
 
     desired_width = button.width
     desired_height = button.height
@@ -262,11 +268,13 @@ class BadgeConfig:
 _ANCHOR_X = {"left": -1, "center": 0, "right": 1}
 _ANCHOR_Y = {"bottom": -1, "center": 0, "top": 1}
 
+
 class AnimationPlayer(object):
     def __init__(self, timetoupdate, index=0) -> None:
         self.time = 0
         self.index = index
         self.timetoupdate = timetoupdate
+
     def updateAnim(self, deltatime, maxLen):
         self.time += deltatime
         if self.time >= self.timetoupdate:
@@ -276,6 +284,8 @@ class AnimationPlayer(object):
             self.time -= self.timetoupdate
             return self.index
         return None
+
+
 class Sound(arcade.Sound):
     """Arcade ``Sound`` wrapper that tolerates load/play failures and tracks volume."""
 
@@ -297,11 +307,13 @@ class Sound(arcade.Sound):
             except Exception:
                 self.player = None
 
-    def play(self, pan: float = 0, loop: bool = False) -> None:  # type: ignore[override]
+    # type: ignore[override]
+    def play(self, pan: float = 0, loop: bool = False) -> None:
         try:
             self.player = super().play(self.volume, pan, loop)
         except Exception:
             self.player = None
+
 
 _sound_cooldowns: dict[tuple[str, str], float] = {}
 _sound_cache: dict[str, Optional[arcade.Sound]] = {}
@@ -315,7 +327,8 @@ def _get_sound(file: str) -> Optional[arcade.Sound]:
     try:
         sound = arcade.load_sound(file)
     except Exception as exc:
-        logging.getLogger(__name__).warning("Failed to load sound %s: %s", file, exc)
+        logging.getLogger(__name__).warning(
+            "Failed to load sound %s: %s", file, exc)
         _sound_cache[file] = None
         return None
     _sound_cache[file] = sound
@@ -360,13 +373,15 @@ def SOUND(file, volume, dist, volume_map=None, sound_type="UI", cooldown=0.1):
     try:
         player = arcade.play_sound(sound, volume=attenuated)
     except Exception as exc:
-        logging.getLogger(__name__).warning("Error playing sound '%s': %s", file, exc)
+        logging.getLogger(__name__).warning(
+            "Error playing sound '%s': %s", file, exc)
         return None
 
     players.append(player)
     _active_sound_players[file] = players
     _sound_cooldowns[key] = now
     return player
+
 
 class Handle_Christmas(object):
     def update(self):
@@ -376,29 +391,39 @@ class Handle_Christmas(object):
         if self.timer >= 60:
             t = self.timer - 45
             num = max(0.0, 15 - t / 15)
-            self.Christmas_music.set_volume(self.Christmas_music.true_volume * num)
-            self.Background_music.set_volume(self.Background_music.true_volume * max(0.0, t / 15))
+            self.Christmas_music.set_volume(
+                self.Christmas_music.true_volume * num)
+            self.Background_music.set_volume(
+                self.Background_music.true_volume * max(0.0, t / 15))
         elif self.timer >= 45:
             t = self.timer - 45
             num = max(0.0, 15 - t / 15)
-            self.Christmas_music.set_volume(self.Christmas_music.true_volume * max(0.0, t / 15))
-            self.Background_music.set_volume(self.Background_music.true_volume * num)
+            self.Christmas_music.set_volume(
+                self.Christmas_music.true_volume * max(0.0, t / 15))
+            self.Background_music.set_volume(
+                self.Background_music.true_volume * num)
+
 
 class StateMachieneState(object):
     def __init__(self, state, accessable) -> None:
         self.state = state
         self.can_go_to = accessable
+
+
 class StateMachiene(object):
     def __init__(self, state, states) -> None:
-        
+
         self.states = []
         for i in states:
             Node = StateMachieneState(i)
             self.states.append(Node)
         self.state = state
+
+
 class Entity(object):
     def __init__(self) -> None:
         pass
+
 
 class HealthBar:
     """
@@ -424,7 +449,6 @@ class HealthBar:
         border_size: int = 4,
     ) -> None:
         # Store the reference to the owner and the sprite list
-
 
         # Set the needed size variables
         self._box_width: int = width
@@ -452,6 +476,7 @@ class HealthBar:
         self.fullness: float = 1.0
         self.visible: bool = True
         self.position: Tuple[float, float] = position
+
     def remove_from_sprite_lists(self):
         self._background_box.remove_from_sprite_lists()
         self._full_box.remove_from_sprite_lists()
@@ -485,11 +510,12 @@ class HealthBar:
 
         self.full_box.width = self._box_width * new_fullness
         self.full_box.left = self._center_x - (self._box_width // 2)
-    
+
     @property
     def visible(self) -> float:
         """Returns the visibility"""
         return getattr(self, "_visible", True)
+
     @visible.setter
     def visible(self, visible) -> None:
         self._visible = bool(visible)
@@ -513,10 +539,12 @@ class HealthBar:
 
             # Make sure full_box is to the left of the bar instead of the middle
             self.full_box.left = self._center_x - (self._box_width // 2)
+
+
 class CustomTextSprite(object):
-    def __init__(self, string, Alphabet_Textures, scale=1, 
-                 center_x=0, center_y = 0, 
-                 text_scale=1, text_margin=16, width=100, height = 40,  Background_offset_x=0, Background_offset_y=0, Background_scale=1, Background_Texture=None, vertical_align:"Literal['center','top','bottom']"='center') -> None:
+    def __init__(self, string, Alphabet_Textures, scale=1,
+                 center_x=0, center_y=0,
+                 text_scale=1, text_margin=16, width=100, height=40,  Background_offset_x=0, Background_offset_y=0, Background_scale=1, Background_Texture=None, vertical_align: "Literal['center','top','bottom']" = 'center') -> None:
         super().__init__()
         self.Sprite_List = arcade.SpriteList()
         self.background_texture = Background_Texture
@@ -554,10 +582,10 @@ class CustomTextSprite(object):
             self.Background_Sprite = None
 
         self.update_text(string, Alphabet_Textures)
-        
-    def update_text(self, text, Alphabet_Textures, scale=None, 
-                 center_x=None, center_y=None, 
-                 text_margin=None, width=None, height=None, vertical_align=None):
+
+    def update_text(self, text, Alphabet_Textures, scale=None,
+                    center_x=None, center_y=None,
+                    text_margin=None, width=None, height=None, vertical_align=None):
         self.text = text
         self.Sprite_List.clear()
         if not text:
@@ -617,7 +645,8 @@ class CustomTextSprite(object):
             start_y = top_y - line_height / 2
         elif self.vertical_align == 'bottom':
             bottom_y = self.center_y - effective_height / 2 + padding
-            start_y = bottom_y + (len(lines) - 1) * line_height + line_height / 2
+            start_y = bottom_y + (len(lines) - 1) * \
+                line_height + line_height / 2
         else:
             start_y = self.center_y + total_height / 2 - line_height / 2
 
@@ -654,15 +683,19 @@ class CustomTextSprite(object):
 
             self.Background_Sprite.center_x = self.center_x + self.background_offset_x
             if self.vertical_align == 'top':
-                self.Background_Sprite.center_y = self.center_y + effective_height / 2 - bg_height / 2 + self.background_offset_y
+                self.Background_Sprite.center_y = self.center_y + \
+                    effective_height / 2 - bg_height / 2 + self.background_offset_y
             elif self.vertical_align == 'bottom':
-                self.Background_Sprite.center_y = self.center_y - effective_height / 2 + bg_height / 2 + self.background_offset_y
+                self.Background_Sprite.center_y = self.center_y - \
+                    effective_height / 2 + bg_height / 2 + self.background_offset_y
             else:
                 self.Background_Sprite.center_y = self.center_y + self.background_offset_y
 
             if self._background_base_width and self._background_base_height:
-                self.Background_Sprite.width = max(bg_width, self._background_base_width * self.background_scale)
-                self.Background_Sprite.height = max(bg_height, self._background_base_height * self.background_scale)
+                self.Background_Sprite.width = max(
+                    bg_width, self._background_base_width * self.background_scale)
+                self.Background_Sprite.height = max(
+                    bg_height, self._background_base_height * self.background_scale)
             else:
                 self.Background_Sprite.width = bg_width
                 self.Background_Sprite.height = bg_height
@@ -671,9 +704,10 @@ class CustomTextSprite(object):
 
         else:
             self._background_height = total_height
-    def update_textv2(self, text, Alphabet_Textures, scale=1, 
-                 center_x=0, center_y = 0, 
-                 text_margin=16, width=100, height = 40):
+
+    def update_textv2(self, text, Alphabet_Textures, scale=1,
+                      center_x=0, center_y=0,
+                      text_margin=16, width=100, height=40):
         self.Sprite_List.clear()
         if text:
             pos_x = -45+center_x
@@ -681,17 +715,20 @@ class CustomTextSprite(object):
             if len(text)*scale*text_margin > width:
                 pos_y += 10
             for string in text:
-                sprite = arcade.Sprite(center_x=center_x+pos_x, center_y=center_y+pos_y, scale=scale)
+                sprite = arcade.Sprite(
+                    center_x=center_x+pos_x, center_y=center_y+pos_y, scale=scale)
                 sprite.texture = Alphabet_Textures[string]
                 self.Sprite_List.append(sprite)
                 pos_x += text_margin
                 if pos_x*scale > width-90+center_x:
                     pos_x = -45+center_x
                     pos_y -= 24
+
     def draw(self):
         if self.Background_Sprite:
             self.Background_Sprite.draw()
         self.Sprite_List.draw()
+
     def update(self, delta_time):
         return None
 
@@ -707,6 +744,7 @@ class CustomTextSprite(object):
             self.Background_Sprite.center_x += dx
             self.Background_Sprite.center_y += dy
 
+
 class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
     """
     A text button, with support for background color and a border.
@@ -720,7 +758,7 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
 
     """
 
-    def __init__(self, 
+    def __init__(self,
                  Alphabet_Textures,
                  center_x: float = 0,
                  center_y: float = 0,
@@ -731,13 +769,13 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
                  size_hint=None,
                  size_hint_min=None,
                  size_hint_max=None,
-                 style=None, 
-                 text_offset_x=0, text_offset_y = 0, 
-                 text_scale=1, text_margin=16,  
-                 offset_x=0, offset_y=0, 
-                 line_spacing = 20,
-                 Texture="resources/gui/Wood Button resized.png", Hovered_Texture=None, Pressed_Texture=None, 
-                 click_sound = None,
+                 style=None,
+                 text_offset_x=0, text_offset_y=0,
+                 text_scale=1, text_margin=16,
+                 offset_x=0, offset_y=0,
+                 line_spacing=20,
+                 Texture="resources/gui/Wood Button resized.png", Hovered_Texture=None, Pressed_Texture=None,
+                 click_sound=None,
                  badge: Optional[BadgeConfig] = None,
                  **kwargs):
         if Hovered_Texture is None:
@@ -783,9 +821,10 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
 
         self.offset_x = offset_x
         self.offset_y = offset_y
-        self._visual_bounds: Tuple[float, float, float, float] = (0.0, 0.0, width, height)
+        self._visual_bounds: Tuple[float, float,
+                                   float, float] = (0.0, 0.0, width, height)
 
-#image_width=width+50, image_height=height+50       image_width=width+607, image_height=height+303, 
+# image_width=width+50, image_height=height+50       image_width=width+607, image_height=height+303,
         sprite_center_x = center_x + offset_x
         sprite_center_y = center_y + offset_y
         base_texture = arcade.load_texture(Texture)
@@ -801,27 +840,30 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
         scale_y = desired_height / texture_height
         sprite_scale = min(scale_x, scale_y) * scale
 
-        self.sprite = arcade.Sprite(center_x=sprite_center_x, center_y=sprite_center_y)
+        self.sprite = arcade.Sprite(
+            center_x=sprite_center_x, center_y=sprite_center_y)
         self.sprite.texture = base_texture
         self.sprite.scale = sprite_scale
 
-        self.hovered_sprite = arcade.Sprite(center_x=sprite_center_x, center_y=sprite_center_y)
+        self.hovered_sprite = arcade.Sprite(
+            center_x=sprite_center_x, center_y=sprite_center_y)
         self.hovered_sprite.texture = hovered_texture
         self.hovered_sprite.scale = sprite_scale
 
-        self.pressed_sprite = arcade.Sprite(center_x=sprite_center_x, center_y=sprite_center_y)
+        self.pressed_sprite = arcade.Sprite(
+            center_x=sprite_center_x, center_y=sprite_center_y)
         self.pressed_sprite.texture = pressed_texture
         self.pressed_sprite.scale = sprite_scale
         self.text_sprites = arcade.SpriteList()
         self.badge_text_sprites = arcade.SpriteList()
 
         self.line_spacing = line_spacing
-        self.text_offset_x=text_offset_x
-        self.text_offset_y = text_offset_y 
-        self.text_scale=text_scale
-        self.text_margin=text_margin
-        self.offset_x=offset_x
-        self.offset_y=offset_y
+        self.text_offset_x = text_offset_x
+        self.text_offset_y = text_offset_y
+        self.text_scale = text_scale
+        self.text_margin = text_margin
+        self.offset_x = offset_x
+        self.offset_y = offset_y
 
         self._badge_text = ""
         self._badge_text_dirty = False
@@ -837,7 +879,8 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
 
         if badge is not None:
             texture = arcade.load_texture(badge.texture)
-            self.badge_sprite = arcade.Sprite(center_x=center_x, center_y=center_y)
+            self.badge_sprite = arcade.Sprite(
+                center_x=center_x, center_y=center_y)
             self.badge_sprite.texture = texture
             self.badge_sprite.scale = badge.scale
             self._badge_anchor_x = badge.anchor_x
@@ -850,7 +893,6 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
             self.badge_text_margin = badge.text_margin
             self.set_badge_text(badge.text)
 
-        
         self.set_text(text, Alphabet_Textures)
         self._text_dirty = True
 
@@ -912,7 +954,7 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
         self._limit_render_area(surface)
         if self.pressed:
             self.pressed_sprite.draw()
-            if self.click_sound and not self.clicked: 
+            if self.click_sound and not self.clicked:
                 self.click_sound.play()
                 self.clicked = True
         elif self.hovered:
@@ -946,6 +988,7 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
                 anchor_x='center', anchor_y='center',
                 width=self.width - 2 * border_width - 2 * text_margin
             )
+
     def do_render2(self, surface: arcade.gui.Surface):
         self.prepare_render(surface)
 
@@ -959,14 +1002,18 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
 
         if self.pressed:
             bg_color = self._style.get("bg_color_pressed", arcade.color.WHITE)
-            border_color = self._style.get("border_color_pressed", arcade.color.WHITE)
-            font_color = self._style.get("font_color_pressed", arcade.color.BLACK)
+            border_color = self._style.get(
+                "border_color_pressed", arcade.color.WHITE)
+            font_color = self._style.get(
+                "font_color_pressed", arcade.color.BLACK)
         elif self.hovered:
-            border_color = self._style.get("border_color_pressed", arcade.color.WHITE)
+            border_color = self._style.get(
+                "border_color_pressed", arcade.color.WHITE)
 
         # render BG
         if bg_color:
-            arcade.draw_xywh_rectangle_filled(0, 0, self.width, self.height, color=bg_color)
+            arcade.draw_xywh_rectangle_filled(
+                0, 0, self.width, self.height, color=bg_color)
 
         # render border
         if border_color and border_width:
@@ -995,12 +1042,15 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
                 anchor_x='center', anchor_y='center',
                 width=self.width - 2 * border_width - 2 * text_margin
             )
+
     @property
     def text(self):
         return self._text
+
     @text.setter
     def text(self, value):
         self.set_text(value, self._alphabet_textures)
+
     def set_text(self, text, Alphabet_Textures=None):
         if Alphabet_Textures is not None:
             self._alphabet_textures = Alphabet_Textures
@@ -1008,6 +1058,7 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
         self._text_dirty = True
         self._rebuild_text_sprites()
         self.trigger_full_render()
+
     def set_badge_text(self, text: Optional[str]):
         if self.badge_sprite is None:
             return
@@ -1022,6 +1073,7 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
         self._badge_text = text
         self._badge_text_dirty = True
         self.trigger_full_render()
+
     def _rebuild_text_sprites(self):
         self.text_sprites.clear()
         if not self._text or not self._alphabet_textures:
@@ -1110,7 +1162,8 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
             if texture is None:
                 current_x += glyph_width
                 continue
-            sprite = arcade.Sprite(center_x=0, center_y=0, scale=self.badge_text_scale)
+            sprite = arcade.Sprite(
+                center_x=0, center_y=0, scale=self.badge_text_scale)
             sprite.texture = texture
             sprite._relative_x = current_x
             sprite._relative_y = 0
@@ -1131,8 +1184,10 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
         anchor_x = _ANCHOR_X.get(self._badge_anchor_x, 1)
         anchor_y = _ANCHOR_Y.get(self._badge_anchor_y, -1)
 
-        rel_x = anchor_x * (half_w - badge_half_w - self._badge_padding_x) + self._badge_offset_x
-        rel_y = anchor_y * (half_h - badge_half_h - self._badge_padding_y) - self._badge_offset_y
+        rel_x = anchor_x * (half_w - badge_half_w -
+                            self._badge_padding_x) + self._badge_offset_x
+        rel_y = anchor_y * (half_h - badge_half_h -
+                            self._badge_padding_y) - self._badge_offset_y
 
         return base_center_x + rel_x, base_center_y + rel_y
 
@@ -1170,7 +1225,8 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
 
         base_center_x = self.width / 2 + self.offset_x
         base_center_y = self.height / 2 + self.offset_y
-        badge_center_x, badge_center_y = self._calculate_badge_center(base_center_x, base_center_y)
+        badge_center_x, badge_center_y = self._calculate_badge_center(
+            base_center_x, base_center_y)
         world_left = self.rect.left
         world_bottom = self.rect.bottom
 
@@ -1235,6 +1291,7 @@ class CustomUIFlatButton(arcade.gui.UIInteractiveWidget):
             return EVENT_HANDLED
 
         return EVENT_UNHANDLED
+
 
 class CustomUISlider(UIWidget):
     """Minimal slider implementation drawing directly on the widget surface."""
@@ -1395,7 +1452,8 @@ class CustomUISlider(UIWidget):
         if isinstance(event, UIMouseDragEvent) and self.pressed:
             old_value = self.value
             self.value_x = event.x - self.left
-            self.dispatch_event("on_change", UIOnChangeEvent(self, old_value, self.value))  # type: ignore
+            self.dispatch_event("on_change", UIOnChangeEvent(
+                self, old_value, self.value))  # type: ignore
 
         if isinstance(event, UIMouseReleaseEvent):
             self.pressed = False
@@ -1407,9 +1465,9 @@ class CustomUISlider(UIWidget):
 
 
 class CustomTextSprite2(object):
-    def __init__(self, string, Alphabet_Textures, scale=1, 
-                 center_x=0, center_y = 0, 
-                 text_scale=1, text_margin=16, width=100, height = 40,  Background_offset_x=0, Background_offset_y=0, Background_scale=1, Background_Texture=None) -> None:
+    def __init__(self, string, Alphabet_Textures, scale=1,
+                 center_x=0, center_y=0,
+                 text_scale=1, text_margin=16, width=100, height=40,  Background_offset_x=0, Background_offset_y=0, Background_scale=1, Background_Texture=None) -> None:
         super().__init__()
         self.Sprite_List = arcade.SpriteList()
         self.background_texture = Background_Texture
@@ -1435,12 +1493,12 @@ class CustomTextSprite2(object):
             self.Background_Sprite = None
 
         self.update_text(string, Alphabet_Textures, scale=scale, text_scale=text_scale,
-                 center_x=center_x, center_y=center_y, 
-                 text_margin=text_margin, width=width, height = height)
-        
+                         center_x=center_x, center_y=center_y,
+                         text_margin=text_margin, width=width, height=height)
+
     def update_text(self, text, Alphabet_Textures, scale=1, text_scale=1,
-                 center_x=None, center_y = None, 
-                 text_margin=None, width=None, height = None):
+                    center_x=None, center_y=None,
+                    text_margin=None, width=None, height=None):
         self.text = text
         self.Sprite_List.clear()
         if not text:
@@ -1498,7 +1556,8 @@ class CustomTextSprite2(object):
                     if texture is None:
                         current_x += glyph_advance
                         continue
-                    sprite = arcade.Sprite(center_x=current_x, center_y=current_y, scale=scale*text_scale)
+                    sprite = arcade.Sprite(
+                        center_x=current_x, center_y=current_y, scale=scale*text_scale)
                     sprite.texture = texture
                     self.Sprite_List.append(sprite)
                     current_x += glyph_advance
@@ -1528,8 +1587,9 @@ class CustomTextSprite2(object):
             self.Background_Sprite.center_y += dy
 
 
-textures = load_texture_grid("resources/gui/Wooden Font.png", 14, 24, 12, 71, margin=1)
-Alphabet_Textures = {" ":None}
+textures = load_texture_grid(
+    "resources/gui/Wooden Font.png", 14, 24, 12, 71, margin=1)
+Alphabet_Textures = {" ": None}
 string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz.:,%/-+_'"
 for i in range(len(string)):
     Alphabet_Textures[string[i]] = textures[i]
@@ -1545,8 +1605,10 @@ for i in range(len(string)):
         # code, but it is needed to easily run the examples using "python -m"
         # as mentioned at the top of this program.
         arcade.set_background_color(arcade.color.BLACK)
+
     def setup(self):
-        self.bttn = CustomTextSprite2("BRRRRRRR", Alphabet_Textures, center_x=400, center_y=300, scale=2)
+        self.bttn = CustomTextSprite2(
+            "BRRRRRRR", Alphabet_Textures, center_x=400, center_y=300, scale=2)
 
     def on_draw(self):
         self.bttn.draw()
@@ -1562,11 +1624,14 @@ def main():
 if __name__ == "__main__":
     main()
 
+
 class UpdatingText(CustomTextSprite):
     def __init__(self, string, Alphabet_Textures, max_time, scale=1, center_x=0, center_y=0, text_scale=1, text_margin=16, width=100, height=40, Background_offset_x=0, Background_offset_y=0, Background_scale=1, Background_Texture=None) -> None:
-        super().__init__(string, Alphabet_Textures, scale, center_x=center_x, center_y=center_y, text_scale=text_scale, text_margin=text_margin, width=width, height=height,  Background_offset_x=Background_offset_x, Background_offset_y=Background_offset_y, Background_scale=Background_scale, Background_Texture=Background_Texture)
+        super().__init__(string, Alphabet_Textures, scale, center_x=center_x, center_y=center_y, text_scale=text_scale, text_margin=text_margin, width=width, height=height,
+                         Background_offset_x=Background_offset_x, Background_offset_y=Background_offset_y, Background_scale=Background_scale, Background_Texture=Background_Texture)
         self.max_time = max_time
         self.timer = 0
+
     def update(self, delta_time):
         self.timer += delta_time
         if self.timer >= self.max_time:

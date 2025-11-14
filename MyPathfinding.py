@@ -1,12 +1,14 @@
-import arcade, math
+import math
 
 
 class CustomList(list):
     """
     A List that allows floats when getting or setting something
     """
+
     def __setitem__(self, index, item):
         super().__setitem__(int(index), int(item))
+
     def __getitem__(self, __name):
         return super().__getitem__(int(__name))
 
@@ -21,13 +23,14 @@ class LivingMap(object):
         "__weakref__"
     )
 
-    def __init__(self, x_length:int, y_length:int,  
-                    size:int, *args, tilesize:int=50
-                    ) -> None:
+    def __init__(self, x_length: int, y_length: int,
+                 size: int, *args, tilesize: int = 50
+                 ) -> None:
         self.size = size
         self.tilesize = tilesize
 
-        self.graph = CustomList()#[[0 for tile in range(y_length)] for tiles in range(x_length)]
+        # [[0 for tile in range(y_length)] for tiles in range(x_length)]
+        self.graph = CustomList()
         for tiles in range(x_length):
             self.graph.append(CustomList())
             for tile in range(y_length):
@@ -41,7 +44,7 @@ class LivingMap(object):
                 self.graph[x][y] = count
             count += 1
 
-    def change(self, x:int, y:int, barrier:bool) -> None:
+    def change(self, x: int, y: int, barrier: bool) -> None:
         x = int(x/50)
         y = int(y/50)
 
@@ -57,20 +60,20 @@ class LivingMap(object):
         self.graph[x][y] = val
 
 
-def heuristic(start:tuple, goal:tuple):
-        """
-        Gets the Heuristic of the 2 points
-        """
-        # Use Chebyshev distance heuristic if we can move one square either
-        # adjacent or diagonal
-        d = 1
-        d2 = 1
-        dx = abs(start[0] - goal[0])
-        dy = abs(start[1] - goal[1])
-        return d * (dx + dy) + (d2 - 2 * d) * min(dx, dy)
+def heuristic(start: tuple, goal: tuple):
+    """
+    Gets the Heuristic of the 2 points
+    """
+    # Use Chebyshev distance heuristic if we can move one square either
+    # adjacent or diagonal
+    d = 1
+    d2 = 1
+    dx = abs(start[0] - goal[0])
+    dy = abs(start[1] - goal[1])
+    return d * (dx + dy) + (d2 - 2 * d) * min(dx, dy)
 
 
-def move_cost(a:int, b:int):
+def move_cost(a: int, b: int):
 
     if a[0] == b[0] or a[1] == b[1]:
         return 1*5
@@ -79,10 +82,10 @@ def move_cost(a:int, b:int):
 
 
 def get_dist(pos, pos2):
-    return math.sqrt((pos[0]-pos2[0])**2+(pos[1]- pos2[1])**2)
+    return math.sqrt((pos[0]-pos2[0])**2+(pos[1] - pos2[1])**2)
 
 
-def _AStarSearch(Map:LivingMap, start:tuple, end:tuple, allow_diagonal_movement:bool=True, movelist=None, min_dist=0):
+def _AStarSearch(Map: LivingMap, start: tuple, end: tuple, allow_diagonal_movement: bool = True, movelist=None, min_dist=0):
     if movelist is None:
         movelist = [0]
     tilesize = Map.tilesize
@@ -106,7 +109,8 @@ def _AStarSearch(Map:LivingMap, start:tuple, end:tuple, allow_diagonal_movement:
     # what squares do we search
     adjacent_squares = ((0, -1), (0, 1), (-1, 0), (1, 0),)
     if allow_diagonal_movement:
-        adjacent_squares = ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1),)
+        adjacent_squares = ((0, -1), (0, 1), (-1, 0), (1, 0),
+                            (-1, -1), (-1, 1), (1, -1), (1, 1),)
 
     count = 0
     while len(open_vertices) > 0:
@@ -139,8 +143,9 @@ def _AStarSearch(Map:LivingMap, start:tuple, end:tuple, allow_diagonal_movement:
         closed_vertices.add(current)
 
         neighbours = []
-        for new_position in adjacent_squares: # Adjacent squares
-            neighbours.append((current[0] + new_position[0], current[1] + new_position[1]))
+        for new_position in adjacent_squares:  # Adjacent squares
+            neighbours.append(
+                (current[0] + new_position[0], current[1] + new_position[1]))
 
         # Update scores for vertices near the current position
         for neighbour in neighbours:
@@ -151,7 +156,6 @@ def _AStarSearch(Map:LivingMap, start:tuple, end:tuple, allow_diagonal_movement:
 
             if graph[neighbour[0]][neighbour[1]] not in movelist:
                 continue
-
 
             candidate_g = G[current] + move_cost(current, neighbour)
 
@@ -170,8 +174,7 @@ def _AStarSearch(Map:LivingMap, start:tuple, end:tuple, allow_diagonal_movement:
     return []
 
 
-
-def SearchTilesAround(Map:LivingMap, start:tuple, allow_diagonal_movement:bool=True, movelist=None):
+def SearchTilesAround(Map: LivingMap, start: tuple, allow_diagonal_movement: bool = True, movelist=None):
     if movelist is None:
         movelist = [0]
     tilesize = Map.tilesize
@@ -185,23 +188,23 @@ def SearchTilesAround(Map:LivingMap, start:tuple, allow_diagonal_movement:bool=T
     # what squares do we search
     adjacent_squares = ((0, -1), (0, 1), (-1, 0), (1, 0),)
     if allow_diagonal_movement:
-        adjacent_squares = ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1),)
+        adjacent_squares = ((0, -1), (0, 1), (-1, 0), (1, 0),
+                            (-1, -1), (-1, 1), (1, -1), (1, 1),)
 
     count = 0
     while len(open_vertices) > 0:
         count += 1
         if count > 100:
             break
-
-        #get first element in the set
         for current in open_vertices:
             break
         open_vertices.remove(current)
         closed_vertices.add(current)
 
         neighbours = []
-        for new_position in adjacent_squares: # Adjacent squares
-            neighbours.append((current[0] + new_position[0], current[1] + new_position[1]))
+        for new_position in adjacent_squares:  # Adjacent squares
+            neighbours.append(
+                (current[0] + new_position[0], current[1] + new_position[1]))
 
         # Update scores for vertices near the current position
         for neighbour in neighbours:
@@ -214,8 +217,5 @@ def SearchTilesAround(Map:LivingMap, start:tuple, allow_diagonal_movement:bool=T
                 continue
 
             if not neighbour in open_vertices:
-                open_vertices.add(neighbour)  
-
-
-    # Out-of-bounds
+                open_vertices.add(neighbour)
     return count
