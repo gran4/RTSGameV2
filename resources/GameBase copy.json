@@ -19,7 +19,7 @@
 
     ["Lab", 700, 200, ["Black Smith"], "Unlock Labs to more efficiently research", {"Lab":""}, 15, 15, 0],
     ["Factory", 700, 100, ["Black Smith"], "Unlock Factorys to more efficiently make toys", {"Factory":""}, 15, 15, 0],
-    ["", 700, 0, ["Farm"], "Get 20% more efficient", {"overall":20}, 15, 15, 0],    
+    ["Efficiency Boost", 700, 0, ["Farm"], "Get 20% more efficient", {"overall":20}, 15, 15, 0],    
     ["Dorms", 700, -100, ["Farm"], "Unlock Dormatories", {"Dormatory":""}, 15, 15, 0],
 
     

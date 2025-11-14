@@ -1,11 +1,12 @@
 import arcade, math, itertools
 
 from dataclasses import dataclass
-from typing import Optional, Tuple, Union, Literal
+from typing import Optional, Tuple, Union, Literal, Sequence
 
 from pyglet.event import EVENT_HANDLED, EVENT_UNHANDLED
 
 from arcade import load_spritesheet as _arcade_load_spritesheet, Rect
+from arcade.hitbox import HitBox
 from arcade.texture import Texture
 from arcade.gui import (
     UIWidget,
@@ -119,6 +120,25 @@ def load_texture_grid(
             texture_index += 1
 
     return textures
+
+
+def set_sprite_hit_box(
+    sprite: arcade.Sprite,
+    points: Optional[Sequence[tuple[float, float]]] = None,
+) -> None:
+    """Apply a custom hit box to a sprite using Arcade's 3.x API."""
+    texture = getattr(sprite, "texture", None)
+    if points is None:
+        if not texture:
+            return
+        points = texture.hit_box_points
+    if not points:
+        return
+
+    hit_box = HitBox(points, sprite.position, getattr(sprite, "_scale", (1.0, 1.0)))
+    angle = getattr(sprite, "_angle", 0.0)
+    sprite._hit_box = hit_box.create_rotatable(angle=angle)
+    sprite.update_spatial_hash()
 
 def get_closest_sprite(pos, sprite_list):
     lowest_dist = float("inf")

@@ -102,10 +102,7 @@ class BaseEnemy(arcade.Sprite):
             except Exception:
                 pass
         if getattr(self, "texture", None):
-            try:
-                self.set_hit_box(self.texture.hit_box_points)
-            except Exception:
-                pass
+            set_sprite_hit_box(self, self.texture.hit_box_points)
     def serialize_state(self) -> dict:
         state = {
             "type": type(self).__name__,

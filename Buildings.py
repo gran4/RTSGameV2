@@ -17,6 +17,7 @@ class BaseBuilding(arcade.Sprite):
         self.center_x = x
         self.center_y = y
         self.path = False
+        self.allows_people = True
 
         self.affects_enemy_spawns = True
         self._spawn_registered = False
@@ -45,6 +46,8 @@ class BaseBuilding(arcade.Sprite):
             "scale": scale,
         }
     def add(self, sprite):
+        if not getattr(self, "allows_people", True):
+            return True
         if len(self.list_of_people) == self.max_length:
             return True
         if sprite in self.game.People:
@@ -461,8 +464,9 @@ class RaindeerFarm(BaseBuilding):
 class Farm(BaseBuilding):
     produces = {"food": 1.6}
     def __init__(self, game, x:float, y:float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/Observatory.jpeg")
-        self.set_hit_box(((-25.0, -25.0), (25.0, -25.0), (25.0, 25.0), (-25.0, 25.0)))
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/tree_farm.png")
+        hit_box = ((-25.0, -25.0), (25.0, -25.0), (25.0, 25.0), (-25.0, 25.0))
+        set_sprite_hit_box(self, hit_box)
 
         self.AnimationPlayer = AnimationPlayer(1)
         self.textures = load_texture_grid("resources/Sprites/Farm Pixilart Sprite Sheet.png", 50, 50, 50, 2)
@@ -569,10 +573,12 @@ class StoneWall(BaseBuilding):
     produces = {}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 100, 0, 0, 1, "resources/Sprites/StoneWall.png")
+        self.allows_people = False
 class MetalWall(BaseBuilding):
     produces = {}
     def __init__(self, game, x:float, y:float):
         super().__init__(game, x, y, 1000, 0, 0, 1, "resources/Sprites/MetalWall.png")
+        self.allows_people = False
 
 
 class MaterialDepot(BaseBuilding):

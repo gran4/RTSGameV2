@@ -433,6 +433,12 @@ class Person(arcade.Sprite):
         self._update_health_bar_fullness()
     def update_movement(self, game):
         if self.path != []:
+            target = self.path[0]
+            blocking_buildings = self._blocking_buildings_at(game, target)
+            if blocking_buildings:
+                self.path = []
+                game.show_move_feedback("Path blocked", target[0], target[1])
+                return
             if self.center_x<self.path[0][0]:
                 self.key = "D"
             elif self.center_x>self.path[0][0]:
@@ -452,6 +458,7 @@ class Person(arcade.Sprite):
         target = self.path[0]
         tile = game.graph[round(target[0]/50)][round(target[1]/50)]
         buildings_at_target = arcade.get_sprites_at_point(target, game.Buildings)
+        blocking_buildings = self._blocking_buildings_at(game, target)
         boats_at_target = arcade.get_sprites_at_point(target, game.Boats)
         if tile not in self.movelist and not buildings_at_target and not boats_at_target:
             self.path = []
@@ -462,17 +469,23 @@ class Person(arcade.Sprite):
         destination = self.position
 
         refresh = getattr(game, "refresh_population", None)
+        blocking_buildings = blocking_buildings if target == self.position else self._blocking_buildings_at(game, self.position)
+        if blocking_buildings:
+            building = blocking_buildings[0]
+            self._cancel_move(game, prev_pos, destination, "Can't enter that building")
+            return
+
         buildings_at_point = buildings_at_target if target == self.position else arcade.get_sprites_at_point(self.position, game.Buildings)
         if buildings_at_point:
-            if not buildings_at_point[0].add(self):
+            building = buildings_at_point[0]
+            if not getattr(building, "allows_people", True):
+                self._cancel_move(game, prev_pos, destination, "Can't enter that building")
+                return
+            if not building.add(self):
                 if callable(refresh):
                     refresh()
                 return
-            # Building full; stay on previous tile
-            self.position = prev_pos
-            self.health_bar.position = self.position
-            self.path = []
-            game.show_move_feedback("Building is full", destination[0], destination[1])
+            self._cancel_move(game, prev_pos, destination, "Building is full")
             return
 
         ships_at_point = boats_at_target if target == self.position else arcade.get_sprites_at_point(self.position, game.Boats)
@@ -576,6 +589,15 @@ class Person(arcade.Sprite):
             self.health_bar = HealthBar(game, position=self.position)
         self._update_health_bar_fullness()
         self.health_bar.position = self.position
+    def _blocking_buildings_at(self, game, target):
+        buildings = arcade.get_sprites_at_point(target, game.Buildings)
+        return [building for building in buildings if not getattr(building, "allows_people", True)]
+
+    def _cancel_move(self, game, prev_pos, destination, message):
+        self.position = prev_pos
+        self.health_bar.position = self.position
+        self.path = []
+        game.show_move_feedback(message, destination[0], destination[1])
 class People_that_attack(Person):
     def __init__(self, game, filename, x, y, damage, range, health, scale=1):
         super().__init__(game, x, y, scale=scale)

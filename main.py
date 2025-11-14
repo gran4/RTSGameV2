@@ -26,6 +26,8 @@ from math import sqrt, floor, ceil
 import arcade, json, random, arcade.gui, time, pickle, atexit
 from collections import defaultdict, deque
 from arcade import math as arcade_math
+from arcade import XYWH
+from arcade.draw import draw_rect_filled, draw_rect_outline
 
 from arcade.gui import UILabel, UIFlatButton
 from gui_compat import UIAnchorWidget
@@ -161,8 +163,9 @@ class MyGame(arcade.View):
         self.not_scrolling_camera = arcade.Camera2D()
 
         self.lacks = []
+        self._storage_frame_valid = False
 
-        self.science = 100
+        self.science = 300
         self.overall_multiplier = 1
         self.training_speed_multiplier = 1
         self.dissent_multiplier = 1
@@ -176,18 +179,18 @@ class MyGame(arcade.View):
         self.toys_multiplier = 1
         self.building_multiplier = 1
 
-        self.food = 2000
-        self.food_storage = 3000
+        self.food = 20000
+        self.food_storage = 30000
         self.population = 2
-        self.stone = 0
+        self.stone = 200
         self.metal = 0
-        self.wood = 50
-        self.toys = 300
+        self.wood = 500
+        self.toys = 3000
         self.toy_amount = 100
         self.failed_toys = 0
         self.max_toy_failures = 3
 
-        self.mcsStorage = 200
+        self.mcsStorage = 2000
         self.max_pop = 5
 
         self.timer = 0
@@ -195,7 +198,6 @@ class MyGame(arcade.View):
         self.x = 0
         self.y = 0
 
-        #sprite lists
         #BackGround
         self.Lands = arcade.SpriteList(use_spatial_hash=True)
         self.Stones = arcade.SpriteList(use_spatial_hash=True)
@@ -219,7 +221,7 @@ class MyGame(arcade.View):
 
         self.Enemies = arcade.SpriteList()
         self.EnemyBoats = arcade.SpriteList()
-        self.spawnEnemy = -200
+        self.spawnEnemy = -500
         self.hardness_multiplier = 1
         self.min_enemy_spawn_distance = 200
         self.EnemyMap = {}
@@ -786,12 +788,7 @@ class MyGame(arcade.View):
         self.BerryBushes.draw()
         self.underParticals.draw()
 
-
-        if self.last:
-            self.selection_rectangle.center_x = self.last.center_x-1
-            self.selection_rectangle.center_y = self.last.center_y+1
-            self.selection_rectangle.draw()
-
+        selected = getattr(self, "last", None)
 
         self.Buildings.draw()
         self.Boats.draw()
@@ -802,8 +799,14 @@ class MyGame(arcade.View):
         self.EnemyBoats.draw()
 
         self.health_bars.draw()
+        if selected:
+            self._draw_selection_overlay(selected)
+            self._redraw_selection_stack(selected)
         self.Fires.draw()
         self.overParticles.draw()
+
+        if selected:
+            self._draw_selection_border(selected)
 
 
         self.not_scrolling_camera.use()
@@ -825,6 +828,108 @@ class MyGame(arcade.View):
         if self.selection_panel_visible and self.selection_panel:
             self.selection_panel.draw()
         for PopUp in self.PopUps: PopUp.draw()
+
+    def _draw_selection_overlay(self, target=None):
+        target = target or getattr(self, "last", None)
+        rect = self._selection_rect(target)
+        if rect is None:
+            return
+
+        center_x, center_y, width, height = rect
+        color = self._selection_color(target)
+
+        draw_rect_filled(
+            XYWH(center_x, center_y, width, height),
+            color,
+        )
+
+    def _selection_rect(self, target):
+        if not target or getattr(target, "center_x", None) is None:
+            return None
+        tile_size = 50
+        center_x = round(target.center_x / tile_size) * tile_size
+        center_y = round(target.center_y / tile_size) * tile_size
+        if abs(center_x) > 10000 or abs(center_y) > 10000:
+            return None
+        padding = self._selection_padding(target)
+        width = tile_size + padding
+        height = tile_size + padding
+        return center_x, center_y, width, height
+
+    def _selection_color(self, target):
+        if isinstance(target, BaseBuilding):
+            return (255, 221, 70, 205)
+        if isinstance(target, BaseBoat):
+            return (255, 228, 90, 190)
+        return (255, 240, 140, 175)
+
+    def _selection_padding(self, target):
+        if isinstance(target, BaseBuilding):
+            return 12
+        if isinstance(target, BaseBoat):
+            return 12
+        return 12
+    
+    def _redraw_selection_stack(self, target):
+        rect = self._selection_rect(target)
+        if rect is None:
+            return
+        center_x, center_y, width, height = rect
+        sprites = []
+        if isinstance(target, arcade.Sprite):
+            sprites.append(target)
+        sprites.extend(self._sprites_in_rect(self.People, center_x, center_y, width, height))
+        player = getattr(self, "player", None)
+        if player and self._sprite_overlaps_rect(player, center_x, center_y, width, height):
+            sprites.append(player)
+
+        seen_ids: set[int] = set()
+        for sprite in sprites:
+            if not sprite:
+                continue
+            sprite_id = id(sprite)
+            if sprite_id in seen_ids:
+                continue
+            seen_ids.add(sprite_id)
+            sprite.draw()
+
+    def _draw_selection_border(self, target):
+        if not target or getattr(target, "center_x", None) is None:
+            return
+        rect = self._selection_rect(target)
+        if rect is None:
+            return
+        center_x, center_y, width, height = rect
+        color = self._selection_border_color(target)
+        draw_rect_outline(
+            XYWH(center_x, center_y, width, height),
+            color,
+            border_width=3,
+        )
+
+    def _selection_border_color(self, target):
+        if isinstance(target, BaseBuilding):
+            return (255, 230, 100, 255)
+        if isinstance(target, BaseBoat):
+            return (255, 240, 120, 255)
+        return (255, 250, 160, 255)
+    
+    def _sprites_in_rect(self, sprite_list, center_x, center_y, width, height):
+        if not sprite_list:
+            return []
+        matches = []
+        for sprite in sprite_list:
+            if self._sprite_overlaps_rect(sprite, center_x, center_y, width, height):
+                matches.append(sprite)
+        return matches
+
+    @staticmethod
+    def _sprite_overlaps_rect(sprite, center_x, center_y, width, height):
+        half_w = width / 2
+        half_h = height / 2
+        dx = abs(sprite.center_x - center_x)
+        dy = abs(sprite.center_y - center_y)
+        return dx < (half_w + sprite.width / 2) and dy < (half_h + sprite.height / 2)
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
 
@@ -895,182 +1000,225 @@ class MyGame(arcade.View):
             for button in self.ui_sprites:
                 button.center_y += dy
     def on_mouse_press(self, x, y, button, modifiers):
-        for press in self.uimanager.children[0]:
-            try:
-                if press.child.hovered:
-                    return
-            except:
-                pass
-        
-
-        ui_clicked = self.ui_sprites_update(x, y)
-        if ui_clicked:
-            self.clear_uimanager()
-            self.move = False
-            self.last = None
+        if self._ui_consumed_click(x, y):
             return
-        elif button == arcade.MOUSE_BUTTON_RIGHT:
+        if button == arcade.MOUSE_BUTTON_RIGHT:
             self.info_on_click(x, y)
             return
+        if button != arcade.MOUSE_BUTTON_LEFT:
+            return
+
         org_x, org_y = x, y
-        
-        x += self.player.center_x
-        y += self.player.center_y
-        x -=  (self.camera.viewport_width / 2)
-        y -=  (self.camera.viewport_height / 2)
+        world_x, world_y, grid_x, grid_y = self._screen_to_world_and_grid(x, y)
 
-        x = x/50
-        x = round(x)
-        x2 = x
-        x *= 50
-
-        y = y/50
-        y = round(y)
-        y2 = y
-        y *= 50
-
-        if button == arcade.MOUSE_BUTTON_LEFT: 
-            if self.move:
-                source = self.last
-                
-                if source is None or source.health <= 0:
-                    self.move = False
-                    return
-                if not 750<x<self.x_line*50-750 or not 750<y<self.y_line*50-750:
-                    if isinstance(source, BaseBoat):
-                        info_sprite = UpdatingText("Out of Bounds", self.Alphabet_Textures, .5, width = 300, center_x=org_x, center_y=org_y)
-                        self.PopUps.append(info_sprite)
-                        return
-                if len(arcade.get_sprites_at_point((x, y), self.Boats)) > 0:
-                    self.graph[x2][y2] = 0
-                elif len(arcade.get_sprites_at_point((x, y), self.Buildings)) > 0:
-                    i = self.graph[x2][y2]
-                    self.graph[x2][y2] = 0
-                source.path = _AStarSearch(self.graph, source.position, (x, y), allow_diagonal_movement=True, movelist=source.movelist, min_dist=1)
-                if len(arcade.get_sprites_at_point((x, y), self.Boats)) > 0:
-                    self.graph[x2][y2] = 2
-                elif len(arcade.get_sprites_at_point((x, y), self.Buildings)) > 0:
-                    self.graph[x2][y2] = i
-
-                self.move = False
-                if source.path:
-                    source.skill = None
-                    source.amount = 0
-                else:
-                    info_sprite = UpdatingText("Can not move here", self.Alphabet_Textures, .5, width = 300, center_x=org_x, center_y=org_y)
-                    self.PopUps.append(info_sprite)
-                return
-            people_at_point = arcade.get_sprites_at_point((x, y), self.People)
-            if len(people_at_point) != 0:
-                people_at_point[0].clicked(self)
-                return
-            ships_at_point = arcade.get_sprites_at_point((x, y), self.Boats)
-            if len(ships_at_point) > 0:
-                ships_at_point[0].clicked(self)
-                return
-
-            buildings_at_point = arcade.get_sprites_at_point((x, y), self.Buildings)
-            if len(buildings_at_point) != 0:
-                buildings_at_point[0].clicked(self)
-                return
-            
-            string = ""
+        if self._handle_active_move(world_x, world_y, grid_x, grid_y, org_x, org_y):
+            return
+        if self._handle_direct_selection(world_x, world_y):
+            return
         if self.object is None:
-            info_sprite = UpdatingText("Select an item to deploy first", self.Alphabet_Textures, .5, width = 200, center_x=org_x, center_y=org_y)
-            self.PopUps.append(info_sprite)
+            self._show_info_popup("Select an item to deploy first", org_x, org_y, width=200)
             return
 
         current_population = self.refresh_population()
-
-        if arcade_math.get_distance(self.player.center_x, self.player.center_y, x, y) > 400:
-            string = "Too far from Santa"
-        elif not _AStarSearch(self.graph, self.player.position, (x, y), movelist=[0], min_dist=50):
-            string = "Santa can not pathfind here"
-        elif get_closest_sprite((x, y), self.People)[1] < 100:
-            pass
-        elif self.SnowMap[x][y] == 0:
-            string = "Must be 3 blocks from a Building or adjacent to an elf"
-        elif arcade.get_sprites_at_point((x, y), self.Enemies):
-            string = "Can not place on an Enemy"
-        elif get_closest_sprite((x, y), self.Enemies)[1] < 150:
-            string = "Too close to an enemy"
-        elif (
-            current_population >= self.max_pop
-            and (
-                self.object_placement == "People"
-                or issubclass(self.objects[self.object], Person)
-            )
-        ):
-            string = "Not enough Housing"
-
-        if string:
-            self.show_lack_popup(string, org_x, org_y, duration=1.5)
+        lack_reason = self._placement_precheck(world_x, world_y, grid_x, grid_y, current_population)
+        if lack_reason:
+            self.show_lack_popup(lack_reason, org_x, org_y, duration=1.5)
             return
 
-        if self.unlocked[self.object] and 0 < x < 5000 and 0 < y < 5000:
-                dont_continue = False
-                if tiles[self.object] == Land and self.graph[x2][y2] != 0:
-                    dont_continue = True
-                elif tiles[self.object] == Stone and self.graph[x2][y2] != 1:
-                    dont_continue = True
-                elif tiles[self.object] == Sea and self.graph[x2][y2] != 2:
-                    dont_continue = True
-                elif tiles[self.object] == BerryBush:
-                    if len(arcade.get_sprites_at_point((x, y), self.BerryBushes)) == 0:
-                        dont_continue = True
-                elif tiles[self.object] == Tree:
-                    if len(arcade.get_sprites_at_point((x, y), self.Trees)) == 0:
-                        dont_continue = True
-                if dont_continue:
-                    info_sprite = UpdatingText(f"You can only place this on {tiles[self.object].__name__}", self.Alphabet_Textures, .5, width = 300, center_x=org_x, center_y=org_y)
-                    self.PopUps.append(info_sprite)
-                    return
+        if not (self.unlocked[self.object] and 0 < world_x < 5000 and 0 < world_y < 5000):
+            return
 
-                missing = ""
-                self.requirements = requirements[self.object]
-                for _type, requirement in self.requirements.items():
-                    if vars(self)[_type] < requirement:
-                        if missing:
-                            missing += ", "
-                        missing += f"{requirement-vars(self)[_type]} {_type}"
-                if missing:
-                    info_sprite = UpdatingText("missing: "+missing, self.Alphabet_Textures, .5, width = 300, center_x=org_x, center_y=org_y)
-                    self.PopUps.append(info_sprite)
-                    return                 
+        tile_error = self._validate_tile_target(world_x, world_y, grid_x, grid_y)
+        if tile_error:
+            self._show_info_popup(tile_error, org_x, org_y)
+            return
 
-                current_population = self.refresh_population()
+        missing_resources = self._missing_requirements()
+        if missing_resources:
+            self._show_info_popup(f"missing: {missing_resources}", org_x, org_y)
+            return
 
-                if (
-                    current_population >= self.max_pop
-                    and issubclass(self.objects[self.object], Person)
-                ):
-                    self._add_lack("housing")
-                    self.show_lack_popup("Not enough Housing", org_x, org_y, duration=1.5)
-                    return
-              
-                for _type, requirement in self.requirements.items():
-                    vars(self)[_type] -= requirement
-                
-                
-                if issubclass(self.objects[self.object], BaseBuilding):
-                    new_building = UNbuiltBuilding(self, x, y, max_len=max_length[self.object], time=times[self.object], building=self.object)
-                    self.Buildings.append(new_building)
-                    # Actual spawn map update happens when the building finishes
-                elif issubclass(self.objects[self.object], BaseBoat):
-                    created = self.objects[self.object](self, x, y)
-                    self.Boats.append(created)
-                elif issubclass(self.objects[self.object], Person):
-                    created = self.objects[self.object](self, x, y)
-                    created.path = [created.position]
-                    created.update_self(self)
-                    self.People.append(created)
-                    self.population += 1
-                else:
-                    raise ValueError(f"{created}   Is not a person, building, or boat.")
-                self.updateStorage()
-                self.update_text(1)
+        current_population = self.refresh_population()
+        if current_population >= self.max_pop and issubclass(self.objects[self.object], Person):
+            self._add_lack("housing")
+            self.show_lack_popup("Not enough Housing", org_x, org_y, duration=1.5)
+            return
+
+        self._deduct_requirements()
+        self._spawn_selected_object(world_x, world_y)
+        self.updateStorage()
+        self.update_text(1)
 
         return
+    def _ui_consumed_click(self, x, y):
+        children = getattr(self.uimanager, "children", [])
+        if children:
+            for press in children[0]:
+                child = getattr(press, "child", None)
+                if child and getattr(child, "hovered", False):
+                    return True
+
+        if self.ui_sprites_update(x, y):
+            self.clear_uimanager()
+            self.move = False
+            self.last = None
+            return True
+        return False
+
+    def _screen_to_world_and_grid(self, x, y):
+        world_x = x + self.player.center_x - (self.camera.viewport_width / 2)
+        world_y = y + self.player.center_y - (self.camera.viewport_height / 2)
+
+        grid_x = round(world_x / 50)
+        grid_y = round(world_y / 50)
+        world_x = grid_x * 50
+        world_y = grid_y * 50
+        return world_x, world_y, grid_x, grid_y
+
+    def _handle_active_move(self, world_x, world_y, grid_x, grid_y, screen_x, screen_y):
+        if not self.move:
+            return False
+
+        source = self.last
+        if source is None or source.health <= 0:
+            self.move = False
+            return True
+        if not 750 < world_x < self.x_line * 50 - 750 or not 750 < world_y < self.y_line * 50 - 750:
+            if isinstance(source, BaseBoat):
+                self._show_info_popup("Out of Bounds", screen_x, screen_y)
+            self.move = False
+            return True
+
+        boat_at_target = arcade.get_sprites_at_point((world_x, world_y), self.Boats)
+        building_at_target = arcade.get_sprites_at_point((world_x, world_y), self.Buildings)
+        blocking_building = None
+        if building_at_target:
+            blocking_building = next(
+                (b for b in building_at_target if not getattr(b, "allows_people", True)),
+                None,
+            )
+        if blocking_building:
+            self.move = False
+            self.show_move_feedback("Can't move there", world_x, world_y)
+            return True
+        original_value = None
+        if boat_at_target:
+            self.graph[grid_x][grid_y] = 0
+        elif building_at_target:
+            original_value = self.graph[grid_x][grid_y]
+            self.graph[grid_x][grid_y] = 0
+
+        source.path = _AStarSearch(
+            self.graph,
+            source.position,
+            (world_x, world_y),
+            allow_diagonal_movement=True,
+            movelist=source.movelist,
+            min_dist=1,
+        )
+
+        if boat_at_target:
+            self.graph[grid_x][grid_y] = 2
+        elif building_at_target and original_value is not None:
+            self.graph[grid_x][grid_y] = original_value
+
+        self.move = False
+        if source.path:
+            source.skill = None
+            source.amount = 0
+        else:
+            self._show_info_popup("Can not move here", screen_x, screen_y)
+        return True
+
+    def _handle_direct_selection(self, world_x, world_y):
+        people_at_point = arcade.get_sprites_at_point((world_x, world_y), self.People)
+        if people_at_point:
+            people_at_point[0].clicked(self)
+            return True
+        ships_at_point = arcade.get_sprites_at_point((world_x, world_y), self.Boats)
+        if ships_at_point:
+            ships_at_point[0].clicked(self)
+            return True
+        buildings_at_point = arcade.get_sprites_at_point((world_x, world_y), self.Buildings)
+        if buildings_at_point:
+            buildings_at_point[0].clicked(self)
+            return True
+        return False
+
+    def _placement_precheck(self, world_x, world_y, grid_x, grid_y, current_population):
+        if arcade_math.get_distance(self.player.center_x, self.player.center_y, world_x, world_y) > 400:
+            return "Too far from Santa"
+        if not _AStarSearch(self.graph, self.player.position, (world_x, world_y), movelist=[0], min_dist=50):
+            return "Santa can not pathfind here"
+        if get_closest_sprite((world_x, world_y), self.People)[1] < 100:
+            return None
+        if self.SnowMap[world_x][world_y] == 0:
+            return "Must be 3 blocks from a Building or adjacent to an elf"
+        if arcade.get_sprites_at_point((world_x, world_y), self.Enemies):
+            return "Can not place on an Enemy"
+        if get_closest_sprite((world_x, world_y), self.Enemies)[1] < 150:
+            return "Too close to an enemy"
+        if current_population >= self.max_pop and (
+            self.object_placement == "People" or issubclass(self.objects[self.object], Person)
+        ):
+            return "Not enough Housing"
+        return None
+
+    def _validate_tile_target(self, world_x, world_y, grid_x, grid_y):
+        target_tile = tiles[self.object]
+        error_message = f"You can only place this on {target_tile.__name__}"
+        if target_tile == Land and self.graph[grid_x][grid_y] != 0:
+            return error_message
+        if target_tile == Stone and self.graph[grid_x][grid_y] != 1:
+            return error_message
+        if target_tile == Sea and self.graph[grid_x][grid_y] != 2:
+            return error_message
+        if target_tile == BerryBush and not arcade.get_sprites_at_point((world_x, world_y), self.BerryBushes):
+            return error_message
+        if target_tile == Tree and not arcade.get_sprites_at_point((world_x, world_y), self.Trees):
+            return error_message
+        return None
+
+    def _missing_requirements(self):
+        self.requirements = requirements[self.object]
+        missing_parts = []
+        for _type, requirement in self.requirements.items():
+            deficit = requirement - vars(self)[_type]
+            if deficit > 0:
+                missing_parts.append(f"{deficit} {_type}")
+        return ", ".join(missing_parts) if missing_parts else None
+
+    def _deduct_requirements(self):
+        for _type, requirement in self.requirements.items():
+            vars(self)[_type] -= requirement
+
+    def _spawn_selected_object(self, world_x, world_y):
+        obj_cls = self.objects[self.object]
+        if issubclass(obj_cls, BaseBuilding):
+            building = UNbuiltBuilding(
+                self,
+                world_x,
+                world_y,
+                max_len=max_length[self.object],
+                time=times[self.object],
+                building=self.object,
+            )
+            self.Buildings.append(building)
+        elif issubclass(obj_cls, BaseBoat):
+            created = obj_cls(self, world_x, world_y)
+            self.Boats.append(created)
+        elif issubclass(obj_cls, Person):
+            created = obj_cls(self, world_x, world_y)
+            created.path = [created.position]
+            created.update_self(self)
+            self.People.append(created)
+            self.population += 1
+        else:
+            raise ValueError(f"{obj_cls} is not a person, building, or boat.")
+
+    def _show_info_popup(self, message, screen_x, screen_y, width=300):
+        info_sprite = UpdatingText(message, self.Alphabet_Textures, 0.5, width=width, center_x=screen_x, center_y=screen_y)
+        self.PopUps.append(info_sprite)
     def info_on_click(self, x, y):
         x2 = x
         y2 = y
@@ -1517,20 +1665,49 @@ class MyGame(arcade.View):
             self._add_lack("food storage")
         self.foodStoragePercent = weight / self.food_storage
 
-        weight = 0
-        for resource in ["wood", "stone", "metal"]:
-            weight += variables[resource]*item_weight[resource]
+        weight = sum(
+            variables[resource] * item_weight[resource]
+            for resource in ["wood", "stone", "metal"]
+        )
         if weight > self.mcsStorage:
             self._add_lack("Mcs Storage")
-            for resource in ["wood", "stone", "metal"]: 
-                variables[resource] = prev_frame[resource]
-                
+            if self._storage_frame_valid:
+                for resource in ["wood", "stone", "metal"]:
+                    variables[resource] = prev_frame[resource]
+            else:
+                self._cap_resources_to_storage(variables)
+                self._storage_frame_valid = True
+        else:
+            self._storage_frame_valid = True
+
+        weight = sum(
+            variables[resource] * item_weight[resource]
+            for resource in ["wood", "stone", "metal"]
+        )
         self.mcsStoragePercent = weight / self.mcsStorage
 
         variables = vars(self)
         for resource in item_weight.keys():
             prev_frame[resource] = variables[resource]
-    
+
+    def _cap_resources_to_storage(self, variables):
+        """Scale resources down to fit inside the current storage capacity."""
+        weight = sum(
+            variables[resource] * item_weight[resource]
+            for resource in ["wood", "stone", "metal"]
+        )
+        if weight <= 0:
+            for resource in ["wood", "stone", "metal"]:
+                variables[resource] = 0
+            return
+
+        scale = self.mcsStorage / weight
+        if scale >= 1:
+            return
+
+        for resource in ["wood", "stone", "metal"]:
+            variables[resource] *= scale
+
 
     def generateWorld(self, x_line, y_line, world_gen):
 
@@ -3454,7 +3631,7 @@ class UpgradeScienceMenu(arcade.View):
             ScienceMenuInfo = menu_config["ScienceMenu"]
         id = 0
         for node in ScienceMenuInfo:
-            label = node[0]
+            label = node[0] or "Unnamed Research"
             badge_cfg = BadgeConfig(
                 text=str(node[7]),
                 texture="resources/gui/wood_circle.png",
@@ -3485,7 +3662,6 @@ class UpgradeScienceMenu(arcade.View):
             start_button.affect = node[5]
             start_button.connections = node[3]
             start_button.cost = node[7]
-            start_button.set_badge_text(str(node[7]))
             start_button.wrapper = wrapper
             connection_names = node[3]
 
@@ -3505,13 +3681,15 @@ class UpgradeScienceMenu(arcade.View):
                 start_button.unlocked = False
                 convert_button(start_button, self.silver_button_texture)
                 start_button.cost = node[7]
-                start_button.set_badge_text(str(node[7]))
+
             if start_button.unlocked:
                 start_button.cost = float("inf")
                 wrapper.identity = float("inf")
 
                 convert_button(start_button, self.gold_button_texture)
                 start_button.set_badge_text(None)
+            else:
+                start_button.set_badge_text(str(node[7]))
                 
             for i in start_button.connections:
                 endx = ScienceMenuInfo[i][1]+370#cameraView
@@ -3818,7 +3996,7 @@ class ScienceMenu(arcade.View):
 
         id = 0
         for button in ScienceMenuInfo:
-            label = button[0]
+            label = button[0] or "Unnamed Research"
             badge_cfg = BadgeConfig(
                 text=str(button[6]),
                 texture="resources/gui/wood_circle.png",
@@ -3854,16 +4032,18 @@ class ScienceMenu(arcade.View):
 
             wrapper.description = button[4]
             wrapper.identity = id
-            if saved and self.game_view.science_list[id]: 
+            if saved and self.game_view.science_list[id]:
                 start_button.unlocked = self.game_view.science_list[id]
-
                 convert_button(start_button, self.gold_button_texture)
             else:
                 start_button.unlocked = False
             
             start_button.affect = button[5]
             start_button.cost = button[6]
-            start_button.set_badge_text(str(button[6]))
+            if start_button.unlocked:
+                start_button.set_badge_text(None)
+            else:
+                start_button.set_badge_text(str(button[6]))
 
             button_names = button[3]
 
