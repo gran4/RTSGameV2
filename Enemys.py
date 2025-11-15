@@ -685,10 +685,11 @@ class Golem(BaseEnemy):
 
         self.movelist = [0]
 
-        self.affect = arcade.Sprite(
-            "resources/Sprites/Selection.png", center_x=100000, center_y=100000)
-        self.affect.textures = load_texture_grid(
+        affect_textures = load_texture_grid(
             "resources/Sprites/Free Pixel Effects Pack/10_weaponhit_spritesheet.png", 100, 100, 6, 31)[1:]
+        self.affect = arcade.Sprite(center_x=100000, center_y=100000,
+                                    texture=affect_textures[0])
+        self.affect.textures = affect_textures
         self.affect.animation_player = AnimationPlayer(.03)
         game.underParticals.append(self.affect)
 

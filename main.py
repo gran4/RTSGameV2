@@ -273,8 +273,6 @@ class MyGame(arcade.View):
         self.requirements = {"wood": float("inf")}
 
         self.last = None
-        self.selection_rectangle = arcade.Sprite(
-            "resources/Sprites/Selection.png", scale=1.2, center_x=-100000, center_y=-100000)
 
         try:
             self.load(file_num)
@@ -834,17 +832,33 @@ class MyGame(arcade.View):
         self.underParticals.draw()
 
         selected = getattr(self, "last", None)
+        building_selected = isinstance(selected, BaseBuilding)
+        person_selected = isinstance(selected, Person)
+        boat_selected = isinstance(selected, BaseBoat)
+
+        if building_selected:
+            self._draw_selection_overlay(selected)
 
         self.Buildings.draw()
+
+        if boat_selected:
+            self._draw_selection_overlay(selected)
+
         self.Boats.draw()
+
+        if person_selected:
+            self._draw_selection_overlay(selected)
+
         self.People.draw()
+        if building_selected:
+            self._redraw_selection_stack(selected, include_target=False)
         self.player.draw()
 
         self.Enemies.draw()
         self.EnemyBoats.draw()
 
         self.health_bars.draw()
-        if selected:
+        if selected and not (building_selected or person_selected or boat_selected):
             self._draw_selection_overlay(selected)
             self._redraw_selection_stack(selected)
         self.Fires.draw()
@@ -916,13 +930,13 @@ class MyGame(arcade.View):
             return 12
         return 12
 
-    def _redraw_selection_stack(self, target):
+    def _redraw_selection_stack(self, target, include_target=True):
         rect = self._selection_rect(target)
         if rect is None:
             return
         center_x, center_y, width, height = rect
         sprites = []
-        if isinstance(target, arcade.Sprite):
+        if include_target and isinstance(target, arcade.Sprite):
             sprites.append(target)
         sprites.extend(self._sprites_in_rect(
             self.People, center_x, center_y, width, height))

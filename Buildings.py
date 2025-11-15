@@ -64,7 +64,6 @@ class BaseBuilding(arcade.Sprite):
         if getattr(self.game, "last", None) is sprite:
             self.game.clear_uimanager()
             self.game.last = None
-            self.game.selection_rectangle.position = (-1000000, -1000000)
         return False
 
     def remove(self):
@@ -92,7 +91,6 @@ class BaseBuilding(arcade.Sprite):
         if self is game.last:
             game.clear_uimanager()
             game.last = Bad_Cannoe(game, 10000000, 1000000)
-            game.selection_rectangle.position = (-1000000, -1000000)
         if getattr(self, "affects_enemy_spawns", True) and getattr(self, "_spawn_registered", False):
             game.BuildingChangeEnemySpawner(
                 self.center_x, self.center_y, placing=-1, min_dist=150, max_dist=200)
@@ -256,7 +254,6 @@ class UNbuiltBuilding(BaseBuilding):
         if self is game.last:
             game.clear_uimanager()
             game.last = Bad_Cannoe(game, 10000000, 1000000)
-            game.selection_rectangle.position = (-1000000, -1000000)
         self.remove_from_sprite_lists()
         self.health_bar.remove_from_sprite_lists()
 

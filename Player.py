@@ -34,7 +34,6 @@ class Fire(arcade.Sprite):
             obj.destroy(game)
             game.clear_uimanager()
             game.last = Bad_Cannoe(10000000, 1000000)
-            game.selection_rectangle.position = (-1000000, -1000000)
             self.remove_from_sprite_lists()
         elif random.random()*self.strength > .98:
             reach = round(self.strength/2)
@@ -143,7 +142,6 @@ class BaseBoat(arcade.Sprite):
         if getattr(self.game, "last", None) is sprite:
             self.game.clear_uimanager()
             self.game.last = None
-            self.game.selection_rectangle.position = (-1000000, -1000000)
         return False
 
     def remove(self):
