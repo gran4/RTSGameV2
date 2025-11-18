@@ -840,14 +840,14 @@ class MyGame(arcade.View):
         self.Enemies.draw()
         self.EnemyBoats.draw()
 
-        if selected:
-            self._draw_selection_overlay(selected)
-            self._redraw_selection_stack(selected)
         self.health_bars.draw()
         self.Fires.draw()
         self.overParticles.draw()
 
         if selected:
+            self._draw_selection_overlay(selected)
+            self._redraw_selection_stack(selected)
+            self._redraw_selected_health_bar(selected)
             self._draw_selection_border(selected)
 
         self.not_scrolling_camera.use()
@@ -936,6 +936,19 @@ class MyGame(arcade.View):
                 continue
             seen_ids.add(sprite_id)
             sprite.draw()
+
+    def _redraw_selected_health_bar(self, target) -> None:
+        if not target:
+            return
+        health_bar = getattr(target, "health_bar", None)
+        if not health_bar or not getattr(health_bar, "visible", True):
+            return
+        background = getattr(health_bar, "background_box", None)
+        full = getattr(health_bar, "full_box", None)
+        if background:
+            background.draw()
+        if full:
+            full.draw()
 
     def _draw_selection_border(self, target):
         if not target or getattr(target, "center_x", None) is None:
