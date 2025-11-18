@@ -4,6 +4,7 @@ import arcade
 from arcade import math as arcade_math
 
 from Components import *
+from effects import ProjectileEffect
 
 """
 OBJECT x
@@ -808,8 +809,19 @@ class Wizard(BaseEnemy):
 
         self.wand = arcade.Sprite(
             "resources/Sprites/enemies/Wand.png", scale=.35, center_x=x-10, center_y=y)
-        self.wand.projectile = arcade.Sprite(
-            "resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-2.png", scale=0)
+        projectile_texture = "resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-2.png"
+        destruction_paths = [
+            f"resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png"
+            for i in range(1, 5)
+        ]
+        self.projectile_effect = ProjectileEffect(
+            projectile_texture,
+            destruction_paths,
+            scale=1,
+            speed=50,
+            animation_speed=0.1,
+        )
+        self.wand.projectile = arcade.Sprite(projectile_texture, scale=0)
         self.wand.projectile.visible = False
 
         game.overParticles.append(self.wand)
@@ -821,8 +833,6 @@ class Wizard(BaseEnemy):
         self.boat_bias = 10
 
         self.state = "Idle"
-        self.projectiles = arcade.SpriteList()
-        self.release_projectile = 0
 
         self.WaitToAttack = 1
         self.timer = 0
@@ -842,36 +852,32 @@ class Wizard(BaseEnemy):
             self.wand.projectile.position = self.wand.center_x, self.wand.center_y+15
         elif self.state == "Death":
             self.destroy(game)
-        for projectile in self.projectiles:
-            if not projectile.destroy:
-                advance_sprite(projectile, delta_time)
-                projectile.update()
-                projectile.time += delta_time
-                if projectile.time > projectile.maxtime:
-                    projectile.remove_from_sprite_lists()
 
-                if self.focused_on and arcade_math.get_distance(projectile.center_x, projectile.center_y, self.focused_on.center_x, self.focused_on.center_y) < 25:
-                    projectile.destroy = True
-            else:
-                anim = projectile.destructionAnim.updateAnim(
-                    delta_time, len(projectile.destruction))
-                scalevar = 0.15 * random.random() * delta_time
-                if isinstance(projectile.scale, tuple):
-                    new_scale = projectile.scale[1] + scalevar
-                    projectile.scale = (new_scale, new_scale)
-                else:
-                    projectile.scale += scalevar
-                if anim == 0:
-                    hit = arcade.check_for_collision_with_lists(
-                        projectile, [game.Buildings, game.People, game.Boats], method=3)
-                    for obj in hit:
-                        obj.health -= self.damage
-                        if obj.health > 0:
-                            continue
-                        obj.destroy(game)
-                    projectile.remove_from_sprite_lists()
-                if anim is not None:
-                    projectile.texture = projectile.destruction[anim]
+        def _should_detonate(projectile):
+            if not self.focused_on:
+                return False
+            return arcade_math.get_distance(
+                projectile.center_x,
+                projectile.center_y,
+                self.focused_on.center_x,
+                self.focused_on.center_y,
+            ) < 25
+
+        def _on_explode(projectile):
+            hit = arcade.check_for_collision_with_lists(
+                projectile, [game.Buildings, game.People, game.Boats], method=3)
+            for obj in hit:
+                obj.health -= self.damage
+                if obj.health > 0:
+                    continue
+                obj.destroy(game)
+
+        self.projectile_effect.update(
+            game,
+            delta_time,
+            should_detonate=_should_detonate,
+            on_explode=_on_explode,
+        )
 
     def on_attack(self, game, delta_time):
         if not self.canAttack:
@@ -890,53 +896,39 @@ class Wizard(BaseEnemy):
             current_scale = current_scale[1]
         if current_scale < 1:
             return
+        heading = heading_towards(
+            self.center_x,
+            self.center_y,
+            self.focused_on.center_x,
+            self.focused_on.center_y,
+        )
         if Attack1:
-            self.create_projectile(game)
+            self.projectile_effect.spawn(
+                game,
+                self.position,
+                heading,
+            )
         else:
-            self.create_projectile(game, maxtime=3, maxrotation=22, num=5)
+            self.projectile_effect.spawn(
+                game,
+                self.position,
+                heading,
+                maxtime=3,
+                max_rotation=22,
+                count=5,
+            )
 
         self.canAttack = False
         self.timer = 0
         self.state = "Idle"
         self.wand.projectile.scale = (0, 0)
 
-    def create_projectile(self, game, maxtime=15, maxrotation=5, num=1):
-        for i in range(num):
-            heading = heading_towards(
-                self.center_x,
-                self.center_y,
-                self.focused_on.center_x,
-                self.focused_on.center_y,
-            )
-            heading += random.randrange(-maxrotation, maxrotation)
-            projectile = arcade.Sprite(
-                "resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-2.png",
-                scale=1,
-                angle=heading - 90,
-            )
-            game.overParticles.append(projectile)
-            self.projectiles.append(projectile)
-
-            projectile.time = 0
-            projectile.maxtime = maxtime
-            projectile.destruction = []
-            for i in range(1, 5):
-                projectile.destruction.append(arcade.load_texture(
-                    f"resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png"))
-            projectile.destructionAnim = AnimationPlayer(.1)
-            projectile.destroy = False
-
-            projectile.position = self.position
-            set_sprite_motion(projectile, heading, 50)
-            projectile.update()
-
     def destroy(self, game):
         super().destroy(game)
         self.remove_from_sprite_lists()
         self.wand.remove_from_sprite_lists()
         self.wand.projectile.remove_from_sprite_lists()
-        for projectile in self.projectiles:
-            projectile.remove_from_sprite_lists()
+        self.projectile_effect.cleanup()
 
     def _serialize_extra_state(self) -> dict:
         wand_state = {
@@ -945,26 +937,9 @@ class Wizard(BaseEnemy):
             "projectile_scale": self.wand.projectile.scale,
             "projectile_visible": self.wand.projectile.visible,
         }
-        projectiles_state = []
-        for projectile in self.projectiles:
-            projectiles_state.append(
-                {
-                    "x": projectile.center_x,
-                    "y": projectile.center_y,
-                    "dx": getattr(projectile, "_motion_dx", 0.0),
-                    "dy": getattr(projectile, "_motion_dy", 0.0),
-                    "time": getattr(projectile, "time", 0.0),
-                    "maxtime": getattr(projectile, "maxtime", 0.0),
-                    "destroy": getattr(projectile, "destroy", False),
-                    "scale": projectile.scale,
-                    "angle": projectile.angle,
-                    "anim_index": getattr(getattr(projectile, "destructionAnim", None), "index", 0),
-                    "anim_time": getattr(getattr(projectile, "destructionAnim", None), "time", 0.0),
-                }
-            )
         return {
             "wand": wand_state,
-            "projectiles": projectiles_state,
+            "projectiles": self.projectile_effect.serialize(),
             "timer": self.timer,
             "can_attack": self.canAttack,
         }
@@ -987,32 +962,7 @@ class Wizard(BaseEnemy):
         self.timer = extra_state.get("timer", self.timer)
         self.canAttack = extra_state.get("can_attack", self.canAttack)
 
-        projectile_texture = "resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-2.png"
-        destruction_frames = [
-            arcade.load_texture(
-                f"resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png")
-            for i in range(1, 5)
-        ]
-        self.projectiles = arcade.SpriteList()
-        for entry in extra_state.get("projectiles", []):
-            projectile = arcade.Sprite(
-                projectile_texture,
-                scale=entry.get("scale", 1.0),
-                angle=entry.get("angle", 0.0),
-                center_x=entry.get("x", self.center_x),
-                center_y=entry.get("y", self.center_y),
-            )
-            projectile._motion_dx = entry.get("dx", 0.0)
-            projectile._motion_dy = entry.get("dy", 0.0)
-            projectile.time = entry.get("time", 0.0)
-            projectile.maxtime = entry.get("maxtime", 0.0)
-            projectile.destroy = entry.get("destroy", False)
-            projectile.destruction = destruction_frames
-            projectile.destructionAnim = AnimationPlayer(.1)
-            projectile.destructionAnim.index = entry.get("anim_index", 0)
-            projectile.destructionAnim.time = entry.get("anim_time", 0.0)
-            self.projectiles.append(projectile)
-            game.overParticles.append(projectile)
+        self.projectile_effect.restore(game, extra_state.get("projectiles", []))
 
 
 class Privateer(BaseEnemy):

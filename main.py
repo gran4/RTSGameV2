@@ -41,6 +41,7 @@ from CustomCellularAutomata import create_grid, do_simulation_step, initialize_g
 from Enemys import *
 from MyPathfinding import LivingMap, SearchTilesAround, _AStarSearch
 from Player import *
+from effects import Fire
 from TextInfo import *
 from gui_compat import UIAnchorWidget
 

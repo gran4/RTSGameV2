@@ -184,3 +184,4 @@ Traceback (most recent call last):
 AttributeError: 'Farm' object has no attribute '_health_bar_offset'
 2025-11-17 20:43:49,516 INFO Save slot 2 not found; generating new world
 2025-11-17 20:55:38,453 INFO Save slot 3 not found; generating new world
+2025-11-17 21:11:50,066 INFO Save slot None not found; generating new world
