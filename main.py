@@ -109,10 +109,7 @@ class MyGame(arcade.View):
     """
 
     def __init__(self, menu, file_num=1, world_gen="Normal", difficulty=1):
-
-        # Call the parent class and set up the window
-        super().__init__()  # 750, 500, "SCREEN_TITLE")
-
+        super().__init__()
         arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
 
         self.time_alive = 0
@@ -1919,8 +1916,6 @@ class MyGame(arcade.View):
                 self.graph, (x, y), allow_diagonal_movement=False, movelist=[0])
             if NumTilesAround >= 100:
                 break
-
-        # arcade.Sprite("resources/Sprites/Player.png", scale=.5, center_x=x, center_y=y)
         self.player = Player(center_x=x, center_y=y)
 
         num = 0
