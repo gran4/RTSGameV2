@@ -235,7 +235,7 @@ class BaseBuilding(arcade.Sprite):
 class UNbuiltBuilding(BaseBuilding):
     def __init__(self, game, x: float, y: float, max_len: int = 0, time: float = 0, building: str = "", scale=1):
         super().__init__(game, x, y, 10, 0, 0, max_len,
-                         "resources/Sprites/IN Progress.png", scale)
+                         "resources/Sprites/buildings/IN Progress.png", scale)
         self.time = time
         if self.max_length < 1:
             self.max_length
@@ -308,7 +308,7 @@ class ResearchShop(BaseBuilding):
     produces = {"science": .04}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/conjurerater.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/conjurerater.png")
         self.Updates = False
 
 
@@ -316,7 +316,7 @@ class Lab(BaseBuilding):
     produces = {"science": .1}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/Lab.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/Lab.png")
         self.Updates = False
 
 
@@ -324,21 +324,21 @@ class WorkShop(BaseBuilding):
     produces = {"toys": 1}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/WorkShop.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/WorkShop.png")
 
 
 class Factory(BaseBuilding):
     produces = {"toys": 2}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/Factory.png", scale=.5)
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/Factory.png")
 
 
 class Hospital(BaseBuilding):
     produces = {}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/Hospital.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/Hospital.png")
 
     def update(self, delta_time, game):
         for person in self.list_of_people:
@@ -352,7 +352,7 @@ class PebbleSite(BaseBuilding):
     produces = {"stone": .1}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 20, 0, 0, 1, "resources/Sprites/Pebble Site.png")
+        super().__init__(game, x, y, 20, 0, 0, 1, "resources/Sprites/buildings/Pebble Site.png")
         self.Updates = False
 
 
@@ -360,7 +360,7 @@ class Quary(BaseBuilding):
     produces = {"stone": .25}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 20, 0, 0, 1, "resources/Sprites/Quary.png")
+        super().__init__(game, x, y, 20, 0, 0, 1, "resources/Sprites/buildings/Quary.png")
         self.Updates = False
 
 
@@ -368,7 +368,7 @@ class Lumbermill(BaseBuilding):
     produces = {"wood": .25}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/tree_farm.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/tree_farm.png")
         self.Updates = False
 
 
@@ -376,7 +376,7 @@ class BlackSmith(BaseBuilding):
     produces = {}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/BlackSmith.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/BlackSmith.png")
         self.Updates = True
 
         self.required = {"wood": .01, "stone": .002}
@@ -404,7 +404,7 @@ class SnowTower(BaseBuilding):
     produces: dict[str, float] = {}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 20, .5, 400, 1, "resources/Sprites/SnowTower.png")
+        super().__init__(game, x, y, 20, .5, 400, 1, "resources/Sprites/buildings/SnowTower.png")
         self.Updates = False
         self.canAttack = True
         self.timer = 0
@@ -434,7 +434,7 @@ class SnowTower(BaseBuilding):
         self.snowballs = arcade.SpriteList()
         for entry in state.get("snowballs", []):
             snowball = arcade.Sprite(
-                "resources/Sprites/Snowball.png",
+                "resources/Sprites/buildings/Snowball.png",
                 scale=1,
                 center_x=entry.get("x", self.center_x),
                 center_y=entry.get("y", self.center_y),
@@ -492,7 +492,7 @@ class SnowTower(BaseBuilding):
         )
         heading += random.uniform(-5, 5)
         snowball = arcade.Sprite(
-            "resources/Sprites/Snowball.png",
+            "resources/Sprites/buildings/Snowball.png",
             scale=1,
             center_x=self.center_x,
             center_y=self.center_y,
@@ -512,7 +512,7 @@ class RaindeerFarm(BaseBuilding):
     produces = {"food": 1.4}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/Pasture.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/Pasture.png")
         self.Updates = False
 
 
@@ -520,13 +520,13 @@ class Farm(BaseBuilding):
     produces = {"food": 1.6}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/tree_farm.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/tree_farm.png")
         hit_box = ((-25.0, -25.0), (25.0, -25.0), (25.0, 25.0), (-25.0, 25.0))
         set_sprite_hit_box(self, hit_box)
 
         self.AnimationPlayer = AnimationPlayer(1)
         self.textures = load_texture_grid(
-            "resources/Sprites/Farm Pixilart Sprite Sheet.png", 50, 50, 50, 2)
+            "resources/Sprites/buildings/Farm Pixilart Sprite Sheet.png", 50, 50, 50, 2)
         self.texture = self.textures[0]
 
     def update(self, delta_time, game):
@@ -553,7 +553,7 @@ class FireStation(BaseBuilding):
 
     def __init__(self, game, x: float, y: float):
         super().__init__(game, x, y, .4, 50, 400, 1,
-                         "resources/Sprites/Fire Station.png", scale=1)
+                         "resources/Sprites/buildings/Fire Station.png", scale=1)
         self.timer = 0
 
     def update(self, delta_time, game):
@@ -602,7 +602,7 @@ class Pass(Path):
     produces = {}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 10, 2, "resources/Sprites/Road.png")
+        super().__init__(game, x, y, 10, 10, 2, "resources/Sprites/buildings/Road.png")
         self.Updates = False
         self.prev = game.graph[round(
             self.center_x/50)][round(self.center_y/50)]
@@ -628,19 +628,19 @@ class Housing(BaseBuilding):
 
 class Igloo(Housing):
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, "resources/Sprites/Igloo.png", 1)
+        super().__init__(game, x, y, 10, "resources/Sprites/buildings/Igloo.png", 1)
 
 
 class Dormatory(Housing):
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, "resources/Sprites/Hut.png", 4)
+        super().__init__(game, x, y, 10, "resources/Sprites/buildings/Hut.png", 4)
 
 
 class FoodDepot(BaseBuilding):
     produces = {}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/FoodDepot.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/FoodDepot.png")
         self.food_storage = 75
 
         game.food_storage += self.food_storage
@@ -654,7 +654,7 @@ class StoneWall(BaseBuilding):
     produces = {}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 100, 0, 0, 1, "resources/Sprites/StoneWall.png")
+        super().__init__(game, x, y, 100, 0, 0, 1, "resources/Sprites/buildings/StoneWall.png")
         self.allows_people = False
 
 
@@ -662,7 +662,7 @@ class MetalWall(BaseBuilding):
     produces = {}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 1000, 0, 0, 1, "resources/Sprites/MetalWall.png")
+        super().__init__(game, x, y, 1000, 0, 0, 1, "resources/Sprites/buildings/MetalWall.png")
         self.allows_people = False
 
 
@@ -671,7 +671,7 @@ class MaterialDepot(BaseBuilding):
 
     def __init__(self, game, x: float, y: float):
         self.storage = 10
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/MaterialDepot.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/MaterialDepot.png")
 
         game.mcsStorage += self.storage
 
@@ -685,7 +685,7 @@ class BetterMaterialDepot(BaseBuilding):
 
     def __init__(self, game, x: float, y: float):
         self.storage = 20
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/MaterialDepot.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/MaterialDepot.png")
 
         game.mcsStorage += self.storage
 
@@ -698,7 +698,7 @@ class Encampment(BaseBuilding):
     produces = {}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/Training Ground.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/Training Ground.png")
         self.trainable = ["Bad Gifter", "Bad Reporter"]
 
     def add(self, sprite):

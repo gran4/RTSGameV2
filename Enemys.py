@@ -163,7 +163,7 @@ class BaseEnemy(arcade.Sprite):
 
 class Child(BaseEnemy):
     def __init__(self, game, x, y, difficulty=1):
-        super().__init__("resources/Sprites/enemy.png", x,
+        super().__init__("resources/Sprites/enemies/enemy.png", x,
                          y, 5*difficulty, 10*difficulty, 5, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
 
@@ -174,11 +174,11 @@ class Child(BaseEnemy):
         self.movelist = [0, 2]
 
         self.front_texture = arcade.load_texture(
-            "resources/Sprites/child_front.png")
+            "resources/Sprites/enemies/child_front.png")
         self.back_texture = arcade.load_texture(
-            "resources/Sprites/child_back.png")
+            "resources/Sprites/enemies/child_back.png")
         self.left_texture = arcade.load_texture(
-            "resources/Sprites/child_left.png")
+            "resources/Sprites/enemies/child_left.png")
         self.right_texture = self.left_texture.flip_left_right()
 
         self.texture = self.front_texture
@@ -208,11 +208,11 @@ class Child(BaseEnemy):
 
 class Enemy_Swordsman(BaseEnemy):
     def __init__(self, x: float, y: float, difficulty=1):
-        super().__init__("resources/Sprites/NightBorneWarrior/NightBorne.png",
+        super().__init__("resources/Sprites/enemies/NightBorneWarrior/NightBorne.png",
                          x, y, 10*difficulty, 5*difficulty, 40, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
         self.textures = load_texture_grid(
-            "resources/Sprites/NightBorneWarrior/NightBorne.png", 80, 80, 22, 111, margin=0)
+            "resources/Sprites/enemies/NightBorneWarrior/NightBorne.png", 80, 80, 22, 111, margin=0)
         self.texture = self.textures[0]
 
         self.Idle = self.textures[:7]
@@ -275,10 +275,10 @@ class Enemy_Swordsman(BaseEnemy):
 
 class Enemy_Slinger(BaseEnemy):
     def __init__(self, game, x, y, difficulty=1):
-        super().__init__("resources/Sprites/enemy.png", x,
+        super().__init__("resources/Sprites/enemies/enemy.png", x,
                          y, 5*difficulty, 10*difficulty, 325, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
-        self.texture = arcade.load_texture("resources/Sprites/enemy.png")
+        self.texture = arcade.load_texture("resources/Sprites/enemies/enemy.png")
 
         self.building_bias = 1
         self.people_bias = .3
@@ -290,7 +290,7 @@ class Enemy_Slinger(BaseEnemy):
             center_x=self.center_x, center_y=self.center_y, image_width=50, image_height=50)  # Entity()
         self.bow.Attack_animation = AnimationPlayer(.1)
         self.bow.Attack_textures = load_texture_grid(
-            "resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
+            "resources/Sprites/enemies/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
         self.bow.texture = self.bow.Attack_textures[0]
         self.bow.AttackAnimTimes = [.25, .125,
                                     .125, .125, .2, .1, .05, .025, .025]
@@ -304,11 +304,11 @@ class Enemy_Slinger(BaseEnemy):
         self._sfx_cooldown = 0.0
 
         self.front_texture = arcade.load_texture(
-            "resources/Sprites/child_front.png")
+            "resources/Sprites/enemies/child_front.png")
         self.back_texture = arcade.load_texture(
-            "resources/Sprites/child_back.png")
+            "resources/Sprites/enemies/child_back.png")
         self.left_texture = arcade.load_texture(
-            "resources/Sprites/child_left.png")
+            "resources/Sprites/enemies/child_left.png")
         self.right_texture = self.left_texture.flip_left_right()
         self.texture = self.front_texture
 
@@ -440,7 +440,7 @@ class Enemy_Slinger(BaseEnemy):
             )
             heading += random.randrange(-5, 5)
             arrow = arcade.Sprite(
-                "resources/Sprites/projectile.png",
+                "resources/Sprites/enemies/projectile.png",
                 scale=1,
                 center_x=self.center_x,
                 center_y=self.center_y,
@@ -516,7 +516,7 @@ class Enemy_Slinger(BaseEnemy):
             "anim_time", self.bow.Attack_animation.time)
 
         self.arrows = arcade.SpriteList()
-        arrow_texture = "resources/Sprites/projectile.png"
+        arrow_texture = "resources/Sprites/enemies/projectile.png"
         for entry in extra_state.get("arrows", []):
             arrow = arcade.Sprite(
                 arrow_texture,
@@ -537,16 +537,16 @@ class Enemy_Slinger(BaseEnemy):
 
 class Arsonist(BaseEnemy):
     def __init__(self, game, x: float, y: float, difficulty=1):
-        super().__init__("resources/Sprites/child_front.png", x,
+        super().__init__("resources/Sprites/enemies/child_front.png", x,
                          y, 5*difficulty, 5*difficulty, 40, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
 
         self.front_texture = arcade.load_texture(
-            "resources/Sprites/child_front.png")
+            "resources/Sprites/enemies/child_front.png")
         self.back_texture = arcade.load_texture(
-            "resources/Sprites/child_back.png")
+            "resources/Sprites/enemies/child_back.png")
         self.left_texture = arcade.load_texture(
-            "resources/Sprites/child_left.png")
+            "resources/Sprites/enemies/child_left.png")
         self.right_texture = self.left_texture.flip_left_right()
 
         self.building_bias = 1
@@ -558,7 +558,7 @@ class Arsonist(BaseEnemy):
 
         self.Explosian = arcade.Sprite(center_x=x-10, center_y=y+10, scale=.25)
         self.Explosian.textures = load_texture_grid(
-            "resources/Sprites/Fire_Totem/Fire_Totem-full_Sheet.png", 64, 100, 14, 70)
+            "resources/Sprites/enemies/Fire_Totem/Fire_Totem-full_Sheet.png", 64, 100, 14, 70)
         self.Explosian.texture = self.Explosian.textures[4]
         self.Explosian.AnimationPlayer = AnimationPlayer(.1)
         game.overParticles.append(self.Explosian)
@@ -655,11 +655,11 @@ class Arsonist(BaseEnemy):
 
 class Golem(BaseEnemy):
     def __init__(self, game, x: float, y: float, difficulty=1):
-        super().__init__("resources/Sprites/Stone Golem/Character_sheet.png",
+        super().__init__("resources/Sprites/enemies/Stone Golem/Character_sheet.png",
                          x, y, 10*difficulty, 10*difficulty, 40, scale=.8)
         self.spawn_kwargs = {"difficulty": difficulty}
         textures = load_texture_grid(
-            "resources/Sprites/Stone Golem/Character_sheet.png", 100, 100, 10, 100, margin=0)
+            "resources/Sprites/enemies/Stone Golem/Character_sheet.png", 100, 100, 10, 100, margin=0)
         self.texture = textures[0]
         self.Idle = textures[:4]
         self.Idle_animation = AnimationPlayer(.1)
@@ -685,7 +685,7 @@ class Golem(BaseEnemy):
         self.movelist = [0]
 
         affect_textures = load_texture_grid(
-            "resources/Sprites/Free Pixel Effects Pack/10_weaponhit_spritesheet.png", 100, 100, 6, 31)[1:]
+            "resources/Sprites/enemies/Free Pixel Effects Pack/10_weaponhit_spritesheet.png", 100, 100, 6, 31)[1:]
         self.affect = arcade.Sprite(center_x=100000, center_y=100000,
                                     texture=affect_textures[0])
         self.affect.textures = affect_textures
@@ -793,23 +793,23 @@ class Golem(BaseEnemy):
 
 class Wizard(BaseEnemy):
     def __init__(self, game, x: float, y: float, difficulty):
-        super().__init__("resources/Sprites/Wizard/Idle.png",
+        super().__init__("resources/Sprites/enemies/Wizard/Idle.png",
                          x, y, 5*difficulty, 2*difficulty, 200, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
 
         self.front_texture = arcade.load_texture(
-            "resources/Sprites/child_front.png")
+            "resources/Sprites/enemies/child_front.png")
         self.back_texture = arcade.load_texture(
-            "resources/Sprites/child_back.png")
+            "resources/Sprites/enemies/child_back.png")
         self.left_texture = arcade.load_texture(
-            "resources/Sprites/child_left.png")
+            "resources/Sprites/enemies/child_left.png")
         self.right_texture = self.left_texture.flip_horizontally()
         self.texture = self.front_texture
 
         self.wand = arcade.Sprite(
-            "resources/Sprites/Wand.png", scale=.35, center_x=x-10, center_y=y)
+            "resources/Sprites/enemies/Wand.png", scale=.35, center_x=x-10, center_y=y)
         self.wand.projectile = arcade.Sprite(
-            "resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-2.png", scale=0)
+            "resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-2.png", scale=0)
         self.wand.projectile.visible = False
 
         game.overParticles.append(self.wand)
@@ -910,7 +910,7 @@ class Wizard(BaseEnemy):
             )
             heading += random.randrange(-maxrotation, maxrotation)
             projectile = arcade.Sprite(
-                "resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-2.png",
+                "resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-2.png",
                 scale=1,
                 angle=heading - 90,
             )
@@ -922,7 +922,7 @@ class Wizard(BaseEnemy):
             projectile.destruction = []
             for i in range(1, 5):
                 projectile.destruction.append(arcade.load_texture(
-                    f"resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png"))
+                    f"resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png"))
             projectile.destructionAnim = AnimationPlayer(.1)
             projectile.destroy = False
 
@@ -987,10 +987,10 @@ class Wizard(BaseEnemy):
         self.timer = extra_state.get("timer", self.timer)
         self.canAttack = extra_state.get("can_attack", self.canAttack)
 
-        projectile_texture = "resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-2.png"
+        projectile_texture = "resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-2.png"
         destruction_frames = [
             arcade.load_texture(
-                f"resources/Sprites/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png")
+                f"resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-{i+1}.png")
             for i in range(1, 5)
         ]
         self.projectiles = arcade.SpriteList()
@@ -1029,7 +1029,7 @@ class Privateer(BaseEnemy):
             center_x=self.center_x, center_y=self.center_y, image_width=50, image_height=50)  # Entity()
         self.bow.Attack_animation = AnimationPlayer(.1)
         self.bow.Attack_textures = load_texture_grid(
-            "resources/Sprites/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
+            "resources/Sprites/enemies/Long Bow Pixilart Sprite Sheet.png", 50, 50, 50, 9)
         self.bow.texture = self.bow.Attack_textures[0]
         self.bow.AttackAnimTimes = [.25, .125,
                                     .125, .125, .2, .1, .05, .025, .025]
@@ -1126,7 +1126,7 @@ class Privateer(BaseEnemy):
             )
             heading += random.randrange(-5, 5)
             arrow = arcade.Sprite(
-                "resources/Sprites/projectile.png",
+                "resources/Sprites/enemies/projectile.png",
                 scale=1,
                 center_x=self.center_x,
                 center_y=self.center_y,
@@ -1192,7 +1192,7 @@ class Privateer(BaseEnemy):
             game.overParticles.append(self.bow)
 
         self.arrows = arcade.SpriteList()
-        arrow_texture = "resources/Sprites/projectile.png"
+        arrow_texture = "resources/Sprites/enemies/projectile.png"
         for entry in extra_state.get("arrows", []):
             arrow = arcade.Sprite(
                 arrow_texture,

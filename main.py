@@ -829,33 +829,19 @@ class MyGame(arcade.View):
         self.underParticals.draw()
 
         selected = getattr(self, "last", None)
-        building_selected = isinstance(selected, BaseBuilding)
-        person_selected = isinstance(selected, Person)
-        boat_selected = isinstance(selected, BaseBoat)
-
-        if building_selected:
-            self._draw_selection_overlay(selected)
 
         self.Buildings.draw()
 
-        if boat_selected:
-            self._draw_selection_overlay(selected)
-
         self.Boats.draw()
 
-        if person_selected:
-            self._draw_selection_overlay(selected)
-
         self.People.draw()
-        if building_selected:
-            self._redraw_selection_stack(selected, include_target=False)
         self.player.draw()
 
         self.Enemies.draw()
         self.EnemyBoats.draw()
 
         self.health_bars.draw()
-        if selected and not (building_selected or person_selected or boat_selected):
+        if selected:
             self._draw_selection_overlay(selected)
             self._redraw_selection_stack(selected)
         self.Fires.draw()
@@ -1881,7 +1867,7 @@ class MyGame(arcade.View):
                     break
             if sand:
                 land.texture = arcade.load_texture(
-                    "resources/Sprites/Sand.png")
+                    "resources/Sprites/terrain/Sand.png")
                 land.typ = "Sand"
             else:
                 random_float = random.random()
@@ -2188,7 +2174,7 @@ class MyGame(arcade.View):
                     land[0].typ = "Snow"
                     # gul-li-ble person
                     land[0].texture = arcade.load_texture(
-                        "resources/Sprites/Snow.png")
+                        "resources/Sprites/terrain/Snow.png")
 
     def save(self, event):
         if getattr(self, "is_tutorial", False):
@@ -4842,17 +4828,18 @@ class BuildingMenu(arcade.View):
         with open("textInfo.json", "r") as read_file:
             menu_config = json.load(read_file)
         for node in menu_config["Selectables"]:
-            length = len(node[3])*11
+            align_x, align_y, label, description, requirements, placement = node
+            length = len(label) * 11
             start_button = arcade.gui.UIFlatButton(
-                text=node[3], width=length, x=0, y=0)
+                text=label, width=length, x=0, y=0)
             start_button.on_click = self.on_buttonclick
             wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
-                                     child=start_button, align_x=node[1], align_y=node[2])
+                                     child=start_button, align_x=align_x, align_y=align_y)
 
-            start_button.type = node[3]
-            wrapper.description = node[4]
-            start_button.requirements = node[5]
-            start_button.placement = node[6]
+            start_button.type = label
+            wrapper.description = description
+            start_button.requirements = requirements
+            start_button.placement = placement
             start_button.wrapper = wrapper
 
             self.uimanager.add(wrapper)

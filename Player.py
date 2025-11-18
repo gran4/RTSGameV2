@@ -13,7 +13,7 @@ from gui_compat import UIAnchorWidget
 
 class Fire(arcade.Sprite):
     def __init__(self, game, x: float, y: float, strength):
-        super().__init__("resources/Sprites/tree_farm.png", center_x=x,
+        super().__init__("resources/Sprites/buildings/tree_farm.png", center_x=x,
                          center_y=y, scale=1, hit_box_algorithm="None")
 
         self.textures = load_texture_grid(
@@ -725,7 +725,7 @@ class People_that_attack(Person):
 
 class BadGifter(People_that_attack):
     def __init__(self, game, x, y):
-        super().__init__(game, "resources/Sprites/enemy.png", x, y, 10, 500, 100, scale=1.5)
+        super().__init__(game, "resources/Sprites/enemies/enemy.png", x, y, 10, 500, 100, scale=1.5)
         self.set_up(game, x, y)
 
     def set_up(self, game, x, y):
@@ -968,7 +968,7 @@ class BadGifter(People_that_attack):
 
 class BadReporter(People_that_attack):
     def __init__(self, game, x, y):
-        super().__init__(game, "resources/Sprites/enemy.png", x, y, 25, 500, 100, scale=1.5)
+        super().__init__(game, "resources/Sprites/enemies/enemy.png", x, y, 25, 500, 100, scale=1.5)
         self.set_up(game, x, y)
 
     def set_up(self, game, x, y):

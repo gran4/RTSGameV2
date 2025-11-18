@@ -124,3 +124,45 @@ AttributeError: 'NoneType' object has no attribute 'exists'
 2025-11-17 17:19:05,134 INFO Save slot None not found; generating new world
 2025-11-17 17:23:04,047 INFO Save slot None not found; generating new world
 2025-11-17 17:26:04,413 INFO Save slot None not found; generating new world
+2025-11-17 19:10:23,627 INFO Save slot 2 not found; generating new world
+2025-11-17 19:16:26,052 ERROR Failed to load save slot 1
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 275, in setup
+    self.load(file_num)
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 2579, in load
+    self._load_terrain_from_state(terrain_state)
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 2548, in _load_terrain_from_state
+    _build_tiles(state.get("stone", []), self.Stones)
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 2542, in _build_tiles
+    tile = factory(self, data.get("x", 0), data.get("y", 0))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/BackGround.py", line 83, in __init__
+    detailed = arcade.load_texture(
+               ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/texture/loading.py", line 58, in load_texture
+    tex = Texture(im_data, hit_box_algorithm=hit_box_algorithm)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/texture/texture.py", line 185, in __init__
+    raise TypeError(
+TypeError: hit_box_algorithm must be an instance of HitBoxAlgorithm, not <class 'str'>
+2025-11-17 19:39:34,015 ERROR Failed to load save slot 1
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 275, in setup
+    self.load(file_num)
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 2579, in load
+    self._load_terrain_from_state(terrain_state)
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 2548, in _load_terrain_from_state
+    _build_tiles(state.get("stone", []), self.Stones)
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 2542, in _build_tiles
+    tile = factory(self, data.get("x", 0), data.get("y", 0))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/BackGround.py", line 85, in __init__
+    texture_path, hit_box_algorithm=HitBoxAlgorithm.DETAILED)
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'HitBoxAlgorithm' has no attribute 'DETAILED'
+2025-11-17 19:45:08,345 INFO Save slot 2 not found; generating new world
+2025-11-17 19:59:40,917 INFO Save slot 2 not found; generating new world
+2025-11-17 20:00:05,458 INFO Save slot 2 not found; generating new world
+2025-11-17 20:00:11,665 INFO Save slot 2 not found; generating new world
+2025-11-17 20:05:49,223 INFO Save slot None not found; generating new world
+2025-11-17 20:25:34,520 INFO Save slot 2 not found; generating new world

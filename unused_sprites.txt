@@ -1,0 +1,578 @@
+resources/Sprites/.DS_Store
+resources/Sprites/Campfire.png
+resources/Sprites/Fire.png
+resources/Sprites/Fireball_68x9.png
+resources/Sprites/Orchard.png
+resources/Sprites/Person.png
+resources/Sprites/Sundial.png
+resources/Sprites/Temple of Artemis.png
+resources/Sprites/Trap.png
+resources/Sprites/Tree copy.png
+resources/Sprites/Truck.png
+resources/Sprites/Viking Ship/ship.aseprite
+resources/Sprites/Viking Ship/ship1.png
+resources/Sprites/Viking Ship/ship10.png
+resources/Sprites/Viking Ship/ship11.png
+resources/Sprites/Viking Ship/ship12.png
+resources/Sprites/Viking Ship/ship13.png
+resources/Sprites/Viking Ship/ship14.png
+resources/Sprites/Viking Ship/ship15.png
+resources/Sprites/Viking Ship/ship16.png
+resources/Sprites/Viking Ship/ship2.png
+resources/Sprites/Viking Ship/ship3.png
+resources/Sprites/Viking Ship/ship4.png
+resources/Sprites/Viking Ship/ship5.png
+resources/Sprites/Viking Ship/ship6.png
+resources/Sprites/Viking Ship/ship7.png
+resources/Sprites/Viking Ship/ship8.png
+resources/Sprites/Viking Ship/ship9.png
+resources/Sprites/Viking Ship/sprPlayer_strip16 copy.png
+resources/Sprites/Wooden_boat/ReadMe.txt
+resources/Sprites/Wooden_boat/boat copy.png
+resources/Sprites/arrow.png
+resources/Sprites/berry_bush1.png
+resources/Sprites/enemies/.DS_Store
+resources/Sprites/enemies/Arcane archer/.DS_Store
+resources/Sprites/enemies/Arcane archer/projectile.png
+resources/Sprites/enemies/Arcane archer/projectile_cropped.png
+resources/Sprites/enemies/Arcane archer/spritesheet.aseprite
+resources/Sprites/enemies/Arcane archer/spritesheet.png
+resources/Sprites/enemies/EnemyArcher/Dash.png
+resources/Sprites/enemies/EnemyArcher/High Attack.png
+resources/Sprites/enemies/EnemyArcher/Idle and running.png
+resources/Sprites/enemies/EnemyArcher/Jumping.png
+resources/Sprites/enemies/EnemyArcher/Low attack.png
+resources/Sprites/enemies/EnemyArcher/Normal Attack.png
+resources/Sprites/enemies/EnemyArcher/death.png
+resources/Sprites/enemies/EnemyArcher/final sheet.aseprite
+resources/Sprites/enemies/Fire_Totem/Fire_Totem_appear.gif
+resources/Sprites/enemies/Fire_Totem/Fire_Totem_attack.gif
+resources/Sprites/enemies/Fire_Totem/Fire_Totem_attack_loop.gif
+resources/Sprites/enemies/Fire_Totem/Fire_Totem_blue-Sheet.png
+resources/Sprites/enemies/Fire_Totem/Fire_Totem_blue.gif
+resources/Sprites/enemies/Fire_Totem/Fire_Totem_disappear.gif
+resources/Sprites/enemies/Fire_Totem/Fire_Totem_explosian-Sheet.png
+resources/Sprites/enemies/Fire_Totem/Fire_Totem_idle.gif
+resources/Sprites/enemies/Free Pixel Effects Pack/11_fire_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/12_nebula_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/13_vortex_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/16_sunburn_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/17_felspell_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/19_freezing_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/1_magicspell_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/2_magic8_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/3_bluefire_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/4_casting_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/5_magickahit_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/6_flamelash_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/8_protectioncircle_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/9_brightfire_spritesheet.png
+resources/Sprites/enemies/Free Pixel Effects Pack/README.txt
+resources/Sprites/enemies/Free Pixel Effects Pack/cover.png
+resources/Sprites/enemies/NightBorneWarrior/NightBorne_attack.gif
+resources/Sprites/enemies/NightBorneWarrior/NightBorne_death..gif
+resources/Sprites/enemies/NightBorneWarrior/NightBorne_hurt.gif
+resources/Sprites/enemies/NightBorneWarrior/NightBorne_idle.gif
+resources/Sprites/enemies/NightBorneWarrior/NightBorne_run.gif
+resources/Sprites/enemies/Stone Golem/.DS_Store
+resources/Sprites/enemies/Stone Golem/ASE files/Character.aseprite
+resources/Sprites/enemies/Stone Golem/ASE files/arm_projectile_glowing.ase
+resources/Sprites/enemies/Stone Golem/ASE files/flatten_character.aseprite
+resources/Sprites/enemies/Stone Golem/ASE files/laser.ase
+resources/Sprites/enemies/Stone Golem/ASE files/layered_character.aseprite
+resources/Sprites/enemies/Stone Golem/weapon PNG/Laser_sheet.png
+resources/Sprites/enemies/Stone Golem/weapon PNG/arm_projectile.png
+resources/Sprites/enemies/Stone Golem/weapon PNG/arm_projectile_glowing.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Bolt/bolt-preview-big.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Bolt/bolt-previewt.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Bolt/bolt.aseprite
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Bolt/frames/bolt1.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Bolt/frames/bolt2.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Bolt/frames/bolt3.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Bolt/frames/bolt4.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Pulse/frames/pulse1.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Pulse/frames/pulse2.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Pulse/frames/pulse3.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Pulse/frames/pulse4.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Pulse/pulse-preview-big.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Pulse/pulse-preview.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/Pulse/pulse.aseprite
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/charged/charged-preview-big.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/charged/charged-preview.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/charged/charged.aseprite
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/charged/frames/charged1.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/charged/frames/charged2.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/charged/frames/charged3.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/charged/frames/charged4.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/charged/frames/charged5.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/charged/frames/charged6.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/crossed/crossed-preview-big.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/crossed/crossed-preview.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/crossed/crossed.aseprite
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/crossed/frames/crossed1.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/crossed/frames/crossed2.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/crossed/frames/crossed3.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/crossed/frames/crossed4.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/crossed/frames/crossed5.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/crossed/frames/crossed6.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-2/frames/hits-2-1.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-2/frames/hits-2-2.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-2/frames/hits-2-3.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-2/frames/hits-2-4.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-2/frames/hits-2-5.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-2/frames/hits-2-6.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-2/frames/hits-2-7.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-2/hits-2-preview.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-2/hits-2.aseprite
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-3/frames/hits-3-1.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-3/frames/hits-3-2.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-3/frames/hits-3-3.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-3/frames/hits-3-4.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-3/frames/hits-3-5.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-3/hits-3-preview.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-3/hits-3.aseprite
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-5/frames/hits-5-1.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-5/frames/hits-5-2.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-5/frames/hits-5-3.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-5/frames/hits-5-4.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-5/frames/hits-5-5.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-5/frames/hits-5-6.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-5/frames/hits-5-7.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-5/hits-5-preview.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-5/hits-5.aseprite
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-6/frames/hits-6-preview1.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-6/frames/hits-6-preview2.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-6/frames/hits-6-preview3.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-6/frames/hits-6-preview4.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-6/frames/hits-6-preview5.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-6/frames/hits-6-preview6.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-6/frames/hits-6-preview7.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-6/hits-6-preview.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/Hits-6/hits-6.aseprite
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/hits-4/frames/hits-4-1.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/hits-4/frames/hits-4-2.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/hits-4/frames/hits-4-3.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/hits-4/frames/hits-4-4.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/hits-4/frames/hits-4-5.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/hits-4/frames/hits-4-6.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/hits-4/frames/hits-4-7.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/hits-4/hits-4-preview.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/hits/hits-4/hits-4.aseprite
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/spark/frames/spark-preview1.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/spark/frames/spark-preview2.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/spark/frames/spark-preview3.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/spark/frames/spark-preview4.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/spark/frames/spark-preview5.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/spark/spark-preview-big.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/spark/spark-preview.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/spark/spark.aseprite
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/waveform/frames/waveform1.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/waveform/frames/waveform2.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/waveform/frames/waveform3.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/waveform/frames/waveform4.png
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/waveform/waveform-preview-big.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/waveform/waveform-preview.gif
+resources/Sprites/enemies/Warped shooting fx files/Pixelart/waveform/waveform.aseprite
+resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-1.png
+resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-3.png
+resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-4.png
+resources/Sprites/enemies/Warped shooting fx files/hits-1/frames/hits-1-5.png
+resources/Sprites/enemies/Warped shooting fx files/hits-1/hits-1-preview.gif
+resources/Sprites/enemies/Warped shooting fx files/hits-1/hits-1.aseprite
+resources/Sprites/enemies/Warped shooting fx files/public-license.txt
+resources/Sprites/enemies/Wizard/Attack1.png
+resources/Sprites/enemies/Wizard/Attack2.png
+resources/Sprites/enemies/Wizard/Death.png
+resources/Sprites/enemies/Wizard/Hit.png
+resources/Sprites/enemies/Wizard/Run.png
+resources/Sprites/enemies/explosions/explosions.json
+resources/Sprites/enemies/explosions/explosions.png
+resources/Sprites/enemies/explosions/images/desktop.ini
+resources/Sprites/enemies/explosions/images/explosion/desktop.ini
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0000.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0001.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0002.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0003.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0004.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0005.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0006.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0007.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0008.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0009.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0010.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0011.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0012.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0013.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0014.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0015.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0016.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0017.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0018.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0019.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0020.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0021.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0022.png
+resources/Sprites/enemies/explosions/images/explosion/expl_01_0023.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0000.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0001.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0002.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0003.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0004.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0005.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0006.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0007.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0008.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0009.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0010.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0011.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0012.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0013.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0014.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0015.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0016.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0017.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0018.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0019.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0020.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0021.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0022.png
+resources/Sprites/enemies/explosions/images/explosion/expl_02_0023.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0001.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0002.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0003.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0004.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0005.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0006.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0007.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0008.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0009.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0010.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0011.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0012.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0013.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0014.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0015.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0016.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0017.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0018.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0019.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0020.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0021.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0022.png
+resources/Sprites/enemies/explosions/images/explosion/expl_03_0023.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0000.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0001.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0002.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0003.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0004.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0005.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0006.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0007.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0008.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0009.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0010.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0011.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0012.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0013.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0014.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0015.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0016.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0017.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0018.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0019.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0020.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0021.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0022.png
+resources/Sprites/enemies/explosions/images/explosion/expl_04_0023.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050000.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050001.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050002.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050003.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050004.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050005.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050006.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050007.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050008.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050009.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050010.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050011.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050012.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050013.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050014.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050015.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050016.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050017.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050018.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050019.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050020.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050021.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050022.png
+resources/Sprites/enemies/explosions/images/explosion/expl_050023.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0000.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0001.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0002.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0003.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0004.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0005.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0006.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0007.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0008.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0009.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0010.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0011.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0012.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0013.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0014.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0015.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0016.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0017.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0018.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0019.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0020.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0021.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0022.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0023.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0024.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0025.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0026.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0027.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0028.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0029.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0030.png
+resources/Sprites/enemies/explosions/images/explosion/expl_06_0031.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0000.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0001.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0002.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0003.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0004.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0005.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0006.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0007.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0008.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0009.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0010.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0011.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0012.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0013.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0014.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0015.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0016.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0017.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0018.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0019.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0020.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0021.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0022.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0023.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0024.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0025.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0026.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0027.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0028.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0029.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0030.png
+resources/Sprites/enemies/explosions/images/explosion/expl_07_0031.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0000.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0001.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0002.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0003.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0004.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0005.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0006.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0007.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0008.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0009.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0010.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0011.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0012.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0013.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0014.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0015.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0016.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0017.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0018.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0019.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0020.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0021.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0022.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0023.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0024.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0025.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0026.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0027.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0028.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0029.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0030.png
+resources/Sprites/enemies/explosions/images/explosion/expl_08_0031.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0000.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0001.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0002.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0003.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0004.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0005.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0006.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0007.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0008.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0009.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0010.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0011.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0012.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0013.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0014.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0015.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0016.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0017.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0018.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0019.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0020.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0021.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0022.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0023.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0024.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0025.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0026.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0027.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0028.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0029.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0030.png
+resources/Sprites/enemies/explosions/images/explosion/expl_09_0031.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0000.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0001.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0002.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0003.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0004.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0005.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0006.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0007.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0008.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0009.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0010.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0011.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0012.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0013.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0014.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0015.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0016.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0017.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0018.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0019.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0020.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0021.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0022.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0023.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0024.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0025.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0026.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0027.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0028.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0029.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0030.png
+resources/Sprites/enemies/explosions/images/explosion/expl_10_0031.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0000.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0001.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0002.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0003.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0004.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0005.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0006.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0007.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0008.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0009.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0010.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0011.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0012.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0013.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0014.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0015.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0016.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0017.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0018.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0019.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0020.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0021.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0022.png
+resources/Sprites/enemies/explosions/images/explosion/expl_11_0023.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0000.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0001.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0002.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0003.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0004.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0005.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0006.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0007.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0008.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0009.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0010.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0011.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0012.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0013.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0014.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0015.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0016.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0017.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0018.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0019.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0020.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0021.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0022.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0023.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0024.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0025.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0026.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0027.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0028.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0029.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0030.png
+resources/Sprites/enemies/explosions/images/explosion/puff_smoke_01_0031.png
+resources/Sprites/enemies/explosions/images/hit/desktop.ini
+resources/Sprites/enemies/explosions/images/hit/hit_0000.png
+resources/Sprites/enemies/explosions/images/hit/hit_0001.png
+resources/Sprites/enemies/explosions/images/hit/hit_0002.png
+resources/Sprites/enemies/explosions/images/hit/hit_0003.png
+resources/Sprites/enemies/explosions/images/hit/hit_0004.png
+resources/Sprites/enemies/explosions/images/hit/hit_0005.png
+resources/Sprites/enemies/explosions/images/hit/hit_0006.png
+resources/Sprites/enemies/explosions/images/hit/hit_0007.png
+resources/Sprites/enemies/explosions/images/hit/hit_0008.png
+resources/Sprites/enemies/explosions/images/muzzle/desktop.ini
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0000.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0001.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0002.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0003.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0004.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0005.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0006.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0007.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0008.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0009.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0010.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0011.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0012.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0013.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0014.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0015.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0016.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0017.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0018.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0019.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0020.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0021.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0022.png
+resources/Sprites/enemies/explosions/images/muzzle/muzzle2_0023.png
+resources/Sprites/enemies/explosions/images/rocket_flame/desktop.ini
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0000.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0001.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0002.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0003.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0004.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0005.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0006.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0007.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0008.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0009.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0010.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0011.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0012.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0013.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0014.png
+resources/Sprites/enemies/explosions/images/rocket_flame/rocket_1_0015.png

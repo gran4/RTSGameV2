@@ -141,13 +141,12 @@ class MyGame(arcade.Window):
 
         # Create sprites based on 2D grid
         if not MERGE_SPRITES:
-            # This is the simple-to-understand method. Each grid location
-            # is a sprite.
             for row in range(GRID_HEIGHT):
                 for column in range(GRID_WIDTH):
                     if self.grid[row][column] == 1 and self.grid2[row][column] == 1:
                         if random.random() < .6:
-                            wall = arcade.Sprite("Stone.png", .175)
+                            wall = arcade.Sprite(
+                                "resources/Sprites/terrain/Stone.png", .175)
                             wall.center_x = column * SPRITE_SIZE + SPRITE_SIZE / 2
                             wall.center_y = row * SPRITE_SIZE + SPRITE_SIZE / 2
                             self.wall_list.append(wall)
@@ -164,10 +163,6 @@ class MyGame(arcade.Window):
                         wall.center_y = row * SPRITE_SIZE + SPRITE_SIZE / 2
                         self.wall_list.append(wall)
         else:
-            # This uses new Arcade 1.3.1 features, that allow me to create a
-            # larger sprite with a repeating texture. So if there are multiple
-            # cells in a row with a wall, we merge them into one sprite, with a
-            # repeating texture for each cell. This reduces our sprite count.
             for row in range(GRID_HEIGHT):
                 column = 0
                 while column < GRID_WIDTH:

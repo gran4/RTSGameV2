@@ -15,13 +15,13 @@
 
 
 
-    "Selectables":[["resources/Sprites/Snow.png", -300, 200, "Person", "", {"food":100}, "People"],
-    ["resources/Sprites/quary.png", -170, 200, "CavingSite", "", {"wood":10}, "Buildings"],
-    ["resources/Sprites/tree_farm.png", 0, 200, "LumberingSite", "", {"wood":10}, "Buildings"],
-    ["resources/Sprites/Observatory.jpeg", 150, 200, "Observatory", "", {"wood":10}, "Buildings"],
-    ["resources/Sprites/Box.png", -300, 120, "Hospital", "", {"wood":10}, "Buildings"],
-    ["resources/Sprites/SnowTower.png", -300, 120, "Snow Tower", "", {"wood":10}, "Buildings"],
-    ["resources/Sprites/boat.png", -170, 120, "Carrier", "", {"wood":10}, "Boats"], 
-    ["resources/Sprites/field.png", 0, 120, "Farm", "", {"wood":10}, "Buildings"],
-    ["resources/Sprites/conjurerater.png", 150, 120, "Lab", "", {"wood":5}, "Buildings"]]
+    "Selectables":[[-300, 200, "Person", "", {"food":100}, "People"],
+    [-170, 200, "CavingSite", "", {"wood":10}, "Buildings"],
+    [0, 200, "LumberingSite", "", {"wood":10}, "Buildings"],
+    [150, 200, "Observatory", "", {"wood":10}, "Buildings"],
+    [-300, 120, "Hospital", "", {"wood":10}, "Buildings"],
+    [-300, 120, "Snow Tower", "", {"wood":10}, "Buildings"],
+    [-170, 120, "Carrier", "", {"wood":10}, "Boats"], 
+    [0, 120, "Farm", "", {"wood":10}, "Buildings"],
+    [150, 120, "Lab", "", {"wood":5}, "Buildings"]]
 }

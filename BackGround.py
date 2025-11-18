@@ -1,8 +1,9 @@
 import random
 
 import arcade
+from arcade.hitbox import algo_detailed
 
-from Components import load_texture_grid
+from Components import load_texture_grid, set_sprite_hit_box
 
 
 class BaseBackground(arcade.Sprite):
@@ -19,7 +20,7 @@ class BaseBackground(arcade.Sprite):
 
 class Land(BaseBackground):
     def __init__(self, game, x: float, y: float):
-        super().__init__(x, y, "resources/Sprites/land.png", 1)
+        super().__init__(x, y, "resources/Sprites/terrain/land.png", 1)
         self.typ = "Dirt"
         self.prev_typ = "Dirt"
 
@@ -28,17 +29,19 @@ class Land(BaseBackground):
             self.prev_texture = self.texture
         elif self.typ == "Sand":
             self.prev_texture = arcade.load_texture(
-                "resources/Sprites/Sand.png")
+                "resources/Sprites/terrain/Sand.png")
         else:
             self.prev_texture = arcade.load_texture(
-                "resources/Sprites/Snow.png")
+                "resources/Sprites/terrain/Snow.png")
 
         if self.typ == "Dirt":
             pass
         elif self.typ == "Sand":
-            self.texture = arcade.load_texture("resources/Sprites/Sand.png")
+            self.texture = arcade.load_texture(
+                "resources/Sprites/terrain/Sand.png")
         else:
-            self.texture = arcade.load_texture("resources/Sprites/Snow.png")
+            self.texture = arcade.load_texture(
+                "resources/Sprites/terrain/Snow.png")
 
     def serialize_state(self) -> dict:
         return {
@@ -60,7 +63,7 @@ class Land(BaseBackground):
 
 class Sand(BaseBackground):
     def __init__(self, game, x: float, y: float):
-        super().__init__(x, y, "resources/Sprites/Sand.png", 1)
+        super().__init__(x, y, "resources/Sprites/terrain/Sand.png", 1)
 
     def serialize_state(self) -> dict:
         return {"type": "Sand", "x": self.center_x, "y": self.center_y}
@@ -72,8 +75,17 @@ class Sand(BaseBackground):
 
 
 class Stone(BaseBackground):
+    _hit_box_points = None
+
     def __init__(self, game, x: float, y: float):
-        super().__init__(x, y, "resources/Sprites/Stone.png", 1)
+        texture_path = "resources/Sprites/terrain/Stone.png"
+        super().__init__(x, y, texture_path, 1)
+        if Stone._hit_box_points is None:
+            texture = arcade.load_texture(
+                texture_path, hit_box_algorithm=algo_detailed)
+            Stone._hit_box_points = texture.hit_box_points
+        if Stone._hit_box_points:
+            set_sprite_hit_box(self, Stone._hit_box_points)
 
     def serialize_state(self) -> dict:
         return {"type": "Stone", "x": self.center_x, "y": self.center_y}
@@ -86,7 +98,7 @@ class Stone(BaseBackground):
 
 class Sea(BaseBackground):
     def __init__(self, game, x: float, y: float):
-        super().__init__(x, y, "resources/Sprites/Sea.png", .5)
+        super().__init__(x, y, "resources/Sprites/terrain/Sea.png", .5)
 
     def serialize_state(self) -> dict:
         return {"type": "Sea", "x": self.center_x, "y": self.center_y}
@@ -98,8 +110,8 @@ class Sea(BaseBackground):
 
 
 class Tree(BaseBackground):
-    TEXTURE_PATH = "resources/Sprites/48x48 trees copy.png"
-    DEFAULT_PATH = "resources/Sprites/Tree.png"
+    TEXTURE_PATH = "resources/Sprites/terrain/48x48 trees.png"
+    DEFAULT_PATH = "resources/Sprites/terrain/Tree.png"
     TEXTURE_SIZE = 48
     TEXTURE_COLUMNS = 4
     TEXTURE_COUNT = 4
@@ -153,7 +165,7 @@ class Tree(BaseBackground):
 
 class BerryBush(BaseBackground):
     def __init__(self, game, x: float, y: float):
-        super().__init__(x, y, "resources/Sprites/berry_bush.png", 1)
+        super().__init__(x, y, "resources/Sprites/terrain/berry_bush.png", 1)
 
     def serialize_state(self) -> dict:
         return {"type": "BerryBush", "x": self.center_x, "y": self.center_y}
