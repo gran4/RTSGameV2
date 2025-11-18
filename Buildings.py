@@ -28,7 +28,10 @@ class BaseBuilding(arcade.Sprite):
         self.dmg = dmg
         self.health = health
         self.max_health = self.health
-        self.health_bar = HealthBar(game, position=self.position)
+        self.health_bar = HealthBar(
+            game,
+            position=self.position,
+        )
         self.health_bar.fullness = self.health/self.max_health
         self.range = range
 
@@ -225,7 +228,10 @@ class BaseBuilding(arcade.Sprite):
         if isinstance(stored_vars, dict):
             self.vars = dict(stored_vars)
         if not getattr(self, "health_bar", None):
-            self.health_bar = HealthBar(game, position=self.position)
+            self.health_bar = HealthBar(
+                game,
+                position=self.position,
+            )
         self.health_bar.fullness = self.health / \
             self.max_health if self.max_health else 1
         self._pending_occupants = state.get("occupants", [])

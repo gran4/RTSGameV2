@@ -26,8 +26,9 @@ if not hasattr(arcade.Sprite, "draw"):
         draw_list = getattr(self, "_compat_draw_list", None)
         if draw_list is None:
             draw_list = arcade.SpriteList()
-            draw_list.append(self)
             self._compat_draw_list = draw_list
+        if self not in draw_list:
+            draw_list.append(self)
         draw_list.draw()
 
     arcade.Sprite.draw = _compat_sprite_draw  # type: ignore[attr-defined]
@@ -447,6 +448,7 @@ class HealthBar:
         width: int = 40,
         height: int = 4,
         border_size: int = 4,
+        y_offset: float = -20.0,
     ) -> None:
         # Store the reference to the owner and the sprite list
 
@@ -475,6 +477,7 @@ class HealthBar:
         # Set the fullness and position of the bar
         self.fullness: float = 1.0
         self.visible: bool = True
+        self._y_offset = y_offset
         self.position: Tuple[float, float] = position
 
     def remove_from_sprite_lists(self):
@@ -532,10 +535,13 @@ class HealthBar:
         """Sets the new position of the bar."""
         # Check if the position has changed. If so, change the bar's position
         if new_position != self.position:
-            new_position = new_position[0], new_position[1]-20
-            self._center_x, self._center_y = new_position
-            self.background_box.position = new_position
-            self.full_box.position = new_position
+            offset_position = (
+                new_position[0],
+                new_position[1] + self._y_offset,
+            )
+            self._center_x, self._center_y = offset_position
+            self.background_box.position = offset_position
+            self.full_box.position = offset_position
 
             # Make sure full_box is to the left of the bar instead of the middle
             self.full_box.left = self._center_x - (self._box_width // 2)

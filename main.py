@@ -840,10 +840,10 @@ class MyGame(arcade.View):
         self.Enemies.draw()
         self.EnemyBoats.draw()
 
-        self.health_bars.draw()
         if selected:
             self._draw_selection_overlay(selected)
             self._redraw_selection_stack(selected)
+        self.health_bars.draw()
         self.Fires.draw()
         self.overParticles.draw()
 

@@ -166,3 +166,20 @@ AttributeError: type object 'HitBoxAlgorithm' has no attribute 'DETAILED'
 2025-11-17 20:00:11,665 INFO Save slot 2 not found; generating new world
 2025-11-17 20:05:49,223 INFO Save slot None not found; generating new world
 2025-11-17 20:25:34,520 INFO Save slot 2 not found; generating new world
+2025-11-17 20:38:08,856 ERROR Failed to load save slot 1
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 275, in setup
+    self.load(file_num)
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 2559, in load
+    building_id_map = self._load_buildings_from_state(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 2308, in _load_buildings_from_state
+    building = cls(self, x, y)
+               ^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/Buildings.py", line 531, in __init__
+    super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/tree_farm.png")
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/Buildings.py", line 34, in __init__
+    y_offset=self._health_bar_offset(),
+             ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Farm' object has no attribute '_health_bar_offset'
+2025-11-17 20:43:49,516 INFO Save slot 2 not found; generating new world
