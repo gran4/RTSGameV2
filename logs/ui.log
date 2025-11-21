@@ -185,3 +185,326 @@ AttributeError: 'Farm' object has no attribute '_health_bar_offset'
 2025-11-17 20:43:49,516 INFO Save slot 2 not found; generating new world
 2025-11-17 20:55:38,453 INFO Save slot 3 not found; generating new world
 2025-11-17 21:11:50,066 INFO Save slot None not found; generating new world
+2025-11-20 18:52:23,986 INFO Save slot 2 not found; generating new world
+2025-11-20 18:53:49,486 INFO Save slot 2 not found; generating new world
+2025-11-20 21:01:21,682 INFO Save slot 2 not found; generating new world
+2025-11-20 21:36:03,716 INFO Save slot 2 not found; generating new world
+2025-11-20 21:36:17,232 INFO Save slot 2 not found; generating new world
+2025-11-20 21:47:47,654 INFO Save slot 2 not found; generating new world
+2025-11-20 21:53:27,533 INFO Save slot 2 not found; generating new world
+2025-11-20 23:13:29,935 INFO Save slot 2 not found; generating new world
+2025-11-20 23:13:31,380 ERROR Failed to compile water shader
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1049, in _init_water_shader
+    self._water_program = ctx.load_program(
+                          ^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/context.py", line 480, in load_program
+    vertex_shader_src = resolve(vertex_shader).read_text()
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/resources/__init__.py", line 107, in resolve
+    path = Path(path.resolve(strict=True))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/pathlib.py", line 993, in resolve
+    s = os.path.realpath(self, strict=strict)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 416, in realpath
+  File "<frozen posixpath>", line 451, in _joinrealpath
+FileNotFoundError: [Errno 2] No such file or directory: '#version 330\nin vec2 in_vert;\nin vec2 in_uv;\nout vec2 v_uv;\n\nvoid main() {\n    v_uv = in_uv;\n    gl_Position = vec4(in_vert, 0.0, 1.0);\n}'
+2025-11-20 23:15:50,971 INFO Save slot 2 not found; generating new world
+2025-11-20 23:15:52,490 ERROR Failed to compile water shader
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1049, in _init_water_shader
+    self._water_program = ctx.load_program(
+                          ^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/context.py", line 480, in load_program
+    vertex_shader_src = resolve(vertex_shader).read_text()
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/resources/__init__.py", line 107, in resolve
+    path = Path(path.resolve(strict=True))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/pathlib.py", line 993, in resolve
+    s = os.path.realpath(self, strict=strict)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 416, in realpath
+  File "<frozen posixpath>", line 451, in _joinrealpath
+FileNotFoundError: [Errno 2] No such file or directory: '#version 330\nin vec2 in_vert;\nin vec2 in_uv;\nout vec2 v_uv;\n\nvoid main() {\n    v_uv = in_uv;\n    gl_Position = vec4(in_vert, 0.0, 1.0);\n}'
+2025-11-20 23:16:50,524 INFO Save slot 2 not found; generating new world
+2025-11-20 23:16:51,949 ERROR Failed to compile water shader
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1062, in _init_water_shader
+    self._water_program = ctx.load_program(
+                          ^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/context.py", line 480, in load_program
+    vertex_shader_src = resolve(vertex_shader).read_text()
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/resources/__init__.py", line 107, in resolve
+    path = Path(path.resolve(strict=True))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/pathlib.py", line 993, in resolve
+    s = os.path.realpath(self, strict=strict)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 416, in realpath
+  File "<frozen posixpath>", line 451, in _joinrealpath
+FileNotFoundError: [Errno 2] No such file or directory: '#version 330\nin vec2 in_vert;\nin vec2 in_uv;\nout vec2 v_uv;\n\nvoid main() {\n    v_uv = in_uv;\n    gl_Position = vec4(in_vert, 0.0, 1.0);\n}'
+2025-11-20 23:20:51,417 INFO Save slot 2 not found; generating new world
+2025-11-20 23:20:52,875 ERROR Failed to compile water shader
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1063, in _init_water_shader
+    self._water_program = ctx.load_program(
+                          ^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/context.py", line 480, in load_program
+    vertex_shader_src = resolve(vertex_shader).read_text()
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/resources/__init__.py", line 107, in resolve
+    path = Path(path.resolve(strict=True))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/pathlib.py", line 993, in resolve
+    s = os.path.realpath(self, strict=strict)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 416, in realpath
+  File "<frozen posixpath>", line 451, in _joinrealpath
+FileNotFoundError: [Errno 2] No such file or directory: '#version 330\nin vec2 in_vert;\nin vec2 in_uv;\nout vec2 v_uv;\n\nvoid main() {\n    v_uv = in_uv;\n    gl_Position = vec4(in_vert, 0.0, 1.0);\n}'
+2025-11-20 23:23:22,354 INFO Save slot 2 not found; generating new world
+2025-11-20 23:23:23,800 ERROR Failed to compile water shader
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1066, in _init_water_shader
+    self._water_program = ctx.load_program(
+                          ^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/context.py", line 480, in load_program
+    vertex_shader_src = resolve(vertex_shader).read_text()
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/resources/__init__.py", line 107, in resolve
+    path = Path(path.resolve(strict=True))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/pathlib.py", line 993, in resolve
+    s = os.path.realpath(self, strict=strict)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 416, in realpath
+  File "<frozen posixpath>", line 451, in _joinrealpath
+FileNotFoundError: [Errno 2] No such file or directory: '#version 330\nin vec2 in_vert;\nin vec2 in_uv;\nout vec2 v_uv;\n\nvoid main() {\n    v_uv = in_uv;\n    gl_Position = vec4(in_vert, 0.0, 1.0);\n}'
+2025-11-20 23:25:47,450 ERROR Failed to compile water shader
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1066, in _init_water_shader
+    self._water_program = ctx.load_program(
+                          ^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/context.py", line 480, in load_program
+    vertex_shader_src = resolve(vertex_shader).read_text()
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/resources/__init__.py", line 107, in resolve
+    path = Path(path.resolve(strict=True))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/pathlib.py", line 993, in resolve
+    s = os.path.realpath(self, strict=strict)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 416, in realpath
+  File "<frozen posixpath>", line 451, in _joinrealpath
+FileNotFoundError: [Errno 2] No such file or directory: '#version 330\nin vec2 in_vert;\nin vec2 in_uv;\nout vec2 v_uv;\n\nvoid main() {\n    v_uv = in_uv;\n    gl_Position = vec4(in_vert, 0.0, 1.0);\n}'
+2025-11-20 23:25:53,901 INFO Save slot 2 not found; generating new world
+2025-11-20 23:25:55,382 ERROR Failed to compile water shader
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1066, in _init_water_shader
+    self._water_program = ctx.load_program(
+                          ^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/context.py", line 480, in load_program
+    vertex_shader_src = resolve(vertex_shader).read_text()
+                        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/resources/__init__.py", line 107, in resolve
+    path = Path(path.resolve(strict=True))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/pathlib.py", line 993, in resolve
+    s = os.path.realpath(self, strict=strict)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen posixpath>", line 416, in realpath
+  File "<frozen posixpath>", line 451, in _joinrealpath
+FileNotFoundError: [Errno 2] No such file or directory: '#version 330\nin vec2 in_vert;\nin vec2 in_uv;\nout vec2 v_uv;\n\nvoid main() {\n    v_uv = in_uv;\n    gl_Position = vec4(in_vert, 0.0, 1.0);\n}'
+2025-11-20 23:28:14,379 INFO Save slot 2 not found; generating new world
+2025-11-20 23:32:01,189 INFO Save slot 2 not found; generating new world
+2025-11-20 23:36:30,669 INFO Save slot 2 not found; generating new world
+2025-11-20 23:39:23,468 INFO Save slot 2 not found; generating new world
+2025-11-20 23:40:58,480 INFO Save slot 2 not found; generating new world
+2025-11-20 23:43:00,047 INFO Save slot 2 not found; generating new world
+2025-11-20 23:44:38,016 INFO Save slot 2 not found; generating new world
+2025-11-20 23:47:30,584 INFO Save slot 2 not found; generating new world
+2025-11-20 23:49:05,627 INFO Save slot 2 not found; generating new world
+2025-11-20 23:49:32,270 INFO Save slot 2 not found; generating new world
+2025-11-20 23:51:25,044 INFO Save slot 2 not found; generating new world
+2025-11-20 23:52:02,460 INFO Save slot 2 not found; generating new world
+2025-11-20 23:52:56,042 INFO Save slot 2 not found; generating new world
+2025-11-20 23:55:59,002 INFO Save slot 2 not found; generating new world
+2025-11-20 23:57:29,005 INFO Save slot 2 not found; generating new world
+2025-11-21 00:00:43,220 INFO Save slot 2 not found; generating new world
+2025-11-21 00:02:35,834 INFO Save slot 2 not found; generating new world
+2025-11-21 00:04:28,980 INFO Save slot 2 not found; generating new world
+2025-11-21 00:05:39,033 INFO Save slot 2 not found; generating new world
+2025-11-21 00:05:57,651 INFO Save slot 2 not found; generating new world
+2025-11-21 00:06:35,525 INFO Save slot 2 not found; generating new world
+2025-11-21 00:07:39,194 INFO Save slot 2 not found; generating new world
+2025-11-21 00:11:26,738 INFO Save slot 2 not found; generating new world
+2025-11-21 00:12:53,804 INFO Save slot 2 not found; generating new world
+2025-11-21 00:14:25,371 INFO Save slot 2 not found; generating new world
+2025-11-21 00:16:34,517 INFO Save slot 2 not found; generating new world
+2025-11-21 00:18:17,170 INFO Save slot 2 not found; generating new world
+2025-11-21 00:20:25,780 INFO Save slot 2 not found; generating new world
+2025-11-21 00:21:16,681 INFO Save slot 2 not found; generating new world
+2025-11-21 00:21:36,151 INFO Save slot 2 not found; generating new world
+2025-11-21 00:22:56,769 INFO Save slot 2 not found; generating new world
+2025-11-21 00:23:47,596 INFO Save slot 2 not found; generating new world
+2025-11-21 00:24:03,118 INFO Save slot 2 not found; generating new world
+2025-11-21 00:24:04,544 ERROR Failed to compile water shader
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1093, in _init_water_shader
+    self._water_program = ctx.program(
+                          ^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/gl/backends/opengl/context.py", line 264, in program
+    return OpenGLProgram(
+           ^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/gl/backends/opengl/program.py", line 129, in __init__
+    shader = OpenGLProgram.compile_shader(shader_code, shader_type)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/venv/lib/python3.11/site-packages/arcade/gl/backends/opengl/program.py", line 522, in compile_shader
+    raise ShaderException(
+arcade.gl.exceptions.ShaderException: Error compiling fragment shader (0): ERROR: 0:48: Use of undeclared identifier 'sand_color'
+ERROR: 0:51: Use of undeclared identifier 'shaded'
+ERROR: 0:52: Use of undeclared identifier 'crest'
+ERROR: 0:59: Use of undeclared identifier 'shore_mix'
+ERROR: 0:63: Use of undeclared identifier 'crest_blend'
+ERROR: 0:65: Use of undeclared identifier 'final_color'
+
+---- [fragment shader] ---
+001: #version 330 
+002: uniform sampler2D base_texture; 
+003: uniform float time; 
+004: uniform vec2 resolution; 
+005:  
+006: in vec2 v_uv; 
+007: out vec4 fragColor; 
+008:  
+009: float hash(vec2 p) { 
+010:     p = fract(p * vec2(123.34, 345.45)); 
+011:     p += dot(p, p + 34.5); 
+012:     return fract(p.x * p.y); 
+013: } 
+014:  
+015: void main() { 
+016:     vec2 uv = v_uv; 
+017:     vec4 original_color = texture(base_texture, uv); 
+018:  
+019:     float scale = 18.0; 
+020:     vec2 offset; 
+021:     offset.x = sin((uv.y * scale) + time * 0.6) * 0.0030; 
+022:     offset.y = cos((uv.x * scale * 0.75) - time * 0.45) * 0.0030; 
+023:     offset += vec2(sin((uv.x + uv.y) * 60.0 + time * 0.5) * 0.0015, 
+024:                    cos((uv.x - uv.y) * 55.0 - time * 0.35) * 0.0015); 
+025:  
+026:     vec2 warped_uv = clamp(uv + offset, vec2(0.001), vec2(0.999)); 
+027:     vec4 warped_color = texture(base_texture, warped_uv); 
+028:  
+029:     vec2 texel = 1.0 / max(resolution, vec2(1.0)); 
+030:     float neighbor_alpha = 0.0; 
+031:     neighbor_alpha += texture(base_texture, uv + vec2(texel.x, 0.0)).a; 
+032:     neighbor_alpha += texture(base_texture, uv - vec2(texel.x, 0.0)).a; 
+033:     neighbor_alpha += texture(base_texture, uv + vec2(0.0, texel.y)).a; 
+034:     neighbor_alpha += texture(base_texture, uv - vec2(0.0, texel.y)).a; 
+035:     neighbor_alpha *= 0.25; 
+036:     float edge = abs(original_color.a - neighbor_alpha); 
+037:     float interior = mix(0.2, 1.0, 1.0 - smoothstep(0.003, 0.03, edge)); 
+038:     float shoreline = smoothstep(0.0, 1.0, clamp((1.0 - interior) * 6.0, 0.0, 1.0)); 
+039:  
+040:     vec2 foam_uv = warped_uv + vec2(sin(time + warped_uv.y * 75.0), 
+041:                                     cos(time * 0.65 + warped_uv.x * 75.0)) * 0.0008; 
+042:     float foam = hash(foam_uv * resolution * 0.05); 
+043:     float foam_mask = smoothstep(0.82, 1.0, foam) * original_color.a; 
+044:     vec3 foam_color = vec3(0.9, 0.97, 1.0) * foam_mask * 0.08; 
+045:  
+046:     vec3 tint = vec3(0.03, 0.06, 0.12); 
+047:     vec3 mixed = mix(original_color.rgb, warped_color.rgb, 0.25 * interior); 
+048:     vec3 shaded = mix(sand_color, mixed, interior) + foam_color + tint * original_color.a; 
+049:     vec3 sand_color = vec3(0.93, 0.82, 0.55); 
+050:     vec3 foam_highlight = vec3(0.95, 0.98, 1.0); 
+051:     vec3 crest = mix(shaded, foam_highlight, shoreline * 0.9); 
+052:     vec3 shore_mix = mix(sand_color, crest, 1.0 - shoreline * 0.4); 
+053:  
+054:     float shore_band = smoothstep(0.86, 0.99, uv.y); 
+055:     float foam_wave = sin((uv.x * 38.0) + time * 0.9) * 0.5 + 0.5; 
+056:     float foam_detail = sin((uv.x * 14.0 - time * 0.4) + uv.y * 6.0) * 0.5 + 0.5; 
+057:     float foam_mix = pow(foam_wave * foam_detail, 1.2) * shore_band; 
+058:     vec3 foam_ridge = mix(sand_color, foam_highlight, foam_mix); 
+059:     vec3 crest_blend = mix(shore_mix, foam_ridge, foam_mix * 0.7); 
+060:  
+061:     float sand_blend = smoothstep(0.0, 0.02, edge); 
+062:     float water_blend = max(interior, 1.0 - sand_blend); 
+063:     vec3 final_color = mix(sand_color, crest_blend, water_blend); 
+064:  
+065:     fragColor = vec4(final_color, original_color.a); 
+066: } 
+2025-11-21 00:24:46,039 INFO Save slot 2 not found; generating new world
+2025-11-21 00:27:40,432 INFO Save slot 2 not found; generating new world
+2025-11-21 00:28:43,133 INFO Save slot 2 not found; generating new world
+2025-11-21 00:36:52,177 INFO Save slot 2 not found; generating new world
+2025-11-21 00:45:40,926 INFO Save slot 2 not found; generating new world
+2025-11-21 00:47:39,559 INFO Save slot 2 not found; generating new world
+2025-11-21 08:41:42,936 INFO Save slot 2 not found; generating new world
+2025-11-21 08:45:19,997 INFO Save slot 2 not found; generating new world
+2025-11-21 08:50:58,324 INFO Save slot 2 not found; generating new world
+2025-11-21 08:53:35,627 INFO Save slot 2 not found; generating new world
+2025-11-21 08:54:52,991 INFO Save slot 2 not found; generating new world
+2025-11-21 08:55:54,328 INFO Save slot 2 not found; generating new world
+2025-11-21 08:57:38,840 INFO Save slot 2 not found; generating new world
+2025-11-21 09:01:12,890 INFO Save slot 2 not found; generating new world
+2025-11-21 09:05:27,544 INFO Save slot 2 not found; generating new world
+2025-11-21 09:06:58,172 INFO Save slot 2 not found; generating new world
+2025-11-21 09:08:15,011 INFO Save slot 2 not found; generating new world
+2025-11-21 09:12:27,730 INFO Save slot 2 not found; generating new world
+2025-11-21 09:13:57,250 INFO Save slot 2 not found; generating new world
+2025-11-21 09:17:10,912 INFO Save slot 2 not found; generating new world
+2025-11-21 09:23:33,705 INFO Save slot 2 not found; generating new world
+2025-11-21 09:25:56,541 INFO Save slot 3 not found; generating new world
+2025-11-21 09:27:48,827 INFO Save slot 2 not found; generating new world
+2025-11-21 09:41:16,860 INFO Save slot 2 not found; generating new world
+2025-11-21 09:47:16,961 INFO Save slot 2 not found; generating new world
+2025-11-21 09:50:52,150 INFO Save slot 3 not found; generating new world
+2025-11-21 09:53:41,947 INFO Save slot 2 not found; generating new world
+2025-11-21 09:55:38,711 INFO Save slot 2 not found; generating new world
+2025-11-21 10:00:35,733 INFO Save slot 3 not found; generating new world
+2025-11-21 10:01:25,458 INFO Save slot 2 not found; generating new world
+2025-11-21 10:21:03,117 INFO Save slot 2 not found; generating new world
+2025-11-21 10:23:25,266 INFO Save slot 2 not found; generating new world
+2025-11-21 10:27:10,930 INFO Save slot 2 not found; generating new world
+2025-11-21 10:32:39,709 INFO Save slot 2 not found; generating new world
+2025-11-21 10:35:21,499 INFO Save slot 2 not found; generating new world
+2025-11-21 10:40:30,226 INFO Save slot 2 not found; generating new world
+2025-11-21 10:41:39,183 INFO Save slot 3 not found; generating new world
+2025-11-21 10:46:23,308 INFO Save slot 2 not found; generating new world
+2025-11-21 10:47:24,371 INFO Save slot 2 not found; generating new world
+2025-11-21 10:49:50,374 INFO Save slot 2 not found; generating new world
+2025-11-21 10:52:04,122 INFO Save slot 2 not found; generating new world
+2025-11-21 10:55:05,316 INFO Save slot 2 not found; generating new world
+2025-11-21 11:01:37,888 INFO Save slot 2 not found; generating new world
+2025-11-21 11:07:18,511 INFO Save slot 2 not found; generating new world
+2025-11-21 11:07:57,939 INFO Save slot 2 not found; generating new world
+2025-11-21 11:11:55,799 INFO Save slot 2 not found; generating new world
+2025-11-21 11:13:27,359 INFO Save slot 2 not found; generating new world
+2025-11-21 11:15:51,157 INFO Save slot 2 not found; generating new world
+2025-11-21 11:16:45,593 INFO Save slot 2 not found; generating new world
+2025-11-21 11:19:29,138 INFO Save slot 2 not found; generating new world
+2025-11-21 11:22:44,686 INFO Save slot 2 not found; generating new world
+2025-11-21 11:25:41,811 INFO Save slot 2 not found; generating new world
+2025-11-21 11:26:25,004 INFO Save slot 2 not found; generating new world
+2025-11-21 11:27:00,734 INFO Save slot 2 not found; generating new world
+2025-11-21 11:33:00,006 INFO Save slot 2 not found; generating new world
+2025-11-21 11:35:44,272 INFO Save slot 2 not found; generating new world
+2025-11-21 11:37:42,864 INFO Save slot 2 not found; generating new world
+2025-11-21 11:40:24,163 INFO Save slot 2 not found; generating new world
+2025-11-21 11:45:19,986 INFO Save slot 2 not found; generating new world
+2025-11-21 11:47:06,767 INFO Save slot 2 not found; generating new world
+2025-11-21 11:50:18,235 INFO Save slot 2 not found; generating new world
+2025-11-21 11:52:01,150 INFO Save slot 2 not found; generating new world
+2025-11-21 11:52:53,147 INFO Save slot 2 not found; generating new world
+2025-11-21 11:53:23,681 INFO Save slot 2 not found; generating new world
+2025-11-21 11:55:20,564 INFO Save slot 2 not found; generating new world
+2025-11-21 11:55:37,449 INFO Save slot 2 not found; generating new world
+2025-11-21 11:59:11,099 INFO Save slot 2 not found; generating new world
+2025-11-21 12:01:13,928 INFO Save slot 2 not found; generating new world
+2025-11-21 12:02:54,625 INFO Save slot 2 not found; generating new world
+2025-11-21 12:05:32,993 INFO Save slot 2 not found; generating new world
+2025-11-21 12:12:55,883 INFO Save slot 2 not found; generating new world

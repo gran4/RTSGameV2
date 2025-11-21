@@ -988,7 +988,7 @@ class Privateer(BaseEnemy):
         self.bow.canAttack = False
         game.overParticles.append(self.bow)
 
-        self.arrows = arcade.SpriteList()  # []
+        self.arrows = arcade.SpriteList()
         self.state = "Idle"
 
     def update(self, game, delta_time):

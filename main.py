@@ -31,8 +31,10 @@ import arcade.gui
 from arcade import XYWH
 from arcade import math as arcade_math
 from arcade.draw import draw_rect_filled, draw_rect_outline
+from arcade.shape_list import ShapeElementList, create_line, create_rectangle_filled
+from arcade.gl import geometry
 from arcade.gui import UIFlatButton, UILabel
-from arcade.shape_list import ShapeElementList, create_line
+from arcade.shape_list import ShapeElementList, create_line, create_rectangle_filled
 
 from BackGround import *
 from Buildings import *
@@ -74,6 +76,68 @@ logging.basicConfig(
 )
 
 CHRISTMAS_TRIGGER_TIME = 120.0
+
+WATER_VERTEX_SHADER = """
+#version 330
+in vec2 in_vert;
+in vec2 in_uv;
+out vec2 v_uv;
+
+void main() {
+    v_uv = in_uv;
+    gl_Position = vec4(in_vert, 0.0, 1.0);
+}
+"""
+
+WATER_FRAGMENT_SHADER = """
+#version 330
+uniform sampler2D base_texture;
+uniform float time;
+
+in vec2 v_uv;
+out vec4 fragColor;
+
+void main() {
+    vec2 uv = v_uv;
+    vec4 base_color = texture(base_texture, uv);
+
+    float scale = 13.0;
+    vec2 offset;
+    offset.x = sin((uv.y * scale) + time * 0.35) * 0.008;
+    offset.y = cos((uv.x * scale * 0.75) - time * 0.32) * 0.008;
+    offset += vec2(sin((uv.x + uv.y) * 14.0 + time * 0.28) * 0.002,
+                   cos((uv.x - uv.y) * 12.0 - time * 0.25) * 0.002);
+
+    vec2 warped_uv = clamp(uv + offset, vec2(0.001), vec2(0.999));
+    vec4 warped_color = texture(base_texture, warped_uv);
+
+    vec2 foam_uv = uv * 7.0;
+    float foam_wave = sin(foam_uv.x + time * 0.25) * 0.5 + 0.5;
+    float foam_mask = smoothstep(0.35, 0.75, foam_wave);
+
+    vec3 mixed = mix(base_color.rgb, warped_color.rgb, 0.02);
+    vec3 foam_tint = vec3(0.8, 0.9, 1.0) * foam_mask * 0.25;
+    vec3 color = mixed + foam_tint;
+
+    vec2 texel = 1.0 / vec2(textureSize(base_texture, 0));
+    float alpha = base_color.a;
+    float neighbor = 0.0;
+    neighbor += texture(base_texture, uv + vec2(texel.x, 0.0)).a;
+    neighbor += texture(base_texture, uv - vec2(texel.x, 0.0)).a;
+    neighbor += texture(base_texture, uv + vec2(0.0, texel.y)).a;
+    neighbor += texture(base_texture, uv - vec2(0.0, texel.y)).a;
+    neighbor *= 0.25;
+    float edge = clamp(abs(alpha - neighbor), 0.0, 1.0);
+    float shoreline = smoothstep(0.01, 0.12, edge);
+    vec3 shore_color = vec3(0.03, 0.25, 0.55);
+    color = mix(color, shore_color, shoreline * 0.95);
+
+    vec3 foam_shine = vec3(0.95, 0.98, 1.0) * shoreline * 0.15;
+    color = mix(color, color + foam_shine, shoreline);
+
+    fragColor = vec4(color, base_color.a);
+}
+"""
 
 
 def get_save_path(file_id):
@@ -122,7 +186,16 @@ class MyGame(arcade.View):
         self.menu = menu
         self.science_list = None
 
+        self._water_ctx = None
+        self._water_program = None
+        self._water_quad = None
+        self._water_texture = None
+        self._water_fbo = None
+        self._water_shader_failed = False
+        self._shore_program = None
+
         self.setup(file_num, world_gen)
+        self._init_water_shader()
         self.create_audio()
         self.updateStorage()
 
@@ -219,6 +292,7 @@ class MyGame(arcade.View):
         self.Seas = arcade.SpriteList(use_spatial_hash=True)
         self.Trees = arcade.SpriteList(use_spatial_hash=True)
         self.BerryBushes = arcade.SpriteList(use_spatial_hash=True)
+        self.shoreline_overlay = ShapeElementList()
 
         self.Fires = arcade.SpriteList(use_spatial_hash=True)
         self.overParticles = arcade.SpriteList()
@@ -290,6 +364,7 @@ class MyGame(arcade.View):
 
         self.center_camera()
         self.clear_uimanager()
+        self._rebuild_shoreline_overlay()
 
     def create_audio(self):
         self.audios = self.menu.audios
@@ -483,6 +558,8 @@ class MyGame(arcade.View):
             y -= 30
         self.christmas_background.position = self.player.center_x, self.player.center_y
         self.christmas_background.scale = .25*max(width/1240, height/900)
+
+        self._update_water_framebuffer(width, height)
         return super().on_resize(width, height)
 
     def End(self, reason: str | None = None, force_menu: bool = False, extra_lines: list[str] | None = None):
@@ -823,7 +900,7 @@ class MyGame(arcade.View):
 
         # tiles
         self.Lands.draw()
-        self.Seas.draw()
+        self._draw_water_layer()
         self.Stones.draw()
         self.Trees.draw()
         self.BerryBushes.draw()
@@ -844,6 +921,8 @@ class MyGame(arcade.View):
         self.health_bars.draw()
         self.Fires.draw()
         self.overParticles.draw()
+
+        self._draw_out_of_bounds_overlay()
 
         if selected:
             self._draw_selection_overlay(selected)
@@ -872,6 +951,227 @@ class MyGame(arcade.View):
             self.selection_panel.draw()
         for PopUp in self.PopUps:
             PopUp.draw()
+
+    def _draw_out_of_bounds_overlay(self) -> None:
+        """Darken regions outside the generated world when the camera sees them."""
+        camera = getattr(self, "camera", None)
+        player = getattr(self, "player", None)
+        if not camera or not getattr(self, "x_line", None) or not getattr(self, "y_line", None):
+            return
+
+        width = getattr(camera, "viewport_width", None)
+        height = getattr(camera, "viewport_height", None)
+        if not width or not height:
+            return
+
+        if player:
+            center_x = getattr(player, "center_x", 0.0)
+            center_y = getattr(player, "center_y", 0.0)
+        else:
+            cam_pos = getattr(camera, "position", (0.0, 0.0))
+            if isinstance(cam_pos, tuple) or isinstance(cam_pos, list):
+                center_x, center_y = cam_pos
+            else:
+                center_x = getattr(cam_pos, "x", 0.0)
+                center_y = getattr(cam_pos, "y", 0.0)
+
+        half_width = width / 2
+        half_height = height / 2
+        view_min_x = center_x - half_width
+        view_max_x = center_x + half_width
+        view_min_y = center_y - half_height
+        view_max_y = center_y + half_height
+
+        tile_size = 50
+        world_min_x = 0
+        world_min_y = 0
+        world_max_x = self.x_line * tile_size
+        world_max_y = self.y_line * tile_size
+
+        edge_padding = 750
+        pad_tiles = max(0, int(edge_padding // tile_size))
+        allowed_min_x = max(world_min_x, pad_tiles * tile_size)
+        allowed_min_y = max(world_min_y, pad_tiles * tile_size)
+        allowed_max_x = min(world_max_x, world_max_x - pad_tiles * tile_size)
+        allowed_max_y = min(world_max_y, world_max_y - pad_tiles * tile_size)
+        if allowed_max_x < allowed_min_x:
+            allowed_max_x = allowed_min_x
+        if allowed_max_y < allowed_min_y:
+            allowed_max_y = allowed_min_y
+
+        inner_color = (5, 5, 15, 180)
+        outer_color = (5, 5, 15, 215)
+        boundary_color = (130, 90, 50, 220)
+        inner_mask_needed = False
+
+        def _draw_rect(x_min: float, x_max: float, y_min: float, y_max: float, color) -> None:
+            width = max(0.0, x_max - x_min)
+            height = max(0.0, y_max - y_min)
+            if width <= 0 or height <= 0:
+                return
+            center_x = x_min + (width / 2)
+            center_y = y_min + (height / 2)
+            draw_rect_filled(XYWH(center_x, center_y, width, height), color)
+
+        if view_min_x < allowed_min_x:
+            inner_mask_needed = True
+            _draw_rect(view_min_x, allowed_min_x, view_min_y,
+                       view_max_y, inner_color)
+        if view_max_x > allowed_max_x:
+            inner_mask_needed = True
+            _draw_rect(allowed_max_x, view_max_x, view_min_y,
+                       view_max_y, inner_color)
+        if view_min_y < allowed_min_y:
+            inner_mask_needed = True
+            lower_x_min = max(view_min_x, allowed_min_x)
+            lower_x_max = min(view_max_x, allowed_max_x)
+            _draw_rect(lower_x_min, lower_x_max, view_min_y,
+                       allowed_min_y, inner_color)
+        if view_max_y > allowed_max_y:
+            inner_mask_needed = True
+            upper_x_min = max(view_min_x, allowed_min_x)
+            upper_x_max = min(view_max_x, allowed_max_x)
+            _draw_rect(upper_x_min, upper_x_max, allowed_max_y,
+                       view_max_y, inner_color)
+
+        if view_min_x < world_min_x:
+            _draw_rect(view_min_x, world_min_x, view_min_y,
+                       view_max_y, outer_color)
+        if view_max_x > world_max_x:
+            _draw_rect(world_max_x, view_max_x, view_min_y,
+                       view_max_y, outer_color)
+        if view_min_y < world_min_y:
+            lower_x_min = max(view_min_x, world_min_x)
+            lower_x_max = min(view_max_x, world_max_x)
+            _draw_rect(lower_x_min, lower_x_max, view_min_y,
+                       world_min_y, outer_color)
+        if view_max_y > world_max_y:
+            upper_x_min = max(view_min_x, world_min_x)
+            upper_x_max = min(view_max_x, world_max_x)
+            _draw_rect(upper_x_min, upper_x_max, world_max_y,
+                       view_max_y, outer_color)
+
+        if inner_mask_needed:
+            allowed_width = max(0.0, allowed_max_x - allowed_min_x)
+            allowed_height = max(0.0, allowed_max_y - allowed_min_y)
+            if allowed_width > 0 and allowed_height > 0:
+                draw_rect_outline(
+                    XYWH(
+                        allowed_min_x + allowed_width / 2,
+                        allowed_min_y + allowed_height / 2,
+                        allowed_width,
+                        allowed_height,
+                    ),
+                    boundary_color,
+                    4,
+                )
+
+    def _rebuild_shoreline_overlay(self) -> None:
+        self.shoreline_overlay = ShapeElementList()
+
+    def _init_water_shader(self) -> None:
+        if self._water_shader_failed:
+            return
+        window = arcade.get_window()
+        if not window:
+            return
+        ctx = window.ctx
+        self._water_ctx = ctx
+        try:
+            self._water_program = ctx.program(
+                vertex_shader=WATER_VERTEX_SHADER,
+                fragment_shader=WATER_FRAGMENT_SHADER,
+            )
+        except Exception:
+            logging.exception("Failed to compile water shader")
+            self._water_program = None
+            self._water_shader_failed = True
+            return
+
+        self._water_quad = geometry.quad_2d_fs()
+        self._update_water_framebuffer(window.width, window.height)
+
+    def _update_water_framebuffer(self, width: int, height: int) -> None:
+        if not self._water_ctx or not width or not height:
+            return
+        width = max(1, int(width))
+        height = max(1, int(height))
+        texture = getattr(self, "_water_texture", None)
+        if texture and texture.width == width and texture.height == height:
+            return
+        self._release_water_framebuffer()
+
+        texture = self._water_ctx.texture((width, height))
+        texture.filter = self._water_ctx.LINEAR, self._water_ctx.LINEAR
+        self._water_texture = texture
+        self._water_fbo = self._water_ctx.framebuffer(color_attachments=[texture])
+
+    def _release_water_framebuffer(self) -> None:
+        if getattr(self, "_water_fbo", None):
+            try:
+                self._water_fbo.release()
+            except Exception:
+                pass
+        if getattr(self, "_water_texture", None):
+            try:
+                self._water_texture.release()
+            except Exception:
+                pass
+        self._water_fbo = None
+        self._water_texture = None
+
+    def _draw_water_layer(self) -> None:
+        if not self.Seas:
+            return
+        if (not self._water_program or not self._water_fbo or
+                not self._water_quad or not self._water_texture):
+            if not self._water_shader_failed:
+                self._init_water_shader()
+        if not self._water_program or not self._water_fbo or not self._water_quad or not self._water_texture:
+            self.Seas.draw()
+            return
+        window = arcade.get_window()
+        if not window:
+            self.Seas.draw()
+            return
+
+        try:
+            self._water_fbo.use()
+        except Exception:
+            logging.exception("Failed to bind water framebuffer")
+            self.Seas.draw()
+            return
+
+        self.camera.use()
+        self._water_fbo.clear(color=(0, 0, 0, 0))
+        self.Seas.draw()
+
+        window.use()
+        default_camera = getattr(window, "default_camera", None)
+        previous_camera = getattr(window, "current_camera", None)
+        if default_camera:
+            default_camera.use()
+        else:
+            self.camera.use()
+
+        ctx = self._water_ctx
+        if not ctx:
+            self.Seas.draw()
+            return
+        self._water_texture.use(0)
+        ctx.enable(ctx.BLEND)
+        self._water_program["base_texture"] = 0
+        self._water_program["time"] = float(getattr(self, "time_alive", 0.0))
+        self._water_quad.render(self._water_program)
+        ctx.disable(ctx.BLEND)
+
+        if previous_camera:
+            previous_camera.use()
+        else:
+            self.camera.use()
+
+        if getattr(self, "shoreline_overlay", None):
+            self.shoreline_overlay.draw()
 
     def _draw_selection_overlay(self, target=None):
         target = target or getattr(self, "last", None)
