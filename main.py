@@ -14,6 +14,7 @@ Make Tiles smaller?
 # python3.10 -m PyInstaller MainTestResizable.py --windowed --noconsole --onefile --add-data "resources:resources" --icon="resources/Sprites/Icon.png"
 
 
+from array import array
 from collections import defaultdict, deque
 from copy import copy
 import json
@@ -34,7 +35,6 @@ from arcade.draw import draw_rect_filled, draw_rect_outline
 from arcade.shape_list import ShapeElementList, create_line, create_rectangle_filled
 from arcade.gl import geometry
 from arcade.gui import UIFlatButton, UILabel
-from arcade.shape_list import ShapeElementList, create_line, create_rectangle_filled
 
 from BackGround import *
 from Buildings import *
@@ -76,6 +76,9 @@ logging.basicConfig(
 )
 
 CHRISTMAS_TRIGGER_TIME = 120.0
+WATER_NOISE_REPEAT = 7.5
+WATER_DISTORTION_STRENGTH = 0.0045
+WATER_FOAM_INTENSITY = 0.12
 
 WATER_VERTEX_SHADER = """
 #version 330
@@ -92,32 +95,63 @@ void main() {
 WATER_FRAGMENT_SHADER = """
 #version 330
 uniform sampler2D base_texture;
+uniform sampler2D noise_texture;
 uniform float time;
+uniform vec2 noise_scale;
+uniform float distortion_strength;
+uniform float foam_intensity;
 
 in vec2 v_uv;
 out vec4 fragColor;
+
+mat2 rotation(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    return mat2(c, -s, s, c);
+}
+
+vec2 sample_noise(vec2 uv, float speed_multiplier, float angle) {
+    vec2 offset = vec2(time * 0.01 * speed_multiplier, time * -0.008 * speed_multiplier);
+    vec2 rotated = (rotation(angle) * (uv - 0.5)) + 0.5;
+    vec2 noise = texture(noise_texture, rotated * noise_scale + offset).rg;
+    return noise * 2.0 - 1.0;
+}
 
 void main() {
     vec2 uv = v_uv;
     vec4 base_color = texture(base_texture, uv);
 
-    float scale = 13.0;
-    vec2 offset;
-    offset.x = sin((uv.y * scale) + time * 0.35) * 0.008;
-    offset.y = cos((uv.x * scale * 0.75) - time * 0.32) * 0.008;
-    offset += vec2(sin((uv.x + uv.y) * 14.0 + time * 0.28) * 0.002,
-                   cos((uv.x - uv.y) * 12.0 - time * 0.25) * 0.002);
+    vec2 noise_a = sample_noise(uv + vec2(0.03, -0.02), 0.6, 0.35);
+    vec2 noise_b = sample_noise(uv * 1.4 + vec2(-0.01, 0.05), 1.05, -0.4);
+    vec2 noise_c = sample_noise(uv * 0.9 + vec2(0.02, 0.02), 0.4, 1.2);
+    vec2 offset = (noise_a * 0.45 + noise_b * 0.35 + noise_c * 0.2);
 
-    vec2 warped_uv = clamp(uv + offset, vec2(0.001), vec2(0.999));
+    offset += vec2(sin((uv.y * 14.0) + time * 0.35),
+                   cos((uv.x * 10.0) - time * 0.3)) * 0.05;
+
+    vec2 warped_uv = clamp(uv + offset * distortion_strength, vec2(0.0), vec2(1.0));
     vec4 warped_color = texture(base_texture, warped_uv);
 
-    vec2 foam_uv = uv * 7.0;
-    float foam_wave = sin(foam_uv.x + time * 0.25) * 0.5 + 0.5;
-    float foam_mask = smoothstep(0.35, 0.75, foam_wave);
+    vec2 foam_uv = uv * (noise_scale * 0.25) + vec2(time * 0.05, time * 0.03);
+    float foam_noise = texture(noise_texture, foam_uv).r;
+    float foam_wave = sin(uv.x * 15.0 + time * 0.32) * 0.5 + 0.5;
+    float foam_mask = smoothstep(0.6, 0.96, foam_wave + foam_noise * 0.32);
 
-    vec3 mixed = mix(base_color.rgb, warped_color.rgb, 0.02);
-    vec3 foam_tint = vec3(0.8, 0.9, 1.0) * foam_mask * 0.25;
-    vec3 color = mixed + foam_tint;
+    vec3 mixed = mix(base_color.rgb, warped_color.rgb, 0.2);
+    vec3 foam_tint = vec3(0.8, 0.95, 1.0) * foam_mask * foam_intensity * 0.4;
+
+    vec2 wave_uv = uv * (noise_scale * 0.15) + vec2(time * 0.015, time * -0.01);
+    float wave_noise = texture(noise_texture, wave_uv).g * 0.7;
+    float long_wave = sin((uv.x + uv.y * 1.4) * 8.0 + time * 0.25) * 0.4 + 0.6;
+    float wave_mix = clamp(wave_noise + long_wave, 0.0, 1.0);
+    vec3 deep_water = vec3(0.01, 0.1, 0.22);
+    vec3 bright_water = vec3(0.05, 0.23, 0.33);
+    vec3 wave_tint = mix(deep_water, bright_water, wave_mix) * 0.24;
+
+    vec3 color = mixed + foam_tint + wave_tint;
+
+    float sparkle = smoothstep(0.85, 1.05, wave_mix + foam_wave * 0.2) * 0.08;
+    color += vec3(0.15, 0.2, 0.28) * sparkle;
 
     vec2 texel = 1.0 / vec2(textureSize(base_texture, 0));
     float alpha = base_color.a;
@@ -130,9 +164,9 @@ void main() {
     float edge = clamp(abs(alpha - neighbor), 0.0, 1.0);
     float shoreline = smoothstep(0.01, 0.12, edge);
     vec3 shore_color = vec3(0.03, 0.25, 0.55);
-    color = mix(color, shore_color, shoreline * 0.95);
+    color = mix(color, shore_color, shoreline * 0.45);
 
-    vec3 foam_shine = vec3(0.95, 0.98, 1.0) * shoreline * 0.15;
+    vec3 foam_shine = vec3(0.95, 0.98, 1.0) * shoreline * 0.1;
     color = mix(color, color + foam_shine, shoreline);
 
     fragColor = vec4(color, base_color.a);
@@ -190,6 +224,7 @@ class MyGame(arcade.View):
         self._water_program = None
         self._water_quad = None
         self._water_texture = None
+        self._water_noise_texture = None
         self._water_fbo = None
         self._water_shader_failed = False
         self._shore_program = None
@@ -1090,6 +1125,7 @@ class MyGame(arcade.View):
 
         self._water_quad = geometry.quad_2d_fs()
         self._update_water_framebuffer(window.width, window.height)
+        self._create_water_noise_texture()
 
     def _update_water_framebuffer(self, width: int, height: int) -> None:
         if not self._water_ctx or not width or not height:
@@ -1105,6 +1141,8 @@ class MyGame(arcade.View):
         texture.filter = self._water_ctx.LINEAR, self._water_ctx.LINEAR
         self._water_texture = texture
         self._water_fbo = self._water_ctx.framebuffer(color_attachments=[texture])
+        if not self._water_noise_texture:
+            self._create_water_noise_texture()
 
     def _release_water_framebuffer(self) -> None:
         if getattr(self, "_water_fbo", None):
@@ -1119,6 +1157,35 @@ class MyGame(arcade.View):
                 pass
         self._water_fbo = None
         self._water_texture = None
+        self._release_water_noise_texture()
+
+    def _create_water_noise_texture(self, size: int = 128) -> None:
+        if not self._water_ctx:
+            return
+        self._release_water_noise_texture()
+        values = array('f', (random.random() for _ in range(size * size * 2)))
+        try:
+            texture = self._water_ctx.texture(
+                (size, size),
+                components=2,
+                data=values.tobytes(),
+                dtype='f4',
+            )
+        except Exception:
+            logging.exception("Failed to create water noise texture")
+            return
+        texture.wrap_x = self._water_ctx.REPEAT
+        texture.wrap_y = self._water_ctx.REPEAT
+        texture.filter = self._water_ctx.LINEAR, self._water_ctx.LINEAR
+        self._water_noise_texture = texture
+
+    def _release_water_noise_texture(self) -> None:
+        if getattr(self, "_water_noise_texture", None):
+            try:
+                self._water_noise_texture.release()
+            except Exception:
+                pass
+        self._water_noise_texture = None
 
     def _draw_water_layer(self) -> None:
         if not self.Seas:
@@ -1127,7 +1194,8 @@ class MyGame(arcade.View):
                 not self._water_quad or not self._water_texture):
             if not self._water_shader_failed:
                 self._init_water_shader()
-        if not self._water_program or not self._water_fbo or not self._water_quad or not self._water_texture:
+        if (not self._water_program or not self._water_fbo or not self._water_quad or
+                not self._water_texture or not self._water_noise_texture):
             self.Seas.draw()
             return
         window = arcade.get_window()
@@ -1159,9 +1227,15 @@ class MyGame(arcade.View):
             self.Seas.draw()
             return
         self._water_texture.use(0)
+        self._water_noise_texture.use(1)
         ctx.enable(ctx.BLEND)
         self._water_program["base_texture"] = 0
+        self._water_program["noise_texture"] = 1
         self._water_program["time"] = float(getattr(self, "time_alive", 0.0))
+        aspect = max(window.width, 1) / max(window.height, 1)
+        self._water_program["noise_scale"] = (WATER_NOISE_REPEAT * aspect, WATER_NOISE_REPEAT)
+        self._water_program["distortion_strength"] = WATER_DISTORTION_STRENGTH
+        self._water_program["foam_intensity"] = WATER_FOAM_INTENSITY
         self._water_quad.render(self._water_program)
         ctx.disable(ctx.BLEND)
 
