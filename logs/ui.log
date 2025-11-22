@@ -3415,3 +3415,756 @@ Traceback (most recent call last):
     texture = arcade.load_texture(spec["path"], **load_kwargs)
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 09:50:07,387 INFO Save slot 3 not found; generating new world
+2025-11-22 09:51:12,261 INFO Save slot 3 not found; generating new world
+2025-11-22 09:53:32,837 INFO Save slot 3 not found; generating new world
+2025-11-22 09:55:58,710 INFO Save slot 3 not found; generating new world
+2025-11-22 09:57:06,861 INFO Save slot 3 not found; generating new world
+2025-11-22 10:02:41,308 INFO Save slot 3 not found; generating new world
+2025-11-22 10:03:04,290 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,313 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,337 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,361 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,383 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,404 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,426 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,446 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,466 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,487 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,508 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,529 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,549 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,570 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,591 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,611 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,631 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,652 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,674 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,696 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,716 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,737 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,758 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,779 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:04,799 ERROR Failed to load preview texture for Person
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,133 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,154 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,175 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,196 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,216 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,237 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,257 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,278 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,297 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,318 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,339 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,361 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,380 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,401 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,422 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,443 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,463 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,484 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,505 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,527 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,547 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,568 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,589 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,611 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,631 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,652 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,673 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,694 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,715 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,736 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,758 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,779 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,798 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,819 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,839 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,861 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,881 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,902 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,923 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,947 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,967 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:08,990 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,012 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,032 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,052 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,072 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,094 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,114 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,141 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,163 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,182 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,204 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,225 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,246 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,266 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,287 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,309 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,330 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,349 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,371 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,391 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,412 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,432 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,453 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,476 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,497 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,516 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,538 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,558 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,579 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,599 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,620 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,641 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,662 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,682 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,703 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,724 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,745 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,764 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,786 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,806 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,828 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,848 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,868 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,890 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,911 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,931 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,952 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,973 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:09,994 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:10,014 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:10,035 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:10,055 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:10,076 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:10,097 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:10,121 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:10,144 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:10,164 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:03:10,185 ERROR Failed to load preview texture for Viking Long Ship
+Traceback (most recent call last):
+  File "/Users/ghur/Coding/Personal Projects/RTSGameV2/main.py", line 1900, in _resolve_preview_texture
+    texture = arcade.load_texture(spec["path"], **load_kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-22 10:04:52,282 INFO Save slot 3 not found; generating new world
+2025-11-22 10:06:09,302 INFO Save slot 3 not found; generating new world
+2025-11-22 10:16:01,713 INFO Save slot 3 not found; generating new world

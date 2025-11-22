@@ -2,10 +2,6 @@
 TODO: Shaders
 TODO: add sound based on distince
 
-BUG: FIX RESIZE BUG
-You can see out of bounds in full screen
-
-Perlin noise for map generation
 Buildings span more than 1 tile
 Make Tiles smaller?
 """
@@ -133,7 +129,8 @@ void main() {
     vec3 overlay_target = mix(bright_blue, overlay_sample.rgb, overlay_sample.a * 0.2);
     vec3 overlay_mix = mix(base_mix, overlay_target, edge);
 
-    vec2 depth_uv = clamp(world_pos * u_depth_scale, vec2(0.0), vec2(1.0));
+    vec2 depth_centered = world_pos - vec2(25.0, 25.0);
+    vec2 depth_uv = clamp(depth_centered * u_depth_scale, vec2(0.0), vec2(1.0));
     float depth = texture(depth_texture, depth_uv).r;
     float depth_shade = mix(0.6, 0.98, 1.0 - depth);
     vec3 color = overlay_mix * depth_shade;
@@ -305,6 +302,7 @@ class MyGame(arcade.View):
         self.Fires = arcade.SpriteList(use_spatial_hash=True)
         self.overParticles = arcade.SpriteList()
         self.underParticals = arcade.SpriteList()
+        self.fog_layers = arcade.SpriteList(use_spatial_hash=False)
 
         self.Buildings = arcade.SpriteList(use_spatial_hash=True)
         self.Boats = arcade.SpriteList()
@@ -387,6 +385,7 @@ class MyGame(arcade.View):
         self.center_camera()
         self.clear_uimanager()
         self._rebuild_shoreline_overlay()
+        self._init_fog_layers()
 
     def create_audio(self):
         self.audios = self.menu.audios
@@ -950,6 +949,7 @@ class MyGame(arcade.View):
         self.health_bars.draw()
         self.Fires.draw()
         self.overParticles.draw()
+        self.fog_layers.draw(pixelated=True)
 
         self._draw_placement_preview()
 
@@ -1127,6 +1127,48 @@ class MyGame(arcade.View):
 
     def _rebuild_shoreline_overlay(self) -> None:
         self.shoreline_overlay = ShapeElementList()
+
+    def _init_fog_layers(self) -> None:
+        self.fog_layers = arcade.SpriteList(use_spatial_hash=False)
+        world_width = getattr(self, "x_line", 0) * 50
+        world_height = getattr(self, "y_line", 0) * 50
+        if world_width <= 0 or world_height <= 0:
+            return
+        texture_size = 192
+        fog_color = (255, 255, 255, 45)
+        texture = arcade.make_soft_square_texture(texture_size, fog_color, outer_alpha=0)
+        world_area = max(1.0, world_width * world_height)
+        density_factor = min(16, max(6, int(world_area / 2_000_000)))
+        for _ in range(density_factor):
+            sprite = arcade.Sprite(center_x=random.uniform(0, world_width), center_y=random.uniform(0, world_height))
+            sprite.texture = texture
+            sprite.scale = random.uniform(2.9, 3.6)
+            sprite.alpha = random.randint(55, 95)
+            sprite.change_x = random.uniform(2.5, 7.5)
+            sprite.change_y = random.uniform(-1.8, 1.8)
+            sprite._drift_speed = random.uniform(0.45, 1.0)
+            self.fog_layers.append(sprite)
+
+    def _update_fog_layers(self, delta_time: float) -> None:
+        if not self.fog_layers:
+            return
+        world_width = getattr(self, "x_line", 0) * 50
+        world_height = getattr(self, "y_line", 0) * 50
+        if world_width <= 0 or world_height <= 0:
+            return
+        margin = 200.0
+        for sprite in self.fog_layers:
+            drift_scale = getattr(sprite, "_drift_speed", 1.0)
+            sprite.center_x += sprite.change_x * delta_time * drift_scale
+            sprite.center_y += sprite.change_y * delta_time * drift_scale
+            if sprite.center_x < -margin:
+                sprite.center_x = world_width + margin
+            elif sprite.center_x > world_width + margin:
+                sprite.center_x = -margin
+            if sprite.center_y < -margin:
+                sprite.center_y = world_height + margin
+            elif sprite.center_y > world_height + margin:
+                sprite.center_y = -margin
 
     def _init_water_shader(self) -> None:
         if self._water_shader_failed:
@@ -2414,6 +2456,7 @@ class MyGame(arcade.View):
         [building.update(delta_time, self) for building in self.Buildings]
         [boat.update(self, delta_time) for boat in self.Boats]
         [enemy.update(self, delta_time) for enemy in self.Enemies]
+        self._update_fog_layers(delta_time)
 
         if self.player.boat:
             self.player.position = self.player.boat.position
