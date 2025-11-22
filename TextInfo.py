@@ -19,6 +19,57 @@ times = {"Factory": 20, "StoneWall": 2, "Dormatory": 10, "Metal Wall": 5, "Raind
 max_length = {"Factory": 2, "StoneWall": 1, "Dormatory": 2, "Metal Wall": 3, "Raindeer Farm": 1, "Work Shop": 1, "BlackSmith": 1, "Fire Station": 1, "Material Depot": 1,
               "Food Depot": 1, "Igloo": 1, "Encampment": 1, 'Hospital': 1, 'Lumbermill': 1, 'Quary': 2, "Research Shop": 2, "Farm": 1, "Lab": 2, "Snow Tower": 2, "Pass": 1, "Pebble Site": 1}
 
+preview_textures = {
+    "Factory": {"path": "resources/Sprites/buildings/Factory.png"},
+    "StoneWall": {"path": "resources/Sprites/buildings/StoneWall.png"},
+    "Dormatory": {"path": "resources/Sprites/buildings/Hut.png"},
+    "Metal Wall": {"path": "resources/Sprites/buildings/MetalWall.png"},
+    "Raindeer Farm": {"path": "resources/Sprites/buildings/Pasture.png"},
+    "Work Shop": {"path": "resources/Sprites/buildings/WorkShop.png"},
+    "BlackSmith": {"path": "resources/Sprites/buildings/BlackSmith.png"},
+    "Cannoe": {"path": "resources/Sprites/Arrow.png"},
+    "Viking Long Ship": {
+        "path": "resources/Sprites/Viking Ship/sprPlayer_strip16.png",
+        "width": 64,
+        "height": 64,
+        "scale": 0.78,
+    },
+    "Fire Station": {"path": "resources/Sprites/buildings/Fire Station.png"},
+    "Material Depot": {"path": "resources/Sprites/buildings/MaterialDepot.png"},
+    "Food Depot": {"path": "resources/Sprites/buildings/FoodDepot.png"},
+    "Igloo": {"path": "resources/Sprites/buildings/Igloo.png"},
+    "Bad Gifter": {
+        "path": "resources/Sprites/Elf Sprite Sheet.png",
+        "width": 24,
+        "height": 33,
+    },
+    "Bad Reporter": {
+        "path": "resources/Sprites/Elf Sprite Sheet.png",
+        "width": 24,
+        "height": 33,
+    },
+    "Encampment": {"path": "resources/Sprites/buildings/Training Ground.png"},
+    "Hospital": {"path": "resources/Sprites/buildings/Hospital.png"},
+    "Lumbermill": {"path": "resources/Sprites/buildings/tree_farm.png"},
+    "Quary": {"path": "resources/Sprites/buildings/Quary.png"},
+    "Research Shop": {"path": "resources/Sprites/buildings/conjurerater.png"},
+    "Person": {
+        "path": "resources/Sprites/Elf Sprite Sheet.png",
+        "width": 24,
+        "height": 33,
+    },
+    "Farm": {
+        "path": "resources/Sprites/buildings/Farm Pixilart Sprite Sheet.png",
+        "width": 50,
+        "height": 50,
+    },
+    "Bad_Cannoe": {"path": "resources/Sprites/Arrow.png", "scale": 0.5},
+    "Lab": {"path": "resources/Sprites/buildings/Lab.png"},
+    "Snow Tower": {"path": "resources/Sprites/buildings/SnowTower.png"},
+    "Pass": {"path": "resources/Sprites/buildings/Road.png"},
+    "Pebble Site": {"path": "resources/Sprites/buildings/Pebble Site.png"},
+}
+
 items_to_show = ["food", "wood", "stone", "metal", "science"]
 item_weight = {"food": 1, "wood": 1, "stone": 2, "metal": 4}
 

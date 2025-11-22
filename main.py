@@ -352,6 +352,19 @@ class MyGame(arcade.View):
         self.object = None
         self.requirements = {"wood": float("inf")}
 
+        # Placement preview helpers
+        self._mouse_position: tuple[float, float] | None = None
+        self._preview_position: tuple[float, float] | None = None
+        self._preview_valid = False
+        self._preview_player_anchor: tuple[float, float] | None = None
+        self._preview_viewport: tuple[float, float] | None = None
+        self._preview_grid: tuple[int, int] | None = None
+        self._preview_object_name: str | None = None
+        self._preview_last_check = 0.0
+        self._preview_texture_cache: dict[tuple, arcade.Texture] = {}
+        self._preview_blocked_by_ui = False
+        self._preview_too_far = False
+
         self.last = None
 
         try:
@@ -802,6 +815,13 @@ class MyGame(arcade.View):
             screen_y = camera.viewport_height - margin
         return screen_x, screen_y
 
+    def _clear_object_selection(self) -> None:
+        self.object = None
+        self.object_placement = None
+        self.requirements = {"wood": float("inf")}
+        self._clear_preview_state()
+        self.hide_selection_panel()
+
     def show_move_feedback(self, message: str, world_x: float | None = None, world_y: float | None = None, duration: float = 0.8) -> None:
         if world_x is None or world_y is None:
             world_x, world_y = getattr(self.player, "position", (0, 0))
@@ -931,6 +951,8 @@ class MyGame(arcade.View):
         self.Fires.draw()
         self.overParticles.draw()
 
+        self._draw_placement_preview()
+
         self._draw_out_of_bounds_overlay()
 
         if selected:
@@ -960,6 +982,34 @@ class MyGame(arcade.View):
             self.selection_panel.draw()
         for PopUp in self.PopUps:
             PopUp.draw()
+
+    def _draw_placement_preview(self) -> None:
+        if (
+            not self.object
+            or not self._preview_position
+            or self._preview_blocked_by_ui
+            or self._preview_too_far
+        ):
+            return
+
+        world_x, world_y = self._preview_position
+        tile_size = 50
+        if self._preview_valid:
+            fill_color = (60, 180, 110, 120)
+            border_color = (150, 255, 170, 180)
+        else:
+            fill_color = (200, 80, 80, 120)
+            border_color = (255, 150, 150, 190)
+
+        draw_rect_filled(XYWH(world_x, world_y, tile_size, tile_size), fill_color)
+        draw_rect_outline(XYWH(world_x, world_y, tile_size, tile_size), border_color, 2)
+        preview_texture = self._resolve_preview_texture()
+        if preview_texture:
+            texture, scale = preview_texture
+            alpha = 210 if self._preview_valid else 160
+            width = max(1.0, texture.width * scale)
+            height = max(1.0, texture.height * scale)
+            self._draw_preview_texture(texture, world_x, world_y, width, height, alpha)
 
     def _draw_out_of_bounds_overlay(self) -> None:
         """Darken regions outside the generated world when the camera sees them."""
@@ -1596,6 +1646,7 @@ class MyGame(arcade.View):
 
         if self._handle_active_move(world_x, world_y, grid_x, grid_y, org_x, org_y):
             return
+
         if self._handle_direct_selection(world_x, world_y):
             return
         if self.object is None:
@@ -1603,43 +1654,24 @@ class MyGame(arcade.View):
                 "Select an item to deploy first", org_x, org_y, width=200)
             return
 
-        current_population = self.refresh_population()
-        lack_reason = self._placement_precheck(
-            world_x, world_y, grid_x, grid_y, current_population)
-        if lack_reason:
-            self.show_lack_popup(lack_reason, org_x, org_y, duration=1.5)
-            return
+        self._attempt_place_selected_object(
+            world_x, world_y, grid_x, grid_y, org_x, org_y)
 
-        if not (self.unlocked[self.object] and 0 < world_x < 5000 and 0 < world_y < 5000):
-            return
-
-        tile_error = self._validate_tile_target(
-            world_x, world_y, grid_x, grid_y)
-        if tile_error:
-            self._show_info_popup(tile_error, org_x, org_y)
-            return
-
-        missing_resources = self._missing_requirements()
-        if missing_resources:
-            self._show_info_popup(
-                f"missing: {missing_resources}", org_x, org_y)
-            return
-
-        current_population = self.refresh_population()
-        if current_population >= self.max_pop and issubclass(self.objects[self.object], Person):
-            self._add_lack("housing")
-            self.show_lack_popup("Not enough Housing",
-                                 org_x, org_y, duration=1.5)
-            return
-
-        self._deduct_requirements()
-        self._spawn_selected_object(world_x, world_y)
-        self.updateStorage()
-        self.update_text(1)
-
-        return
+    def on_mouse_motion(self, x, y, dx, dy):
+        self._update_preview_state(x, y)
 
     def _ui_consumed_click(self, x, y):
+        if self._cursor_over_ui(x, y, include_selection=False):
+            return True
+
+        if self.ui_sprites_update(x, y):
+            self.clear_uimanager()
+            self.move = False
+            self.last = None
+            return True
+        return False
+
+    def _cursor_over_ui(self, x, y, include_selection: bool = True) -> bool:
         children = getattr(self.uimanager, "children", [])
         if children:
             for press in children[0]:
@@ -1647,10 +1679,7 @@ class MyGame(arcade.View):
                 if child and getattr(child, "hovered", False):
                     return True
 
-        if self.ui_sprites_update(x, y):
-            self.clear_uimanager()
-            self.move = False
-            self.last = None
+        if include_selection and len(arcade.get_sprites_at_point((x, y), self.ui_sprites)) > 0:
             return True
         return False
 
@@ -1663,6 +1692,176 @@ class MyGame(arcade.View):
         world_x = grid_x * 50
         world_y = grid_y * 50
         return world_x, world_y, grid_x, grid_y
+
+    def _update_preview_state(self, screen_x: float, screen_y: float) -> None:
+        self._mouse_position = (screen_x, screen_y)
+        if not self.object:
+            self._clear_preview_state()
+            return
+
+        if self._cursor_over_ui(screen_x, screen_y):
+            self._preview_blocked_by_ui = True
+            self._clear_preview_state()
+            return
+        self._preview_blocked_by_ui = False
+        self._preview_too_far = False
+
+        player = getattr(self, "player", None)
+        camera = getattr(self, "camera", None)
+        if not player or not camera:
+            self._clear_preview_state()
+            return
+
+        world_x, world_y, grid_x, grid_y = self._screen_to_world_and_grid(
+            screen_x, screen_y)
+        self._preview_position = (world_x, world_y)
+        now = time.time()
+        need_refresh = (
+            self._preview_grid != (grid_x, grid_y)
+            or self._preview_object_name != self.object
+            or (now - self._preview_last_check) > 0.15
+        )
+        if need_refresh:
+            reach_reason = self._placement_precheck(
+                world_x,
+                world_y,
+                grid_x,
+                grid_y,
+                getattr(self, "population", 0),
+                override_population_check=True,
+            )
+            if reach_reason in ("Too far from Santa", "Santa can not pathfind here"):
+                self._preview_too_far = True
+                self._preview_position = None
+                self._preview_valid = False
+                return
+            self._preview_valid = self._can_place_selection(
+                world_x, world_y, grid_x, grid_y)
+            self._preview_grid = (grid_x, grid_y)
+            self._preview_object_name = self.object
+            self._preview_last_check = now
+        self._preview_player_anchor = (player.center_x, player.center_y)
+        self._preview_viewport = (
+            camera.viewport_width, camera.viewport_height)
+
+    def _force_preview_refresh(self) -> None:
+        if self._mouse_position and self.object:
+            self._update_preview_state(*self._mouse_position)
+
+    def _clear_preview_state(self) -> None:
+        self._preview_position = None
+        self._preview_valid = False
+        self._preview_player_anchor = None
+        self._preview_viewport = None
+        self._preview_grid = None
+        self._preview_object_name = None
+        self._preview_last_check = 0.0
+        self._preview_blocked_by_ui = False
+        self._preview_too_far = False
+
+    def _refresh_preview_on_camera_change(self) -> None:
+        if not self.object or not self._mouse_position:
+            return
+        player = getattr(self, "player", None)
+        camera = getattr(self, "camera", None)
+        if not player or not camera:
+            return
+        current_anchor = (player.center_x, player.center_y)
+        current_viewport = (camera.viewport_width, camera.viewport_height)
+        if (
+            current_anchor != self._preview_player_anchor
+            or current_viewport != self._preview_viewport
+        ):
+            self._update_preview_state(*self._mouse_position)
+
+    def _can_place_selection(self, world_x, world_y, grid_x, grid_y) -> bool:
+        if not self.object or self.object not in self.objects:
+            return False
+        if not (self.unlocked.get(self.object, False) and 0 < world_x < 5000 and 0 < world_y < 5000):
+            return False
+
+        current_population = getattr(self, "population", 0)
+        lack_reason = self._placement_precheck(
+            world_x, world_y, grid_x, grid_y, current_population)
+        if lack_reason:
+            return False
+        if self._placement_occupancy_issue(world_x, world_y):
+            return False
+        tile_error = self._validate_tile_target(
+            world_x, world_y, grid_x, grid_y)
+        if tile_error:
+            return False
+        if self._missing_requirements():
+            return False
+
+        obj_cls = self.objects.get(self.object)
+        if obj_cls and issubclass(obj_cls, Person) and current_population >= self.max_pop:
+            return False
+        return True
+
+    def _placement_occupancy_issue(self, world_x: float, world_y: float) -> str | None:
+        if arcade.get_sprites_at_point((world_x, world_y), self.People):
+            return "Can't place on a person"
+        if arcade.get_sprites_at_point((world_x, world_y), self.Boats):
+            return "Can't place on a boat"
+        if arcade.get_sprites_at_point((world_x, world_y), self.Buildings):
+            return "Space already has a building"
+        return None
+
+    def _draw_preview_texture(self, texture: arcade.Texture, center_x: float, center_y: float, width: float, height: float, alpha: int) -> None:
+        draw_lrwh = getattr(arcade, "draw_lrwh_rectangle_textured", None)
+        if draw_lrwh is None:
+            draw_commands = getattr(arcade, "draw_commands", None)
+            if draw_commands:
+                draw_lrwh = getattr(draw_commands, "draw_lrwh_rectangle_textured", None)
+        if draw_lrwh:
+            draw_lrwh(
+                center_x - width / 2,
+                center_y - height / 2,
+                width,
+                height,
+                texture,
+                alpha=alpha,
+            )
+            return
+
+        draw_scaled = getattr(arcade, "draw_scaled_texture_rectangle", None)
+        if draw_scaled:
+            draw_scaled(center_x, center_y, width, height, texture, alpha=alpha)
+            return
+
+        draw_basic = getattr(arcade, "draw_texture_rectangle", None)
+        if draw_basic:
+            draw_basic(center_x, center_y, width, height, texture, alpha=alpha)
+
+    def _resolve_preview_texture(self) -> tuple[arcade.Texture, float] | None:
+        if not self.object:
+            return None
+        spec = preview_textures.get(self.object)
+        if not spec:
+            return None
+        key = (
+            spec.get("path"),
+            spec.get("x", 0),
+            spec.get("y", 0),
+            spec.get("width"),
+            spec.get("height"),
+        )
+        if key[0] is None:
+            return None
+        texture = self._preview_texture_cache.get(key)
+        if texture is None:
+            load_kwargs = {}
+            for param in ("x", "y", "width", "height"):
+                if param in spec:
+                    load_kwargs[param] = spec[param]
+            try:
+                texture = arcade.load_texture(spec["path"], **load_kwargs)
+            except Exception:
+                logging.exception("Failed to load preview texture for %s", self.object)
+                return None
+            self._preview_texture_cache[key] = texture
+        return texture, float(spec.get("scale", 1.0))
 
     def _handle_active_move(self, world_x, world_y, grid_x, grid_y, screen_x, screen_y):
         if not self.move:
@@ -1726,21 +1925,71 @@ class MyGame(arcade.View):
         people_at_point = arcade.get_sprites_at_point(
             (world_x, world_y), self.People)
         if people_at_point:
+            self._clear_object_selection()
             people_at_point[0].clicked(self)
             return True
         ships_at_point = arcade.get_sprites_at_point(
             (world_x, world_y), self.Boats)
         if ships_at_point:
+            self._clear_object_selection()
             ships_at_point[0].clicked(self)
             return True
         buildings_at_point = arcade.get_sprites_at_point(
             (world_x, world_y), self.Buildings)
         if buildings_at_point:
+            self._clear_object_selection()
             buildings_at_point[0].clicked(self)
             return True
         return False
 
-    def _placement_precheck(self, world_x, world_y, grid_x, grid_y, current_population):
+    def _attempt_place_selected_object(self, world_x, world_y, grid_x, grid_y, screen_x, screen_y):
+        if not (self.unlocked.get(self.object) and 0 < world_x < 5000 and 0 < world_y < 5000):
+            return
+
+        occupancy_issue = self._placement_occupancy_issue(world_x, world_y)
+        if occupancy_issue:
+            self._show_info_popup(occupancy_issue, screen_x, screen_y)
+            self._force_preview_refresh()
+            return
+
+        current_population = self.refresh_population()
+        lack_reason = self._placement_precheck(
+            world_x, world_y, grid_x, grid_y, current_population)
+        if lack_reason:
+            self.show_lack_popup(lack_reason, screen_x, screen_y, duration=1.5)
+            self._force_preview_refresh()
+            return
+
+        tile_error = self._validate_tile_target(
+            world_x, world_y, grid_x, grid_y)
+        if tile_error:
+            self._show_info_popup(tile_error, screen_x, screen_y)
+            self._force_preview_refresh()
+            return
+
+        missing_resources = self._missing_requirements()
+        if missing_resources:
+            self._show_info_popup(
+                f"missing: {missing_resources}", screen_x, screen_y)
+            self._force_preview_refresh()
+            return
+
+        current_population = self.refresh_population()
+        obj_cls = self.objects.get(self.object)
+        if obj_cls and issubclass(obj_cls, Person) and current_population >= self.max_pop:
+            self._add_lack("housing")
+            self.show_lack_popup("Not enough Housing",
+                                 screen_x, screen_y, duration=1.5)
+            self._force_preview_refresh()
+            return
+
+        self._deduct_requirements()
+        self._spawn_selected_object(world_x, world_y)
+        self.updateStorage()
+        self.update_text(1)
+        self._force_preview_refresh()
+
+    def _placement_precheck(self, world_x, world_y, grid_x, grid_y, current_population, override_population_check: bool = False):
         if arcade_math.get_distance(self.player.center_x, self.player.center_y, world_x, world_y) > 400:
             return "Too far from Santa"
         if not _AStarSearch(self.graph, self.player.position, (world_x, world_y), movelist=[0], min_dist=50):
@@ -1753,7 +2002,7 @@ class MyGame(arcade.View):
             return "Can not place on an Enemy"
         if get_closest_sprite((world_x, world_y), self.Enemies)[1] < 150:
             return "Too close to an enemy"
-        if current_population >= self.max_pop and (
+        if not override_population_check and current_population >= self.max_pop and (
             self.object_placement == "People" or issubclass(
                 self.objects[self.object], Person)
         ):
@@ -1891,6 +2140,7 @@ class MyGame(arcade.View):
             string += f" Placed On {tiles[ui[0].name].__name__}"
 
             self.show_selection_panel(string)
+            self._force_preview_refresh()
 
             return True
         else:
@@ -2168,6 +2418,7 @@ class MyGame(arcade.View):
         if self.player.boat:
             self.player.position = self.player.boat.position
         self.center_camera()
+        self._refresh_preview_on_camera_change()
 
         self.spawnEnemy += delta_time * getattr(self, "speed", 1)
         spawned = False
@@ -5405,6 +5656,7 @@ class BuildingMenu(arcade.View):
         self.game_view.object = source.type
         self.game_view.requirements = source.requirements
         self.game_view.object_placement = source.placement
+        self.game_view._force_preview_refresh()
 
     def on_show_view(self):
         super().on_show_view()
