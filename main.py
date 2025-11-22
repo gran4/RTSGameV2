@@ -14,8 +14,10 @@ Make Tiles smaller?
 # python3.10 -m PyInstaller MainTestResizable.py --windowed --noconsole --onefile --add-data "resources:resources" --icon="resources/Sprites/Icon.png"
 
 
+from array import array
 from collections import defaultdict, deque
 from copy import copy
+import heapq
 import json
 import logging
 import os
@@ -24,10 +26,10 @@ import random
 import sys
 import time
 from math import ceil, floor, sqrt
+import math
 from pathlib import Path
 
 import arcade
-import arcade.gui
 from arcade import XYWH
 from arcade import math as arcade_math
 from arcade.draw import draw_rect_filled, draw_rect_outline
@@ -63,6 +65,8 @@ ENEMY_CLASS_MAP = {c.__name__: c for c in _collect_subclasses(BaseEnemy) | {
 BUILDING_CLASS_MAP = {c.__name__: c for c in _collect_subclasses(BaseBuilding) | {
     BaseBuilding}}
 
+WATER_DEPTH_SCALE = 3.0
+
 BASE_DIR = Path(__file__).resolve().parent
 SAVE_DIR = BASE_DIR / "save_files"
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
@@ -78,6 +82,8 @@ CHRISTMAS_TRIGGER_TIME = 120.0
 WATER_TIME_SCALE = 0.4
 WATER_OVERLAY_PATH = (BASE_DIR / "resources/Sprites/terrain/water.jpg")
 WATER_OVERLAY_REPEAT = 1.0
+WATER_DEPTH_SCALE = 3.0
+WATER_TILE_SIZE = 50
 
 WATER_VERTEX_SHADER = """
 #version 330
@@ -95,9 +101,13 @@ WATER_FRAGMENT_SHADER = """
 #version 330
 uniform sampler2D base_texture;
 uniform sampler2D overlay_texture;
+uniform sampler2D depth_texture;
 uniform float u_time;
 uniform vec2 u_resolution;
 uniform vec2 u_overlay_scale;
+uniform vec2 u_world_origin;
+uniform vec2 u_world_size;
+uniform vec2 u_depth_scale;
 
 in vec2 v_uv;
 out vec4 fragColor;
@@ -108,6 +118,7 @@ void main() {
     float wave1 = sin(uv.y * 24.0 + u_time * 1.2) * 0.006;
     float wave2 = cos(uv.x * 18.0 + u_time * 0.95) * 0.006;
     vec2 distorted_uv = uv + vec2(wave1, wave2);
+    vec2 world_pos = u_world_origin + uv * u_world_size;
 
     vec4 base_mask_sample = texture(base_texture, uv);
     vec4 base_color = texture(base_texture, distorted_uv);
@@ -122,9 +133,14 @@ void main() {
     vec3 overlay_target = mix(bright_blue, overlay_sample.rgb, overlay_sample.a * 0.2);
     vec3 overlay_mix = mix(base_mix, overlay_target, edge);
 
+    vec2 depth_uv = clamp(world_pos * u_depth_scale, vec2(0.0), vec2(1.0));
+    float depth = texture(depth_texture, depth_uv).r;
+    float depth_shade = mix(0.6, 0.98, 1.0 - depth);
+    vec3 color = overlay_mix * depth_shade;
+
     float alpha = base_mask_sample.a * 0.9;
 
-    fragColor = vec4(overlay_mix, alpha);
+    fragColor = vec4(color, alpha);
 }
 """
 
@@ -181,6 +197,8 @@ class MyGame(arcade.View):
         self._water_texture = None
         self._water_fbo = None
         self._water_overlay_texture = None
+        self._water_depth_texture = None
+        self._water_depth_data = None
         self._water_shader_failed = False
         self._shore_program = None
 
@@ -352,6 +370,7 @@ class MyGame(arcade.View):
             logging.exception("Failed to load save slot %s", file_num)
             raise
 
+        self._rebuild_water_depth_map()
         self.center_camera()
         self.clear_uimanager()
         self._rebuild_shoreline_overlay()
@@ -1082,6 +1101,8 @@ class MyGame(arcade.View):
         self._update_water_framebuffer(window.width, window.height)
         if self._water_overlay_texture is None:
             self._load_water_overlay_texture()
+        if self._water_depth_texture is None and self._water_depth_data:
+            self._upload_water_depth_texture()
 
     def _update_water_framebuffer(self, width: int, height: int) -> None:
         if not self._water_ctx or not width or not height:
@@ -1129,6 +1150,140 @@ class MyGame(arcade.View):
         texture.filter = self._water_ctx.LINEAR, self._water_ctx.LINEAR
         self._water_overlay_texture = texture
 
+    def _upload_water_depth_texture(self) -> None:
+        if not self._water_ctx or not self._water_depth_data:
+            self._release_water_depth_texture()
+            return
+        data, width, height = self._water_depth_data
+        try:
+            texture = self._water_ctx.texture(
+                (width, height),
+                components=1,
+                data=data.tobytes(),
+                dtype='f4',
+            )
+        except Exception:
+            logging.exception("Failed to upload water depth texture")
+            return
+        texture.wrap_x = self._water_ctx.CLAMP_TO_EDGE
+        texture.wrap_y = self._water_ctx.CLAMP_TO_EDGE
+        texture.filter = self._water_ctx.LINEAR, self._water_ctx.LINEAR
+        self._water_depth_texture = texture
+
+    def _release_water_depth_texture(self) -> None:
+        if getattr(self, "_water_depth_texture", None):
+            try:
+                self._water_depth_texture.release()
+            except Exception:
+                pass
+        self._water_depth_texture = None
+
+    def _rebuild_water_depth_map(self) -> None:
+        x_line = getattr(self, "x_line", 0)
+        y_line = getattr(self, "y_line", 0)
+        graph = getattr(self, "graph", None)
+        if not x_line or not y_line or graph is None:
+            self._water_depth_data = None
+            self._release_water_depth_texture()
+            return
+
+        depth_map: list[list[float]] = [
+            [math.inf for _ in range(y_line)] for _ in range(x_line)
+        ]
+        visited = [[False for _ in range(y_line)] for _ in range(x_line)]
+
+        def is_water(ix: int, iy: int) -> bool:
+            if ix < 0 or iy < 0 or ix >= x_line or iy >= y_line:
+                return False
+            return graph[ix][iy] == 2
+
+        neighbor_offsets = [
+            (1, 0, 1.0),
+            (-1, 0, 1.0),
+            (0, 1, 1.0),
+            (0, -1, 1.0),
+            (1, 1, math.sqrt(2.0)),
+            (1, -1, math.sqrt(2.0)),
+            (-1, 1, math.sqrt(2.0)),
+            (-1, -1, math.sqrt(2.0)),
+        ]
+
+        for ix in range(x_line):
+            for iy in range(y_line):
+                if not is_water(ix, iy) or visited[ix][iy]:
+                    continue
+
+                stack = [(ix, iy)]
+                visited[ix][iy] = True
+                component: list[tuple[int, int]] = []
+                while stack:
+                    cx, cy = stack.pop()
+                    component.append((cx, cy))
+                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        nx, ny = cx + dx, cy + dy
+                        if not is_water(nx, ny) or visited[nx][ny]:
+                            continue
+                        visited[nx][ny] = True
+                        stack.append((nx, ny))
+
+                comp_set = set(component)
+                seeds = []
+                for cx, cy in component:
+                    touches_land = False
+                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        if not is_water(cx + dx, cy + dy):
+                            touches_land = True
+                            break
+                    if touches_land:
+                        seeds.append((cx, cy))
+
+                if not seeds:
+                    seeds = component.copy()
+
+                pq: list[tuple[float, int, int]] = []
+                for cx, cy in component:
+                    depth_map[cx][cy] = math.inf
+                for sx, sy in seeds:
+                    depth_map[sx][sy] = 0.0
+                    heapq.heappush(pq, (0.0, sx, sy))
+
+                comp_max = 0.0
+                while pq:
+                    current_dist, cx, cy = heapq.heappop(pq)
+                    if current_dist > depth_map[cx][cy]:
+                        continue
+                    comp_max = max(comp_max, current_dist)
+                    for dx, dy, cost in neighbor_offsets:
+                        nx, ny = cx + dx, cy + dy
+                        if (nx, ny) not in comp_set:
+                            continue
+                        candidate = current_dist + cost
+                        if candidate + 1e-5 < depth_map[nx][ny]:
+                            depth_map[nx][ny] = candidate
+                            heapq.heappush(pq, (candidate, nx, ny))
+
+                if comp_max <= 0.0:
+                    comp_max = 1.0
+
+                for cx, cy in component:
+                    value = depth_map[cx][cy]
+                    if math.isinf(value):
+                        value = comp_max
+                    normalized = min((value / comp_max) * WATER_DEPTH_SCALE, 1.0)
+                    depth_map[cx][cy] = normalized
+
+        data = array('f')
+        for iy in range(y_line):
+            for ix in range(x_line):
+                value = depth_map[ix][iy]
+                if math.isinf(value):
+                    value = 0.0
+                data.append(float(value))
+
+        self._water_depth_data = (data, x_line, y_line)
+        if self._water_ctx:
+            self._upload_water_depth_texture()
+
     def _draw_water_layer(self) -> None:
         if not self.Seas:
             return
@@ -1171,6 +1326,26 @@ class MyGame(arcade.View):
         self._water_texture.use(0)
         ctx.enable(ctx.BLEND)
         self._water_program["base_texture"] = 0
+
+        viewport_width = getattr(self.camera, "viewport_width", window.width)
+        viewport_height = getattr(self.camera, "viewport_height", window.height)
+        cam_pos = getattr(self.camera, "position", (viewport_width / 2, viewport_height / 2))
+        if not isinstance(cam_pos, (tuple, list)):
+            cam_pos = getattr(cam_pos, "x", 0.0), getattr(cam_pos, "y", 0.0)
+        cam_x, cam_y = float(cam_pos[0]), float(cam_pos[1])
+        world_origin = (
+            cam_x - viewport_width / 2,
+            cam_y - viewport_height / 2,
+        )
+        self._water_program["u_world_origin"] = (
+            float(world_origin[0]),
+            float(world_origin[1]),
+        )
+        self._water_program["u_world_size"] = (
+            float(viewport_width),
+            float(viewport_height),
+        )
+
         overlay_unit = 1
         if self._water_overlay_texture:
             self._water_overlay_texture.use(overlay_unit)
@@ -1183,6 +1358,20 @@ class MyGame(arcade.View):
         else:
             self._water_program["overlay_texture"] = 0
             self._water_program["u_overlay_scale"] = (1.0, 1.0)
+
+        depth_unit = 2
+        world_width = max(self.x_line * WATER_TILE_SIZE, 1)
+        world_height = max(self.y_line * WATER_TILE_SIZE, 1)
+        self._water_program["u_depth_scale"] = (
+            1.0 / float(world_width),
+            1.0 / float(world_height),
+        )
+        if self._water_depth_texture:
+            self._water_depth_texture.use(depth_unit)
+            self._water_program["depth_texture"] = depth_unit
+        else:
+            self._water_program["depth_texture"] = 0
+
         time_alive = float(getattr(self, "time_alive", 0.0))
         self._water_program["u_time"] = time_alive * WATER_TIME_SCALE
         self._water_program["u_resolution"] = (
