@@ -2,14 +2,11 @@
 
 from PyInstaller.utils.hooks import collect_submodules
 
-block_cipher = None
-
-# Ensure arcade's GL modules are bundled.
+# Bundle arcade's GL modules (backends/helpers discovered dynamically).
 _arcade_gl_hidden = collect_submodules("arcade.gl")
 
-
 a = Analysis(
-    ['MainTestResizable.py'],
+    ['main.py'],
     pathex=[],
     binaries=[],
     datas=[('resources', 'resources')],
@@ -18,21 +15,18 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=['pyi_arcade_version_fix.py'],
     excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
     noarchive=False,
+    optimize=0,
 )
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure)
 
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
-    a.zipfiles,
     a.datas,
     [],
-    name='MainTestResizable',
+    name='main',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -49,7 +43,7 @@ exe = EXE(
 )
 app = BUNDLE(
     exe,
-    name='MainTestResizable.app',
+    name='main.app',
     icon='resources/Sprites/Icon.png',
     bundle_identifier=None,
 )

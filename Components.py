@@ -1,5 +1,7 @@
 import itertools
 import math
+import os
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,6 +22,11 @@ from pyglet.event import EVENT_HANDLED, EVENT_UNHANDLED
 
 trainingtimes = {"Bad Gifter": 5, "Bad Reporter": 10}
 movement = {0: 1, 1: 2, 2: 1}
+
+# When frozen by PyInstaller, resources are unpacked into ``sys._MEIPASS``.
+# Change the working directory so relative resource paths keep working.
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    os.chdir(sys._MEIPASS)
 
 if not hasattr(arcade.Sprite, "draw"):
     def _compat_sprite_draw(self):

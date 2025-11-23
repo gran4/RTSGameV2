@@ -9,7 +9,8 @@ Make Tiles smaller?
 # python3.10 -m PyInstaller MainTestResizable.py --noconsole --onefile --add-data "resources:resources"
 # python3.10 -m PyInstaller MainTestResizable.py --windowed --noconsole --onefile --add-data "resources:resources" --icon="resources/Sprites/Icon.png"
 
-
+# python3.11 -m PyInstaller main.py --windowed --noconsole --onefile --add-data "resources:resources" --icon="resources/Sprites/Icon.png"
+# python3 -m PyInstaller --clean main.spec
 from array import array
 from collections import defaultdict, deque
 from copy import copy

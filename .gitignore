@@ -12,3 +12,7 @@ venv/
 
 # Ignore saved files folder
 save_files/
+
+# ignore build/distribution folders
+build/
+dist/
