@@ -154,6 +154,9 @@ class ProjectileEffect:
             return
         anim = projectile.destructionAnim.updateAnim(
             delta_time, len(self._destruction_frames))
+        if anim is None:
+            self._remove(projectile)
+            return
         scalevar = 0.15 * random.random() * delta_time
         current_scale = projectile.scale
         if isinstance(current_scale, tuple):

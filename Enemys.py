@@ -36,13 +36,29 @@ class BaseEnemy(arcade.Sprite):
         self.check = True
         self.create_statemachene()
         self.rotation = 0
-        self.next_time = 1
+        # Slow down movement pacing so enemies step less frequently.
+        self.next_time = 1.6
         self.focused_on = None
         self.spawn_kwargs: dict = {}
 
     def destroy(self, game):
         self.remove_from_sprite_lists()
         self.health = -100
+        # Remove any floating question mark that was tracking this enemy.
+        marks = getattr(game, "floating_question_marks", None)
+        if marks:
+            for mark in list(marks):
+                if getattr(mark, "tracking", None) is self:
+                    try:
+                        mark.remove_from_sprite_lists()
+                        marks.remove(mark)
+                    except Exception:
+                        pass
+                    for text_sprite in getattr(mark, "text_sprites", []) or []:
+                        try:
+                            text_sprite.remove_from_sprite_lists()
+                        except Exception:
+                            pass
 
     def get_path(self):
         if type(self.path) != list:
@@ -67,6 +83,8 @@ class BaseEnemy(arcade.Sprite):
         self.on_update(game, delta_time)
         if self.focused_on is None and not self.path:
             game.calculate_enemy_path(self)
+        # Child was never stepping along its path after the update override.
+        self.update_movement(game, delta_time)
         self.update_movement(game, delta_time)
     # NOTE: Always call on_update in update
 
@@ -183,6 +201,8 @@ class Child(BaseEnemy):
         self.right_texture = self.left_texture.flip_left_right()
 
         self.texture = self.front_texture
+        # Track cleanup to avoid leaving any stray sprites if extended later.
+        self._cleaned_up = False
 
     def update(self, game, delta_time):
         if self.health <= 0:
@@ -191,6 +211,10 @@ class Child(BaseEnemy):
         self.on_update(game, delta_time)
         if self.focused_on is None and not self.path:
             game.calculate_enemy_path(self)
+        # Step along the calculated path.
+        self.update_movement(game, delta_time)
+        if self.health <= 0:
+            self._cleanup()
 
     def update_movement(self, game, delta_time):
         prev_x, prev_y = self.position
@@ -205,6 +229,15 @@ class Child(BaseEnemy):
             self.texture = self.right_texture
         elif prev_y > self.center_y:
             self.texture = self.left_texture
+
+    def destroy(self, game):
+        super().destroy(game)
+        self._cleanup()
+
+    def _cleanup(self):
+        if getattr(self, "_cleaned_up", False):
+            return
+        self._cleaned_up = True
 
 
 class Enemy_Swordsman(BaseEnemy):
@@ -563,8 +596,10 @@ class Arsonist(BaseEnemy):
         self.Explosian.texture = self.Explosian.textures[4]
         self.Explosian.AnimationPlayer = AnimationPlayer(.1)
         game.overParticles.append(self.Explosian)
+        self._explosion_cleaned_up = False
 
     def destroy(self, game):
+        self._cleanup_explosion(game)
         super().destroy(game)
         self.Explosian.remove_from_sprite_lists()
 
@@ -578,6 +613,9 @@ class Arsonist(BaseEnemy):
         if self.state == "Attack":
             self.Explosian.position = self.position
             self.attack(game, delta_time)
+        # If the arsonist dies mid-attack, clean up the lingering explosion sprite.
+        if self.health <= 0:
+            self._cleanup_explosion(game)
 
     def update_movement(self, game, delta_time):
         prev_x, prev_y = self.position
@@ -620,6 +658,27 @@ class Arsonist(BaseEnemy):
                     except:
                         game.LightOnFire(obj, self.fire_strength)
             self.health = -100
+
+    def _cleanup_explosion(self, game):
+        if getattr(self, "_explosion_cleaned_up", False):
+            return
+        explosion = getattr(self, "Explosian", None)
+        if not explosion:
+            self._explosion_cleaned_up = True
+            return
+        try:
+            explosion.remove_from_sprite_lists()
+            if game and explosion in getattr(game, "overParticles", []):
+                game.overParticles.remove(explosion)
+        except Exception:
+            pass
+        explosion.center_x = 100000
+        explosion.center_y = 100000
+        anim = getattr(explosion, "AnimationPlayer", None)
+        if anim:
+            anim.index = 0
+            anim.time = 0
+        self._explosion_cleaned_up = True
 
     def _serialize_extra_state(self) -> dict:
         anim = getattr(self.Explosian, "AnimationPlayer", None)
@@ -692,14 +751,18 @@ class Golem(BaseEnemy):
         self.affect.textures = affect_textures
         self.affect.animation_player = AnimationPlayer(.03)
         game.underParticals.append(self.affect)
+        self._affect_cleaned_up = False
 
     def destroy(self, game):
+        self._cleanup_affect(game)
         self.state = "Death"
         self.canAttack = False
 
     def update(self, game, delta_time):
         if self.health <= 0:
             self.state = "Death"
+        if self.state == "Death":
+            self._cleanup_affect(game)
         self.on_update(game, delta_time)
 
         if self.state == "Idle":
@@ -753,6 +816,10 @@ class Golem(BaseEnemy):
             self.canAttack = False
             self.attack_time = 0
             self.attack_timer = 0
+        # If the golem is gone (killed during an attack), make sure the lingering
+        # hit effect is cleaned up instead of sticking around the map.
+        if self.health <= 0:
+            self._cleanup_affect(game)
 
     def _serialize_extra_state(self) -> dict:
         anim = getattr(self.affect, "animation_player", None)
@@ -790,6 +857,28 @@ class Golem(BaseEnemy):
         self.attack_timer = extra_state.get("attack_timer", self.attack_timer)
         self.attack_time = extra_state.get("attack_time", self.attack_time)
         self.canAttack = extra_state.get("can_attack", self.canAttack)
+
+    def _cleanup_affect(self, game):
+        if getattr(self, "_affect_cleaned_up", False):
+            return
+        affect = getattr(self, "affect", None)
+        if not affect:
+            self._affect_cleaned_up = True
+            return
+        # Remove from any sprite lists so it stops drawing once the golem dies.
+        try:
+            affect.remove_from_sprite_lists()
+            if game and affect in getattr(game, "underParticals", []):
+                game.underParticals.remove(affect)
+        except Exception:
+            pass
+        affect.center_x = 100000
+        affect.center_y = 100000
+        anim = getattr(affect, "animation_player", None)
+        if anim:
+            anim.index = 0
+            anim.time = 0
+        self._affect_cleaned_up = True
 
 
 class Wizard(BaseEnemy):

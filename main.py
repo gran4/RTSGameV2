@@ -1,6 +1,6 @@
 """
 TODO: Shaders
-TODO: add sound based on distince
+TODO: add sound based on distance
 
 Buildings span more than 1 tile
 Make Tiles smaller?
@@ -360,6 +360,9 @@ class MyGame(arcade.View):
 
         self.lacks = []
         self._storage_frame_valid = False
+        self._selection_glow_texture = arcade.make_soft_square_texture(
+            180, (255, 225, 120, 70), outer_alpha=0
+        )
 
         self.science = 300
         self.overall_multiplier = 1
@@ -1060,6 +1063,7 @@ class MyGame(arcade.View):
         self._draw_out_of_bounds_overlay()
 
         if selected:
+            self._draw_selection_glow(selected)
             self._draw_selection_overlay(selected)
             self._redraw_selection_stack(selected)
             self._redraw_selected_health_bar(selected)
@@ -1683,6 +1687,29 @@ class MyGame(arcade.View):
             color,
             border_width=3,
         )
+
+    def _draw_selection_glow(self, target=None):
+        target = target or getattr(self, "last", None)
+        rect = self._selection_rect(target)
+        if rect is None:
+            return
+        center_x, center_y, width, height = rect
+        pad = 18
+        glow_w = width + pad
+        glow_h = height + pad
+        texture = getattr(self, "_selection_glow_texture", None)
+        if not texture:
+            return
+        try:
+            texture.draw_sized(center_x, center_y, glow_w, glow_h, alpha=200)
+        except Exception:
+            scale_x = glow_w / max(texture.width, 1)
+            scale_y = glow_h / max(texture.height, 1)
+            sprite = arcade.Sprite(texture, scale=(scale_x + scale_y) / 2)
+            sprite.center_x = center_x
+            sprite.center_y = center_y
+            sprite.alpha = 200
+            sprite.draw()
 
     def _selection_border_color(self, target):
         if isinstance(target, BaseBuilding):
@@ -2320,7 +2347,7 @@ class MyGame(arcade.View):
 
     def spawn_enemy(self):
         # random.choice(["Basic Enemy", "Privateer", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
-        enemy_pick = "Enemy Archer"
+        enemy_pick = "Enemy Arsonist"
         # while not self.unlocked[enemy_pick]:
         #    enemy_pick = random.choice(["Basic Enemy", "Privateer", "Enemy Swordsman", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
         enemy_class = {"Basic Enemy": Child, "Privateer": Privateer, "Enemy Archer": Enemy_Slinger,
@@ -2579,7 +2606,7 @@ class MyGame(arcade.View):
         self.spawnEnemy += delta_time * getattr(self, "speed", 1)
         spawned = False
         while self.spawnEnemy >= 0:
-            self.spawnEnemy -= 1
+            self.spawnEnemy -= 25
             self.spawn_enemy()
             self.difficulty *= 1.02
             spawned = True

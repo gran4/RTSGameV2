@@ -1,3 +1,4 @@
+import math
 import random
 from math import floor
 
@@ -20,11 +21,17 @@ class Fire(arcade.Sprite):
         self.center_y = y
         self.strength = strength
         self.fireUpdate = 0
+        self._haze_time = 0.0
+        self._haze_sprite = None
+        self._add_heat_haze(game)
 
     def update(self, game, delta_time):
         obj = self.obj
-        obj.health -= self.strength*(1-obj.fire_resistence)*delta_time*.1
-        self.strength += delta_time*.3*(1-obj.fire_resistence)
+        # Stronger, faster-burning fires
+        obj.health -= self.strength*(1-obj.fire_resistence)*delta_time*.2
+        self.strength += delta_time*.7*(1-obj.fire_resistence)
+
+        self._update_heat_haze(game, delta_time)
 
         if obj.health <= 0:
             obj.destroy(game)
@@ -32,10 +39,8 @@ class Fire(arcade.Sprite):
             from Player import Bad_Cannoe  # Local import to avoid circular deps
             game.last = Bad_Cannoe(game, 10000000, 1000000)
             self.remove_from_sprite_lists()
-        elif random.random()*self.strength > .98:
-            reach = round(self.strength/2)
-            if reach == 0:
-                return
+        elif random.random()*self.strength > .9:
+            reach = max(1, round(self.strength))
             offset_x = random.randrange(-reach, reach)*50
             offset_y = random.randrange(-reach, reach)*50
             world_x = obj.center_x + offset_x
@@ -62,6 +67,7 @@ class Fire(arcade.Sprite):
             self.texture = self.textures[idx]
 
     def destroy(self, game):
+        self._remove_heat_haze()
         self.remove_from_sprite_lists()
         del self.obj.fire
 
@@ -102,3 +108,45 @@ class Fire(arcade.Sprite):
         fire.obj = owner
         owner.fire = fire
         return fire
+
+    # Heat haze helpers
+    def _add_heat_haze(self, game):
+        if getattr(self, "_haze_sprite", None):
+            return
+        haze_texture = arcade.make_soft_circle_texture(
+            36, (255, 190, 120, 180), center_alpha=160, outer_alpha=0)
+        haze = arcade.Sprite()
+        haze.texture = haze_texture
+        haze.center_x = self.center_x
+        haze.center_y = self.center_y
+        haze.scale = 1.1
+        haze.alpha = 110
+        haze._haze_phase = random.uniform(0, math.pi * 2)
+        haze._haze_spin = random.uniform(-20, 20)
+        haze._haze_wobble = random.uniform(0.04, 0.08)
+        self._haze_sprite = haze
+        if game and haze not in getattr(game, "overParticles", []):
+            game.overParticles.append(haze)
+
+    def _update_heat_haze(self, game, delta_time):
+        haze = getattr(self, "_haze_sprite", None)
+        target = getattr(self, "obj", None)
+        if not haze or not target:
+            return
+        haze.center_x = target.center_x
+        haze.center_y = target.center_y
+        self._haze_time += delta_time
+        phase = getattr(haze, "_haze_phase", 0.0) + delta_time * 1.5
+        haze._haze_phase = phase
+        wobble = getattr(haze, "_haze_wobble", 0.05)
+        haze.scale = 1.05 + math.sin(phase) * wobble
+        haze.angle += getattr(haze, "_haze_spin", 10) * delta_time
+        haze.alpha = max(50, min(160, int(120 + 45 * math.sin(self._haze_time * 2.2))))
+        if game and haze not in getattr(game, "overParticles", []):
+            game.overParticles.append(haze)
+
+    def _remove_heat_haze(self):
+        haze = getattr(self, "_haze_sprite", None)
+        if haze:
+            haze.remove_from_sprite_lists()
+            self._haze_sprite = None
