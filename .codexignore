@@ -1,0 +1,19 @@
+# Ignore Python virtual environment
+venv/
+.env/
+
+# Ignore game assets & resources
+save_files/
+logs/
+__pycache__/
+
+# Ignore build artifacts
+*.spec
+
+
+# Ignore large JSON files that are not code
+buttonInfo.json
+textInfo.json
+
+# Ignore typical cache / metadata
+.DS_Store

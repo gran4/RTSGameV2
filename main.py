@@ -170,6 +170,105 @@ arcade.PymunkPhysicsEngine
 Font = "Wooden Font(1).png"
 
 
+class SnowAmbience:
+    """Lightweight ambient snow particles over snowy terrain."""
+
+    def __init__(self) -> None:
+        self.particles = arcade.SpriteList()
+        self.texture = arcade.make_soft_circle_texture(
+            14, (235, 245, 255, 230), center_alpha=230, outer_alpha=10)
+        self._player_on_snow = False
+        self._check_timer = 0.0
+
+    def update(self, game, delta_time: float) -> None:
+        self._check_timer -= delta_time
+        if self._check_timer <= 0:
+            self._check_timer = 0.5
+            self._player_on_snow = self._player_on_snow_tile(game)
+
+        if self._player_on_snow:
+            self._spawn(game, delta_time)
+        self._update_particles(delta_time)
+
+    def _player_on_snow_tile(self, game) -> bool:
+        player = getattr(game, "player", None)
+        if not player:
+            return False
+        px = getattr(player, "center_x", None)
+        py = getattr(player, "center_y", None)
+        if px is None or py is None:
+            return False
+        lands = arcade.get_sprites_at_point((px, py), getattr(game, "Lands", []))
+        return bool(lands and getattr(lands[0], "typ", None) == "Snow")
+
+    def _spawn(self, game, delta_time: float) -> None:
+        camera = getattr(game, "camera", None)
+        if not camera:
+            return
+        width = getattr(camera, "viewport_width", None)
+        height = getattr(camera, "viewport_height", None)
+        if not width or not height:
+            return
+
+        cam_pos = getattr(camera, "position", (0.0, 0.0))
+        if isinstance(cam_pos, tuple) or isinstance(cam_pos, list):
+            center_x, center_y = cam_pos
+        else:
+            center_x = getattr(cam_pos, "x", 0.0)
+            center_y = getattr(cam_pos, "y", 0.0)
+
+        # Spawn more flakes when standing on snow
+        spawn_rate = 90  # particles per second
+        to_spawn = int(spawn_rate * delta_time)
+        # probabilistic extra spawn for fractional part
+        if random.random() < (spawn_rate * delta_time - to_spawn):
+            to_spawn += 1
+
+        if to_spawn <= 0:
+            return
+
+        view_min_x = center_x - width / 2
+        view_max_x = center_x + width / 2
+        spawn_y = center_y + height / 2 + 120
+
+        for _ in range(to_spawn):
+            particle = arcade.Sprite(
+                center_x=random.uniform(view_min_x, view_max_x),
+                center_y=spawn_y + random.uniform(-40, 40),
+            )
+            particle.texture = self.texture
+            particle.alpha = random.randint(220, 255)
+            particle.time = 0.0
+            particle.lifetime = random.uniform(30.0, 50.0)
+            base_heading = 270 + random.uniform(-14, 16)
+            base_speed = random.uniform(90, 130)
+            set_sprite_motion(particle, base_heading, base_speed)
+            sway = random.uniform(-13, 13)
+            particle._motion_dx += sway
+            particle.scale = random.uniform(0.80, 1.2)
+            particle.update()
+            self.particles.append(particle)
+            if particle not in getattr(game, "overParticles", []):
+                game.overParticles.append(particle)
+
+    def _update_particles(self, delta_time: float) -> None:
+        for particle in list(self.particles):
+            advance_sprite(particle, delta_time)
+            particle.time += delta_time
+            life_ratio = particle.time / getattr(particle, "lifetime", 0.5)
+            if life_ratio >= 1:
+                particle.remove_from_sprite_lists()
+                if particle in self.particles:
+                    self.particles.remove(particle)
+                continue
+            particle.alpha = max(0, int(particle.alpha * (1 - 0.01 * delta_time)))
+            current_scale = particle.scale
+            if isinstance(current_scale, tuple):
+                new_scale = tuple(val * 0.99 for val in current_scale)
+            else:
+                new_scale = current_scale * 0.99
+            particle.scale = new_scale
+
 class MyGame(arcade.View):
     """
     Main application class.
@@ -303,6 +402,7 @@ class MyGame(arcade.View):
         self.overParticles = arcade.SpriteList()
         self.underParticals = arcade.SpriteList()
         self.fog_layers = arcade.SpriteList(use_spatial_hash=False)
+        self.snow_ambience = SnowAmbience()
 
         self.Buildings = arcade.SpriteList(use_spatial_hash=True)
         self.Boats = arcade.SpriteList()
@@ -2457,6 +2557,8 @@ class MyGame(arcade.View):
         [boat.update(self, delta_time) for boat in self.Boats]
         [enemy.update(self, delta_time) for enemy in self.Enemies]
         self._update_fog_layers(delta_time)
+        base_dt = getattr(self, "real_delta_time", delta_time)
+        self.snow_ambience.update(self, base_dt)
 
         if self.player.boat:
             self.player.position = self.player.boat.position

@@ -1,5 +1,6 @@
 import arcade
 from arcade import math as arcade_math
+import random
 
 from Components import *
 from gui_compat import UIAnchorWidget
@@ -408,16 +409,22 @@ class BlackSmith(BaseBuilding):
 
 class SnowTower(BaseBuilding):
     produces: dict[str, float] = {}
+    SNOW_PARTICLE_TEXTURE = None
 
     def __init__(self, game, x: float, y: float):
         super().__init__(game, x, y, 20, .5, 400, 1, "resources/Sprites/buildings/SnowTower.png")
         self.Updates = False
         self.canAttack = True
         self.timer = 0
-        self.WaitToAttack = 1
+        self.WaitToAttack = 2
 
         self.snowballs = arcade.SpriteList()
+        self.snow_particles = arcade.SpriteList()
         self.focused_on = None
+
+        if SnowTower.SNOW_PARTICLE_TEXTURE is None:
+            SnowTower.SNOW_PARTICLE_TEXTURE = arcade.make_soft_circle_texture(
+                10, (240, 250, 255, 240), center_alpha=240, outer_alpha=10)
 
     def serialize_state(self, person_ids: dict | None = None) -> dict:
         state = super().serialize_state(person_ids)
@@ -438,6 +445,7 @@ class SnowTower(BaseBuilding):
     def apply_state(self, game, state: dict) -> None:
         super().apply_state(game, state)
         self.snowballs = arcade.SpriteList()
+        self.snow_particles = arcade.SpriteList()
         for entry in state.get("snowballs", []):
             snowball = arcade.Sprite(
                 "resources/Sprites/buildings/Snowball.png",
@@ -450,6 +458,13 @@ class SnowTower(BaseBuilding):
             snowball._motion_dy = entry.get("dy", 0.0)
             self.snowballs.append(snowball)
             game.overParticles.append(snowball)
+
+    def destroy(self, game, menu_destroy=False):
+        for snowball in list(self.snowballs):
+            snowball.remove_from_sprite_lists()
+        for particle in list(self.snow_particles):
+            particle.remove_from_sprite_lists()
+        return super().destroy(game, menu_destroy)
 
     def update(self, delta_time, game):
         if self.health <= 0:
@@ -467,6 +482,7 @@ class SnowTower(BaseBuilding):
         for snowball in list(self.snowballs):
             advance_sprite(snowball, delta_time)
             snowball.update()
+            self._maybe_emit_snow_particles(game, snowball, delta_time)
             snowball.time += delta_time
             if snowball.time > 15:
                 snowball.remove_from_sprite_lists()
@@ -479,6 +495,7 @@ class SnowTower(BaseBuilding):
                 snowball.remove_from_sprite_lists()
                 if self.focused_on.health <= 0:
                     self.focused_on = None
+        self._update_snow_particles(delta_time)
 
         self.timer += delta_time
         if self.timer < self.WaitToAttack or not self.focused_on:
@@ -509,9 +526,68 @@ class SnowTower(BaseBuilding):
         self.snowballs.append(snowball)
         game.overParticles.append(snowball)
         snowball.update()
+        self._burst_snow_particles(game, snowball)
         self.canAttack = False
         if self.focused_on and self.focused_on.health <= 0:
             self.focused_on = None
+
+    def _maybe_emit_snow_particles(self, game, snowball, delta_time):
+        # Emit a soft trail behind moving snowballs
+        emit_rate = 12  # particles per second
+        if random.random() > emit_rate * delta_time:
+            return
+        offset_x = random.uniform(-3, 3)
+        offset_y = random.uniform(-3, 3)
+        particle = arcade.Sprite(
+            center_x=snowball.center_x + offset_x,
+            center_y=snowball.center_y + offset_y,
+        )
+        particle.texture = self.SNOW_PARTICLE_TEXTURE
+        particle.alpha = 220
+        particle.time = 0.0
+        particle.lifetime = random.uniform(0.35, 0.6)
+        particle.scale = random.uniform(0.6, 1.0)
+        drift_heading = random.uniform(0, 360)
+        drift_speed = random.uniform(10, 25)
+        set_sprite_motion(particle, drift_heading, drift_speed)
+        particle.update()
+        self.snow_particles.append(particle)
+        game.overParticles.append(particle)
+
+    def _burst_snow_particles(self, game, snowball):
+        # Small burst when a snowball is launched
+        for _ in range(3):
+            particle = arcade.Sprite(
+                center_x=snowball.center_x,
+                center_y=snowball.center_y,
+            )
+            particle.texture = self.SNOW_PARTICLE_TEXTURE
+            particle.alpha = 240
+            particle.time = 0.0
+            particle.lifetime = random.uniform(0.45, 0.75)
+            particle.scale = random.uniform(0.7, 1.1)
+            drift_heading = random.uniform(0, 360)
+            drift_speed = random.uniform(15, 35)
+            set_sprite_motion(particle, drift_heading, drift_speed)
+            particle.update()
+            self.snow_particles.append(particle)
+            game.overParticles.append(particle)
+
+    def _update_snow_particles(self, delta_time):
+        for particle in list(self.snow_particles):
+            advance_sprite(particle, delta_time)
+            particle.time += delta_time
+            life_ratio = particle.time / getattr(particle, "lifetime", 0.5)
+            if life_ratio >= 1:
+                particle.remove_from_sprite_lists()
+                continue
+            particle.alpha = max(0, int(240 * (1 - life_ratio)))
+            current_scale = particle.scale
+            if isinstance(current_scale, tuple):
+                new_scale = tuple(val * 0.985 for val in current_scale)
+            else:
+                new_scale = current_scale * 0.985
+            particle.scale = new_scale
 
 
 class RaindeerFarm(BaseBuilding):
