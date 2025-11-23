@@ -101,6 +101,7 @@ uniform sampler2D depth_texture;
 uniform float u_time;
 uniform vec2 u_resolution;
 uniform vec2 u_overlay_scale;
+uniform vec2 u_overlay_offset;
 uniform vec2 u_world_origin;
 uniform vec2 u_world_size;
 uniform vec2 u_depth_scale;
@@ -118,24 +119,27 @@ void main() {
 
     vec4 base_mask_sample = texture(base_texture, uv);
     vec4 base_color = texture(base_texture, distorted_uv);
-    vec2 overlay_uv = distorted_uv * u_overlay_scale + vec2(u_time * 0.02, -u_time * 0.018);
+    vec2 overlay_uv = distorted_uv * u_overlay_scale + u_overlay_offset + vec2(u_time * 0.02, -u_time * 0.018);
     vec4 overlay_sample = texture(overlay_texture, overlay_uv);
 
     float gradient = gl_FragCoord.y / u_resolution.y;
-    vec3 bright_blue = mix(vec3(0.07, 0.45, 0.9), vec3(0.18, 0.65, 1.0), gradient * 0.7);
-    vec3 base_mix = mix(base_color.rgb, bright_blue, 0.95);
+    vec3 bright_blue = mix(vec3(0.04, 0.32, 0.65), vec3(0.12, 0.52, 0.9), gradient * 0.7);
+    vec3 base_mix = mix(base_color.rgb, bright_blue, 0.65);
 
     float edge = smoothstep(0.0, 0.25, base_mask_sample.a);
-    vec3 overlay_target = mix(bright_blue, overlay_sample.rgb, overlay_sample.a * 0.2);
+    vec3 overlay_target = mix(bright_blue, overlay_sample.rgb, overlay_sample.a * 0.12);
     vec3 overlay_mix = mix(base_mix, overlay_target, edge);
 
-    vec2 depth_centered = world_pos - vec2(25.0, 25.0);
-    vec2 depth_uv = clamp(depth_centered * u_depth_scale, vec2(0.0), vec2(1.0));
+    vec2 depth_uv = clamp(
+        (world_pos + vec2(25.0, 25.0)) * u_depth_scale,
+        vec2(0.0),
+        vec2(1.0)
+    );
     float depth = texture(depth_texture, depth_uv).r;
-    float depth_shade = mix(0.6, 0.98, 1.0 - depth);
+    float depth_shade = mix(0.55, 0.94, 1.0 - depth);
     vec3 color = overlay_mix * depth_shade;
 
-    float alpha = base_mask_sample.a * 0.9;
+    float alpha = base_mask_sample.a * 0.82;
 
     fragColor = vec4(color, alpha);
 }
@@ -1235,16 +1239,17 @@ class MyGame(arcade.View):
         if world_width <= 0 or world_height <= 0:
             return
         texture_size = 192
-        fog_color = (255, 255, 255, 45)
+        # Darker, cooler fog so it sits back in the scene
+        fog_color = (190, 195, 205, 30)
         texture = arcade.make_soft_square_texture(texture_size, fog_color, outer_alpha=0)
         world_area = max(1.0, world_width * world_height)
         density_factor = min(16, max(6, int(world_area / 2_000_000)))
         for _ in range(density_factor):
             sprite = arcade.Sprite(center_x=random.uniform(0, world_width), center_y=random.uniform(0, world_height))
             sprite.texture = texture
-            sprite.scale = random.uniform(2.9, 3.6)
-            sprite.alpha = random.randint(55, 95)
-            sprite.change_x = random.uniform(2.5, 7.5)
+            sprite.scale = random.uniform(2.7, 3.4)
+            sprite.alpha = random.randint(50, 90)
+            sprite.change_x = random.uniform(2.2, 6.5)
             sprite.change_y = random.uniform(-1.8, 1.8)
             sprite._drift_speed = random.uniform(0.45, 1.0)
             self.fog_layers.append(sprite)
@@ -1538,6 +1543,9 @@ class MyGame(arcade.View):
             float(viewport_height),
         )
 
+        world_width = max(self.x_line * WATER_TILE_SIZE, 1)
+        world_height = max(self.y_line * WATER_TILE_SIZE, 1)
+
         overlay_unit = 1
         if self._water_overlay_texture:
             self._water_overlay_texture.use(overlay_unit)
@@ -1547,13 +1555,16 @@ class MyGame(arcade.View):
                 float(overlay_repeat),
                 float(overlay_repeat),
             )
+            self._water_program["u_overlay_offset"] = (
+                float(world_origin[0] / max(world_width, 1) * overlay_repeat),
+                float(world_origin[1] / max(world_height, 1) * overlay_repeat),
+            )
         else:
             self._water_program["overlay_texture"] = 0
             self._water_program["u_overlay_scale"] = (1.0, 1.0)
+            self._water_program["u_overlay_offset"] = (0.0, 0.0)
 
         depth_unit = 2
-        world_width = max(self.x_line * WATER_TILE_SIZE, 1)
-        world_height = max(self.y_line * WATER_TILE_SIZE, 1)
         self._water_program["u_depth_scale"] = (
             1.0 / float(world_width),
             1.0 / float(world_height),
