@@ -782,6 +782,16 @@ class Encampment(BaseBuilding):
     def __init__(self, game, x: float, y: float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/Training Ground.png")
         self.trainable = ["Bad Gifter", "Bad Reporter"]
+        # Animate the training ground so the encampment feels active
+        self.AnimationPlayer = AnimationPlayer(.12)
+        self.textures = load_texture_grid(
+            "resources/Sprites/buildings/Training Ground.png",
+            50,
+            50,
+            15,
+            15,
+        )
+        self.texture = self.textures[0]
 
     def add(self, sprite):
         if len(self.list_of_people) == self.max_length:
@@ -827,6 +837,19 @@ class Encampment(BaseBuilding):
         game.extra_buttons.append(wrapper)
 
     def update(self, delta_time, game):
+        training_active = any(
+            getattr(person, "advancement", None) is not None for person in self.list_of_people)
+        if training_active:
+            anim = self.AnimationPlayer.updateAnim(
+                delta_time, len(self.textures))
+            if anim is not None:
+                self.texture = self.textures[anim]
+        else:
+            # Reset to idle frame when no one is training
+            self.AnimationPlayer.time = 0
+            self.AnimationPlayer.index = 0
+            self.texture = self.textures[0]
+
         for person in self.list_of_people:
             if person.advancement is None:
                 continue
@@ -842,3 +865,5 @@ class Encampment(BaseBuilding):
 
             person.destroy(game)
             game.population += 1
+
+        super().update(delta_time, game)
