@@ -1713,7 +1713,7 @@ class MyGame(arcade.View):
         """Dim buildings that have no occupants so they stand out."""
         if not getattr(self, "Buildings", None):
             return
-        color = (160, 160, 160, 70)
+        color = (200, 200, 200, 90)
         for building in self.Buildings:
             if not isinstance(building, BaseBuilding):
                 continue
@@ -2035,12 +2035,6 @@ class MyGame(arcade.View):
         return True
 
     def _placement_occupancy_issue(self, world_x: float, world_y: float) -> str | None:
-        if arcade.get_sprites_at_point((world_x, world_y), self.People):
-            return "Can't place on a person"
-        if arcade.get_sprites_at_point((world_x, world_y), self.Boats):
-            return "Can't place on a boat"
-        if arcade.get_sprites_at_point((world_x, world_y), self.Buildings):
-            return "Space already has a building"
         return None
 
     def _draw_preview_texture(self, texture: arcade.Texture, center_x: float, center_y: float, width: float, height: float, alpha: int) -> None:
