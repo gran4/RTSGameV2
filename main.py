@@ -1,16 +1,3 @@
-"""
-TODO: Shaders
-TODO: add sound based on distance
-
-Buildings span more than 1 tile
-Make Tiles smaller?
-"""
-
-# python3.10 -m PyInstaller MainTestResizable.py --noconsole --onefile --add-data "resources:resources"
-# python3.10 -m PyInstaller MainTestResizable.py --windowed --noconsole --onefile --add-data "resources:resources" --icon="resources/Sprites/Icon.png"
-
-# python3.11 -m PyInstaller main.py --windowed --noconsole --onefile --add-data "resources:resources" --icon="resources/Sprites/Icon.png"
-# python3 -m PyInstaller --clean main.spec
 from array import array
 from collections import defaultdict, deque
 from copy import copy
@@ -170,8 +157,6 @@ def apply_audio_volume(audio, volume_map):
         source.volume = volume
 
 
-arcade.PymunkPhysicsEngine
-# loading gets stuck somewhere
 Font = "Wooden Font(1).png"
 
 
@@ -222,10 +207,8 @@ class SnowAmbience:
             center_x = getattr(cam_pos, "x", 0.0)
             center_y = getattr(cam_pos, "y", 0.0)
 
-        # Spawn more flakes when standing on snow
         spawn_rate = 90  # particles per second
         to_spawn = int(spawn_rate * delta_time)
-        # probabilistic extra spawn for fractional part
         if random.random() < (spawn_rate * delta_time - to_spawn):
             to_spawn += 1
 
@@ -398,7 +381,6 @@ class MyGame(arcade.View):
         self.x = 0
         self.y = 0
 
-        # BackGround
         self.Lands = arcade.SpriteList(use_spatial_hash=True)
         self.Stones = arcade.SpriteList(use_spatial_hash=True)
         self.Seas = arcade.SpriteList(use_spatial_hash=True)
@@ -458,7 +440,6 @@ class MyGame(arcade.View):
         self.object = None
         self.requirements = {"wood": float("inf")}
 
-        # Placement preview helpers
         self._mouse_position: tuple[float, float] | None = None
         self._preview_position: tuple[float, float] | None = None
         self._preview_valid = False
@@ -598,7 +579,6 @@ class MyGame(arcade.View):
         self.uimanager.add(wrapper)
         self.menu_buttons.append(wrapper)
 
-        # Creating save Button
         button = CustomUIFlatButton(
             self.Alphabet_Textures, click_sound=self.click_sound, text="Save", width=140, height=50)
         button.on_click = self.save
@@ -836,7 +816,6 @@ class MyGame(arcade.View):
     def expand_button_click(self, event):
         self.text_visible = event.source.expand
         event.source.sprite, event.source.hovered_sprite, event.source.pressed_sprite = event.source.pressed_sprite, event.source.pressed_sprite, event.source.sprite
-        # event.source.pressed_sprite = event.source.sprite
         event.source.expand = not event.source.expand
         self.update_text(1)
 
@@ -1030,11 +1009,9 @@ class MyGame(arcade.View):
 
         t = time.time()
         """Render the screen."""
-        # Clear screen
         self.clear()
         self.camera.use()
 
-        # tiles
         self.Lands.draw()
         self._draw_water_layer()
         self.Stones.draw()
@@ -1245,7 +1222,6 @@ class MyGame(arcade.View):
         if world_width <= 0 or world_height <= 0:
             return
         texture_size = 192
-        # Darker, cooler fog so it sits back in the scene
         fog_color = (190, 195, 205, 30)
         texture = arcade.make_soft_square_texture(texture_size, fog_color, outer_alpha=0)
         world_area = max(1.0, world_width * world_height)
@@ -1503,8 +1479,6 @@ class MyGame(arcade.View):
             self.Seas.draw()
             return
 
-        # Resize the water framebuffer to the camera render size
-        # Render water to a buffer matching the window size; we sample it 1:1 on composite
         render_width = int(window.width or 1)
         render_height = int(window.height or 1)
         self._update_water_framebuffer(render_width, render_height)
@@ -1522,7 +1496,6 @@ class MyGame(arcade.View):
             self.Seas.draw()
             return
 
-        # Temporarily match camera and GL viewport to the FBO size so tiles fully cover it
         orig_viewport = getattr(ctx, "viewport", None)
         try:
             ctx.viewport = (0, 0, render_width, render_height)
@@ -1541,7 +1514,6 @@ class MyGame(arcade.View):
         self._water_fbo.clear(color=(0, 0, 0, 0))
         self.Seas.draw()
 
-        # Restore window framebuffer and viewport
         window.use()
         try:
             if orig_viewport is not None:
@@ -1551,7 +1523,6 @@ class MyGame(arcade.View):
         except Exception:
             pass
 
-        # Restore camera viewport after drawing to FBO
         if orig_cam_vw is not None:
             try:
                 self.camera.viewport_width = orig_cam_vw
@@ -1560,7 +1531,6 @@ class MyGame(arcade.View):
                 pass
 
         previous_camera = getattr(window, "current_camera", None)
-        # Ensure the on-screen viewport matches the window before composing
         try:
             ctx.viewport = (0, 0, window.width, window.height)
         except Exception:
@@ -1638,15 +1608,6 @@ class MyGame(arcade.View):
         ctx.disable(ctx.BLEND)
 
         ctx_vp_after = getattr(ctx, "viewport", None)
-        self._log_water_state(
-            event="draw_end",
-            ctx_vp=tuple(ctx_vp_after) if ctx_vp_after else None,
-            u_world_origin=self._water_program["u_world_origin"],
-            u_world_size=self._water_program["u_world_size"],
-            u_resolution=self._water_program["u_resolution"],
-            render_width=render_width,
-            render_height=render_height,
-        )
 
         if previous_camera:
             previous_camera.use()
@@ -1825,7 +1786,6 @@ class MyGame(arcade.View):
 
         center_x = 0
         center_y = 0
-        # move camera
         if key == arcade.key.LEFT or key == arcade.key.A:
             center_x -= 50
             self.player.key = "A"
@@ -2441,10 +2401,7 @@ class MyGame(arcade.View):
                 self.calculate_enemy_path(enemy)
 
     def spawn_enemy(self):
-        # random.choice(["Basic Enemy", "Privateer", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
         enemy_pick = "Enemy Arsonist"
-        # while not self.unlocked[enemy_pick]:
-        #    enemy_pick = random.choice(["Basic Enemy", "Privateer", "Enemy Swordsman", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
         enemy_class = {"Basic Enemy": Child, "Privateer": Privateer, "Enemy Archer": Enemy_Slinger,
                        "Enemy Arsonist": Arsonist, "Enemy Wizard": Wizard}[enemy_pick]
         enemy = enemy_class(self, 0, 0, difficulty=self.hardness_multiplier)
@@ -2470,10 +2427,7 @@ class MyGame(arcade.View):
             i += 1
             if i >= max_i:
                 enemy.destroy(self)
-                # random.choice(["Basic Enemy", "Privateer", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
                 enemy_pick = "Enemy Archer"
-                # while not self.unlocked[enemy_pick]:
-                #    enemy_pick = random.choice(["Basic Enemy", "Privateer", "Enemy Archer", "Enemy Arsonist", "Enemy Wizard"])
                 enemy_class = {"Basic Enemy": Child, "Privateer": Privateer, "Enemy Archer": Enemy_Slinger,
                                "Enemy Arsonist": Arsonist, "Enemy Wizard": Wizard}[enemy_pick]
                 enemy = enemy_class(
@@ -2502,7 +2456,6 @@ class MyGame(arcade.View):
     def calculate_enemy_path(self, enemy):
         enemy.check = False
         enemy.path = []
-        # return
         building, distance = get_closest_sprite(enemy.position, self.Buildings)
         if building is None:
             distance = float("inf")
@@ -2575,7 +2528,6 @@ class MyGame(arcade.View):
             return
         obj.check = False
         obj.path = []
-        # return
 
         obj2, distance = get_closest_sprite(obj.position, SpriteList)
         if obj2 == [] or distance > max_distance:
@@ -2682,7 +2634,6 @@ class MyGame(arcade.View):
 
         if self.population <= 1:
             self.End("All your elves have fallen. The workshop stands empty.")
-        # Update
         self.updateStorage()
         [fire.update(self, delta_time) for fire in self.Fires]
         [person.update(self, delta_time) for person in self.People]
@@ -2706,7 +2657,6 @@ class MyGame(arcade.View):
             self.difficulty *= 1.02
             spawned = True
         if spawned and not self.Enemies:
-            # Ensure snow towers retarget after new spawn
             for building in self.Buildings:
                 if isinstance(building, SnowTower):
                     building.focused_on = None
@@ -2741,7 +2691,6 @@ class MyGame(arcade.View):
             string += lack
             if self.object and lack.lower().startswith(self.object.lower()[:3]) and self.lack_popup is None:
                 self.show_lack_popup(f"{lack}", x, y)
-        # , Background_offset_x=100, Background_offset_y=-50, Background_Texture="resources/gui/Small Text Background.png", Background_scale=1)
         self.lack_text = CustomTextSprite(
             string, self.Alphabet_Textures, center_x=x-200, center_y=y, width=200, text_margin=14)
 
@@ -2865,7 +2814,6 @@ class MyGame(arcade.View):
 
         self.x_line = x_line
         self.y_line = y_line
-        # Create cave system using a 2D grid
         grid = create_grid(x_line, y_line)
         initialize_grid(grid)
 
@@ -2878,11 +2826,6 @@ class MyGame(arcade.View):
         initialize_grid(grid2)
         for step in range(4):
             grid2, template_grid = do_simulation_step(grid2, template_grid)
-
-        # Create sprites based on 2D grid
-
-        # This is the simple-to-understand method. Each grid location
-        # is a sprite.
 
         if world_gen == "Normal":
             stone_factor = .7
@@ -2985,7 +2928,6 @@ class MyGame(arcade.View):
                 self.Enemies.append(enemy)
 
                 building = Hospital(row*50, column*50)
-                # self.BuildingChangeEnemySpawner(row*50, column*50, min_dist=150, max_dist=200)
                 building.enemy = None
                 self.Buildings.append(building)
         for enemy in self.Enemies:
@@ -3190,7 +3132,6 @@ class MyGame(arcade.View):
         return True
 
     def BuildingChangeEnemySpawner(self, x, y, placing=1, min_dist=100, max_dist=300):
-        # NOTE: Placing=-1 is for destroying, keep at 1 if placing
         x = round(x/50)*50
         y = round(y/50)*50
 
@@ -3211,7 +3152,6 @@ class MyGame(arcade.View):
                 else:
                     self.EnemyMap[x1][y1] += placing
 
-                # NOTE: UPDATE open to Enemies list
                 if tile_type != 0:
                     continue
                 if self.EnemyMap[x1][y1] > 0:
@@ -3231,7 +3171,6 @@ class MyGame(arcade.View):
                     land[0].prev_texture = land[0].texture
                     land[0].prev_typ = land[0].typ
                     land[0].typ = "Snow"
-                    # gul-li-ble person
                     land[0].texture = arcade.load_texture(
                         "resources/Sprites/terrain/Snow.png")
 
@@ -3265,7 +3204,6 @@ class MyGame(arcade.View):
             if isinstance(value, (int, float, dict, list)):
                 variables[key] = value
 
-        # Capture only primitive player state for serialization
         player_state = {
             "center_x": self.player.center_x,
             "center_y": self.player.center_y,
@@ -3675,14 +3613,6 @@ class MyGame(arcade.View):
             self.player.health = player_state["health"]
         if "max_health" in player_state:
             self.player.max_health = player_state["max_health"]
-        """ self.graph = LivingMap(file["graphlength"], file["graphlength"], file["graphlength"]*file["graphlength"], self.Stones, self.Seas, tilesize=50)
-        self.graphlength = file["graphlength"]
-
-        #graph = create_Map(self.graphlength, self.graphlength)
-        for seas in self.Seas:
-            x, y = seas.center_x/50, seas.center_y/50
-            self.graph[x][y] = 2 """
-
 
 class MyTutorial(MyGame):
     def __init__(self, menu, file_num=0, world_gen="Normal", difficulty=1):
@@ -4022,8 +3952,6 @@ class EndMenu(arcade.View):
         """ This is run once when we switch to this view """
         self._background_color = arcade.color.BEIGE
 
-        # Reset the viewport, necessary if we have a scrolling game and we need
-        # to reset the viewport back to the start so we can see what we draw.
         reset_window_viewport(self.window)
 
         self.click_sound = game.click_sound
@@ -4049,7 +3977,6 @@ class EndMenu(arcade.View):
             center_y=self.window.height / 2,
             scale=max(self.window.width / 5001, self.window.height / 3334)
         )
-        # arcade.Sprite("resouces/gui/Large Bulletin.png", scale = .25)
         self.christmas_overlay = None
 
         self.texts = []
@@ -4071,7 +3998,6 @@ class EndMenu(arcade.View):
             anchor_x="center_x", anchor_y="center_y", child=start_button, align_x=0, align_y=-100)
         self.uimanager.add(wrapper)
 
-        # self.check_game_save()
         self.texts.append(CustomTextSprite(f"You Died. ", self.Alphabet_Textures, center_x=self.window.width /
                           2, center_y=self.window.height+200, width=1000, scale=4, text_margin=50))
         if self.reason:
@@ -4269,8 +4195,6 @@ class startMenu(arcade.View):
         self._background_color = arcade.color.BEIGE
         arcade.set_background_color(self._background_color)
 
-        # Reset the viewport, necessary if we have a scrolling game and we need
-        # to reset the viewport back to the start so we can see what we draw.
         reset_window_viewport(self.window)
 
         self.audios = []
@@ -4482,7 +4406,6 @@ class startMenu(arcade.View):
     def start_Tutorial(self, event):
         arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
         self.uimanager.disable()
-        # CreateWorld(self, event.source.world_num)
         Game = MyTutorial(self, file_num=None,
                           world_gen="Normal", difficulty=1)
         self.window.show_view(Game)
@@ -4565,7 +4488,6 @@ class CreateWorld(arcade.View):
         self.christmas_background = arcade.Sprite(
             "resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
 
-        # arcade.SpriteList(use_spatial_hash=True, is_static=True)
         self.texts = []
 
         self.uimanager = arcade.gui.UIManager()
@@ -4601,7 +4523,7 @@ class CreateWorld(arcade.View):
 
         start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound=self.click_sound,
                                           width=40, height=40, Texture="resources/gui/Right Pointer resized.png")
-        start_button.direction = 1  # right
+        start_button.direction = 1
         start_button.button = button
         start_button.on_click = self.Generation_change
         wrapper = UIAnchorWidget(
@@ -4610,7 +4532,7 @@ class CreateWorld(arcade.View):
 
         start_button = CustomUIFlatButton(self.Alphabet_Textures, click_sound=self.click_sound,
                                           width=40, height=40, Texture="resources/gui/Left Pointer resized.png")
-        start_button.direction = -1  # left
+        start_button.direction = -1
         start_button.button = button
         start_button.on_click = self.Generation_change
         wrapper = UIAnchorWidget(
@@ -4742,8 +4664,6 @@ class CreateWorld(arcade.View):
         super().on_show_view()
         arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
 
-        # Reset the viewport, necessary if we have a scrolling game and we need
-        # to reset the viewport back to the start so we can see what we draw.
         reset_window_viewport(self.window)
 
     def on_draw(self):
@@ -5009,7 +4929,7 @@ class UpgradeScienceMenu(arcade.View):
                 start_button.set_badge_text(str(node[7]))
 
             for i in start_button.connections:
-                endx = ScienceMenuInfo[i][1]+370  # cameraView
+                endx = ScienceMenuInfo[i][1]+370
                 endy = ScienceMenuInfo[i][2]+250
                 line = create_line(
                     node[1]+370, node[2]+250, endx, endy, (0, 0, 0, 255), line_width=5)
@@ -5088,7 +5008,6 @@ class UpgradeScienceMenu(arcade.View):
     def handle_cost(self, source):
         window = arcade.get_window()
         wrapper = source.wrapper
-        # Does the player have enough science
         if source.unlocked:
             text = UpdatingText(f"Already unlocked", self.Alphabet_Textures, .5, scale=1,
                                 center_x=wrapper.align_x+window.width/2, center_y=wrapper.align_y+window.height/2)
@@ -5131,7 +5050,6 @@ class UpgradeScienceMenu(arcade.View):
         for i in source.connections:
             self.unlock_backwards(self.science_buttons[i].child)
         self.handle_affect(source)
-        # self.uimanager.children[0].pop(-1)
 
     def on_show_view(self):
         super().on_show_view()
@@ -5310,7 +5228,6 @@ class ScienceMenu(arcade.View):
         self.lineList.center_y = height/2 - 250
 
     def pre_load(self):
-        # NOTE: Determens if saved
         self.load()
 
         start_button = CustomUIFlatButton(
@@ -5478,7 +5395,6 @@ class ScienceMenu(arcade.View):
         self.text.update_text(f"{round(self.game_view.science*10)/10} science", self.Alphabet_Textures,
                               scale=1, center_x=-400+window.width/2, center_y=200+window.height/2)
 
-        # passed conditions
         self.handle_affect(source)
 
     def handle_affect(self, source):
@@ -5572,7 +5488,6 @@ class ScienceMenu(arcade.View):
         if self.pressed_a and self.x + 50 < -self.science_buttons[0].true_x:
             self.x += 1000*delta_time
             self.lineList.move(1000*delta_time, 0)
-            # self.lineList.move(0, 0)
         if self.pressed_d and self.x - 50 > -self.science_buttons[-1].true_x:
             self.x -= 1000*delta_time
             self.lineList.move(-1000*delta_time, 0)
@@ -5927,7 +5842,6 @@ class BuildingMenu(arcade.View):
             return
 
         if self.game_view.unlocked[source.type]:
-            # passed conditions
             self.handle_affect(source)
 
     def handle_affect(self, source: arcade.gui.UIFlatButton):
@@ -6096,7 +6010,6 @@ class TrainingMenu(arcade.View):
     def on_buttonclick(self, event):
         source = event.source
         if self.game_view.unlocked[source.string]:
-            # passed conditions
             self.handle_affect(source)
         else:
             window = arcade.get_window()
