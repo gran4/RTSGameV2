@@ -1503,6 +1503,14 @@ class MyGame(arcade.View):
             self.Seas.draw()
             return
 
+        # Resize the water framebuffer to the camera render size
+        # Render water to a buffer matching the window size; we sample it 1:1 on composite
+        render_width = int(window.width or 1)
+        render_height = int(window.height or 1)
+        self._update_water_framebuffer(render_width, render_height)
+        ctx = self._water_ctx
+        ctx_vp = getattr(ctx, "viewport", None)
+
         try:
             self._water_fbo.use()
         except Exception:
@@ -1510,22 +1518,55 @@ class MyGame(arcade.View):
             self.Seas.draw()
             return
 
+        if not ctx:
+            self.Seas.draw()
+            return
+
+        # Temporarily match camera and GL viewport to the FBO size so tiles fully cover it
+        orig_viewport = getattr(ctx, "viewport", None)
+        try:
+            ctx.viewport = (0, 0, render_width, render_height)
+        except Exception:
+            pass
+        orig_cam_vw = getattr(self.camera, "viewport_width", None)
+        orig_cam_vh = getattr(self.camera, "viewport_height", None)
+        if orig_cam_vw is not None:
+            try:
+                self.camera.viewport_width = render_width
+                self.camera.viewport_height = render_height
+            except Exception:
+                pass
+
         self.camera.use()
         self._water_fbo.clear(color=(0, 0, 0, 0))
         self.Seas.draw()
 
+        # Restore window framebuffer and viewport
         window.use()
-        default_camera = getattr(window, "default_camera", None)
-        previous_camera = getattr(window, "current_camera", None)
-        if default_camera:
-            default_camera.use()
-        else:
-            self.camera.use()
+        try:
+            if orig_viewport is not None:
+                ctx.viewport = orig_viewport
+            else:
+                ctx.viewport = (0, 0, window.width, window.height)
+        except Exception:
+            pass
 
-        ctx = self._water_ctx
-        if not ctx:
-            self.Seas.draw()
-            return
+        # Restore camera viewport after drawing to FBO
+        if orig_cam_vw is not None:
+            try:
+                self.camera.viewport_width = orig_cam_vw
+                self.camera.viewport_height = orig_cam_vh
+            except Exception:
+                pass
+
+        previous_camera = getattr(window, "current_camera", None)
+        # Ensure the on-screen viewport matches the window before composing
+        try:
+            ctx.viewport = (0, 0, window.width, window.height)
+        except Exception:
+            pass
+        window.use()
+
         self._water_texture.use(0)
         ctx.enable(ctx.BLEND)
         self._water_program["base_texture"] = 0
@@ -1583,12 +1624,29 @@ class MyGame(arcade.View):
 
         time_alive = float(getattr(self, "time_alive", 0.0))
         self._water_program["u_time"] = time_alive * WATER_TIME_SCALE
+        display_width = window.width
+        display_height = window.height
+        ctx_screen = getattr(getattr(window, "ctx", None), "screen", None)
+        if ctx_screen:
+            display_width = getattr(ctx_screen, "width", display_width)
+            display_height = getattr(ctx_screen, "height", display_height)
         self._water_program["u_resolution"] = (
-            float(max(window.width, 1)),
-            float(max(window.height, 1)),
+            float(max(display_width, 1)),
+            float(max(display_height, 1)),
         )
         self._water_quad.render(self._water_program)
         ctx.disable(ctx.BLEND)
+
+        ctx_vp_after = getattr(ctx, "viewport", None)
+        self._log_water_state(
+            event="draw_end",
+            ctx_vp=tuple(ctx_vp_after) if ctx_vp_after else None,
+            u_world_origin=self._water_program["u_world_origin"],
+            u_world_size=self._water_program["u_world_size"],
+            u_resolution=self._water_program["u_resolution"],
+            render_width=render_width,
+            render_height=render_height,
+        )
 
         if previous_camera:
             previous_camera.use()
