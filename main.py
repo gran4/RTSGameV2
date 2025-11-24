@@ -1045,6 +1045,7 @@ class MyGame(arcade.View):
         selected = getattr(self, "last", None)
 
         self.Buildings.draw()
+        self._draw_empty_building_overlay()
 
         self.Boats.draw()
 
@@ -1689,6 +1690,31 @@ class MyGame(arcade.View):
             border_width=3,
         )
 
+    def _draw_empty_building_overlay(self) -> None:
+        """Dim buildings that have no occupants so they stand out."""
+        if not getattr(self, "Buildings", None):
+            return
+        color = (160, 160, 160, 70)
+        for building in self.Buildings:
+            if not isinstance(building, BaseBuilding):
+                continue
+            if getattr(building, "max_length", 0) <= 0:
+                continue
+            if not getattr(building, "allows_people", True):
+                continue
+            occupants = getattr(building, "list_of_people", [])
+            if occupants:
+                continue
+            draw_rect_filled(
+                XYWH(
+                    building.center_x,
+                    building.center_y,
+                    getattr(building, "width", 50),
+                    getattr(building, "height", 50),
+                ),
+                color,
+            )
+
     def _draw_selection_glow(self, target=None):
         target = target or getattr(self, "last", None)
         rect = self._selection_rect(target)
@@ -1823,13 +1849,15 @@ class MyGame(arcade.View):
             return
 
         org_x, org_y = x, y
+        world_x_raw, world_y_raw = self._screen_to_world(x, y)
         world_x, world_y, grid_x, grid_y = self._screen_to_world_and_grid(x, y)
 
         if self._handle_active_move(world_x, world_y, grid_x, grid_y, org_x, org_y):
             return
 
-        if self._handle_direct_selection(world_x, world_y):
+        if self._handle_direct_selection(world_x_raw, world_y_raw):
             return
+
         if self.object is None:
             self._show_info_popup(
                 "Select an item to deploy first", org_x, org_y, width=200)
@@ -1864,9 +1892,17 @@ class MyGame(arcade.View):
             return True
         return False
 
-    def _screen_to_world_and_grid(self, x, y):
+    def _screen_to_world(self, x, y) -> tuple[float, float]:
+        camera = getattr(self, "camera", None)
+        player = getattr(self, "player", None)
+        if not camera or not player:
+            return x, y
         world_x = x + self.player.center_x - (self.camera.viewport_width / 2)
         world_y = y + self.player.center_y - (self.camera.viewport_height / 2)
+        return world_x, world_y
+
+    def _screen_to_world_and_grid(self, x, y):
+        world_x, world_y = self._screen_to_world(x, y)
 
         grid_x = round(world_x / 50)
         grid_y = round(world_y / 50)

@@ -255,9 +255,14 @@ class UNbuiltBuilding(BaseBuilding):
                 target_cls, "affects_enemy_spawns", True)
 
     def on_build(self, game):
-        while len(self.list_of_people) > 0:
-            person = self.remove()
-            game.People.append(person)
+        # Keep builders inside the finished structure if there's room
+        builders = list(self.list_of_people)
+        self.list_of_people.clear()
+        for person in builders:
+            person.host_building = None
+            person.in_building = False
+            person.health_bar.visible = True
+            person.health_bar.position = self.position
         if self is game.last:
             game.clear_uimanager()
             game.last = Bad_Cannoe(game, 10000000, 1000000)
@@ -272,6 +277,16 @@ class UNbuiltBuilding(BaseBuilding):
         if self.fire:
             self.fire.obj = build
         self.fire = None
+        # Try to move builders into the completed building
+        for person in builders:
+            could_not_add = build.add(person)
+            if could_not_add:
+                # If full, drop the person back into the world
+                person.host_building = None
+                person.in_building = False
+                if person not in game.People:
+                    game.People.append(person)
+
         game.Buildings.append(build)
         if getattr(build, "affects_enemy_spawns", True):
             game.BuildingChangeEnemySpawner(
@@ -780,12 +795,12 @@ class Encampment(BaseBuilding):
     produces = {}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/Training Ground.png")
+        super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/Training Ground 2.png")
         self.trainable = ["Bad Gifter", "Bad Reporter"]
         # Animate the training ground so the encampment feels active
         self.AnimationPlayer = AnimationPlayer(.12)
         self.textures = load_texture_grid(
-            "resources/Sprites/buildings/Training Ground.png",
+            "resources/Sprites/buildings/Training Ground SpriteSheet.png",
             50,
             50,
             15,
