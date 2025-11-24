@@ -795,13 +795,7 @@ class Encampment(BaseBuilding):
         if not hasattr(sprite, "trainingtime"):
             sprite.trainingtime = 0
 
-        if sprite in self.game.People:
-            self.game.People.remove(sprite)
-        self.list_of_people.append(sprite)
-        sprite.health_bar.visible = False
-        sprite.remove_from_sprite_lists()
-        sprite.in_building = True
-        return False
+        return super().add(sprite)
 
     def remove(self):
         if len(self.list_of_people) == 0:
@@ -816,7 +810,9 @@ class Encampment(BaseBuilding):
         self.list_of_people.remove(person)
         person.health_bar.visible = True
         person.in_building = False
+        person.host_building = None
         person.position = self.position
+        person.health_bar.position = person.position
         return person
 
     def clicked_override(self, game):
