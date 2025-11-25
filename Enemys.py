@@ -183,7 +183,7 @@ class BaseEnemy(arcade.Sprite):
 class Child(BaseEnemy):
     def __init__(self, game, x, y, difficulty=1):
         super().__init__("resources/Sprites/enemies/enemy.png", x,
-                         y, 5*difficulty, 10*difficulty, 5, scale=1)
+                         y, 5*difficulty, 1*difficulty, 5, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
 
         self.building_bias = 1
@@ -243,7 +243,7 @@ class Child(BaseEnemy):
 class Enemy_Swordsman(BaseEnemy):
     def __init__(self, x: float, y: float, difficulty=1):
         super().__init__("resources/Sprites/enemies/NightBorneWarrior/NightBorne.png",
-                         x, y, 10*difficulty, 5*difficulty, 40, scale=1)
+                         x, y, 10*difficulty, difficulty, 40, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
         self.textures = load_texture_grid(
             "resources/Sprites/enemies/NightBorneWarrior/NightBorne.png", 80, 80, 22, 111, margin=0)
@@ -310,7 +310,7 @@ class Enemy_Swordsman(BaseEnemy):
 class Enemy_Slinger(BaseEnemy):
     def __init__(self, game, x, y, difficulty=1):
         super().__init__("resources/Sprites/enemies/enemy.png", x,
-                         y, 5*difficulty, 10*difficulty, 325, scale=1)
+                         y, 5*difficulty, difficulty, 325, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
         self.texture = arcade.load_texture("resources/Sprites/enemies/enemy.png")
 
@@ -572,7 +572,7 @@ class Enemy_Slinger(BaseEnemy):
 class Arsonist(BaseEnemy):
     def __init__(self, game, x: float, y: float, difficulty=1):
         super().__init__("resources/Sprites/enemies/child_front.png", x,
-                         y, 5*difficulty, 5*difficulty, 40, scale=1)
+                         y, 5*difficulty, 0.5*difficulty, 40, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
 
         self.front_texture = arcade.load_texture(
@@ -716,7 +716,7 @@ class Arsonist(BaseEnemy):
 class Golem(BaseEnemy):
     def __init__(self, game, x: float, y: float, difficulty=1):
         super().__init__("resources/Sprites/enemies/Stone Golem/Character_sheet.png",
-                         x, y, 10*difficulty, 10*difficulty, 40, scale=.8)
+                         x, y, 10*difficulty, difficulty, 40, scale=.8)
         self.spawn_kwargs = {"difficulty": difficulty}
         textures = load_texture_grid(
             "resources/Sprites/enemies/Stone Golem/Character_sheet.png", 100, 100, 10, 100, margin=0)
@@ -884,7 +884,7 @@ class Golem(BaseEnemy):
 class Wizard(BaseEnemy):
     def __init__(self, game, x: float, y: float, difficulty):
         super().__init__("resources/Sprites/enemies/Wizard/Idle.png",
-                         x, y, 5*difficulty, 2*difficulty, 200, scale=1)
+                         x, y, 5*difficulty, 0.2*difficulty, 200, scale=1)
         self.spawn_kwargs = {"difficulty": difficulty}
 
         self.front_texture = arcade.load_texture(
@@ -1057,7 +1057,7 @@ class Wizard(BaseEnemy):
 class Privateer(BaseEnemy):
     def __init__(self, game, x: float, y: float, difficulty=1):
         super().__init__("resources/Sprites/boat.png",
-                         x, y, 20*difficulty, 5*difficulty, 150, .5)
+                         x, y, 20*difficulty, 0.5*difficulty, 150, .5)
         self.spawn_kwargs = {"difficulty": difficulty}
         self.people_bias = 1
         self.building_bias = 1

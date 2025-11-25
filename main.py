@@ -348,7 +348,7 @@ class MyGame(arcade.View):
             180, (255, 225, 120, 70), outer_alpha=0
         )
 
-        self.science = 300
+        self.science = 0
         self.overall_multiplier = 1
         self.training_speed_multiplier = 1
         self.dissent_multiplier = 1
@@ -362,18 +362,18 @@ class MyGame(arcade.View):
         self.toys_multiplier = 1
         self.building_multiplier = 1
 
-        self.food = 20000
-        self.food_storage = 30000
+        self.food = 2000
+        self.food_storage = 3000
         self.population = 2
-        self.stone = 200
+        self.stone = 10
         self.metal = 0
-        self.wood = 500
-        self.toys = 3000
+        self.wood = 50
+        self.toys = 100
         self.toy_amount = 100
         self.failed_toys = 0
         self.max_toy_failures = 3
 
-        self.mcsStorage = 2000
+        self.mcsStorage = 500
         self.max_pop = 5
 
         self.timer = 0
@@ -2432,9 +2432,10 @@ class MyGame(arcade.View):
                 self.calculate_enemy_path(enemy)
 
     def spawn_enemy(self):
-        enemy_pick = "Enemy Arsonist"
-        enemy_class = {"Basic Enemy": Child, "Privateer": Privateer, "Enemy Archer": Enemy_Slinger,
-                       "Enemy Arsonist": Arsonist, "Enemy Wizard": Wizard}[enemy_pick]
+        enemies = ["Child", "Privateer", "Archer", "Arsonist", "Wizard"]
+        enemy_pick = random.choice(enemies)
+        enemy_class = {"Child": Child, "Privateer": Privateer, "Archer": Enemy_Slinger,
+                       "Arsonist": Arsonist, "Wizard": Wizard}[enemy_pick]
         enemy = enemy_class(self, 0, 0, difficulty=self.hardness_multiplier)
         spawn_pos = self.EnemySpawnPos(enemy.movelist)
         if spawn_pos is None:
@@ -2880,7 +2881,7 @@ class MyGame(arcade.View):
         )
 
         grid2 = create_grid(x_line, y_line)
-        initialize_grid(grid2, chance=0.48)
+        initialize_grid(grid2, chance=0.52)
         grid2 = self._run_cellular_phases(
             grid2,
             [
@@ -2890,7 +2891,7 @@ class MyGame(arcade.View):
         )
 
         mountain_mask = create_grid(x_line, y_line)
-        initialize_grid(mountain_mask, chance=0.5)
+        initialize_grid(mountain_mask, chance=0.7)
         mountain_mask = self._run_cellular_phases(
             mountain_mask,
             [
@@ -2912,11 +2913,15 @@ class MyGame(arcade.View):
             berry_bush_factor = .75
             tree_factor = .3
 
-        self.graph = LivingMap(x_line, y_line, x_line*y_line, tilesize=50)
-        self.graphlength = x_line+1
+        self.graph = LivingMap(x_line, y_line, x_line * y_line, tilesize=50)
+        self.graphlength = x_line + 1
+        self.Lands = arcade.SpriteList(use_spatial_hash=True)
+        self.Stones = arcade.SpriteList(use_spatial_hash=True)
+        self.Seas = arcade.SpriteList(use_spatial_hash=True)
 
         transition_stone_factor = min(0.25, max(0.03, stone_factor * 0.15))
 
+        graph_data = self.graph.graph
         for row in range(y_line):
             for column in range(x_line):
                 world_x = row * 50
@@ -2928,24 +2933,21 @@ class MyGame(arcade.View):
                     and mountain_seed
                 )
                 if is_core:
-                    self.addStone(world_x, world_y)
+                    graph_data[row][column] = 1
                 elif grid[row][column] == 0:
-                    self.addSea(world_x, world_y)
+                    graph_data[row][column] = 2
                 else:
                     if mountain_seed and random.random() < transition_stone_factor:
-                        self.addStone(world_x, world_y)
+                        graph_data[row][column] = 1
                     else:
-                        self.addLand(world_x, world_y)
+                        graph_data[row][column] = 0
 
-        # Smooth out stray tiles to avoid checkerboard gaps inside mountain ranges.
-        graph_data = getattr(self.graph, "graph", None)
-        if graph_data:
-            width = len(graph_data)
-            height = len(graph_data[0]) if width else 0
-            if width > 2 and height > 2:
-                stones_to_land: list[tuple[int, int]] = []
-                land_to_stone: list[tuple[int, int]] = []
-                for gx in range(1, width - 1):
+        width = len(graph_data)
+        height = len(graph_data[0]) if width else 0
+        if width > 2 and height > 2:
+            stones_to_land: list[tuple[int, int]] = []
+            land_to_stone: list[tuple[int, int]] = []
+            for gx in range(1, width - 1):
                     for gy in range(1, height - 1):
                         value = graph_data[gx][gy]
                         stone_neighbors = 0
@@ -2964,156 +2966,141 @@ class MyGame(arcade.View):
                         elif value == 0 and stone_neighbors >= 8:
                             land_to_stone.append((gx, gy))
 
-                def _replace_tile(gx: int, gy: int, value: int) -> None:
-                    current_value = graph_data[gx][gy]
-                    if current_value == value:
-                        return
-                    world_x = gx * 50
-                    world_y = gy * 50
-                    if current_value == 0:
-                        sprites = arcade.get_sprites_at_point(
-                            (world_x, world_y), self.Lands)
-                        for sprite in sprites:
-                            sprite.remove_from_sprite_lists()
-                    elif current_value == 1:
-                        sprites = arcade.get_sprites_at_point(
-                            (world_x, world_y), self.Stones)
-                        for sprite in sprites:
-                            sprite.remove_from_sprite_lists()
-                    elif current_value == 2:
-                        sprites = arcade.get_sprites_at_point(
-                            (world_x, world_y), self.Seas)
-                        for sprite in sprites:
-                            sprite.remove_from_sprite_lists()
+            def _replace_tile(gx: int, gy: int, value: int) -> None:
+                graph_data[gx][gy] = value
 
-                    graph_data[gx][gy] = value
-                    if value == 0:
-                        self.addLand(world_x, world_y)
-                    elif value == 1:
-                        self.addStone(world_x, world_y)
-                    elif value == 2:
-                        self.addSea(world_x, world_y)
+            for gx, gy in stones_to_land:
+                _replace_tile(gx, gy, 0)
 
-                for gx, gy in stones_to_land:
-                    _replace_tile(gx, gy, 0)
+            for gx, gy in land_to_stone:
+                _replace_tile(gx, gy, 1)
 
-                for gx, gy in land_to_stone:
-                    _replace_tile(gx, gy, 1)
-
-                # Remove tiny isolated stone clusters entirely.
-                min_cluster_size = 4
-                visited: set[tuple[int, int]] = set()
-                for gx in range(width):
-                    for gy in range(height):
-                        if graph_data[gx][gy] != 1 or (gx, gy) in visited:
+            # Remove tiny isolated stone clusters entirely.
+            min_cluster_size = 4
+            visited: set[tuple[int, int]] = set()
+            for gx in range(width):
+                for gy in range(height):
+                    if graph_data[gx][gy] != 1 or (gx, gy) in visited:
+                        continue
+                    stack = [(gx, gy)]
+                    component: list[tuple[int, int]] = []
+                    while stack:
+                        cx, cy = stack.pop()
+                        if (cx, cy) in visited:
                             continue
-                        stack = [(gx, gy)]
-                        component: list[tuple[int, int]] = []
-                        while stack:
-                            cx, cy = stack.pop()
-                            if (cx, cy) in visited:
-                                continue
-                            visited.add((cx, cy))
-                            component.append((cx, cy))
-                            for dx in (-1, 0, 1):
-                                for dy in (-1, 0, 1):
-                                    if dx == 0 and dy == 0:
-                                        continue
-                                    nx = cx + dx
-                                    ny = cy + dy
-                                    if nx < 0 or ny < 0 or nx >= width or ny >= height:
-                                        continue
-                                    if graph_data[nx][ny] == 1:
-                                        stack.append((nx, ny))
-                        if len(component) < min_cluster_size:
-                            for cx, cy in component:
-                                _replace_tile(cx, cy, 0)
+                        visited.add((cx, cy))
+                        component.append((cx, cy))
+                        for dx in (-1, 0, 1):
+                            for dy in (-1, 0, 1):
+                                if dx == 0 and dy == 0:
+                                    continue
+                                nx = cx + dx
+                                ny = cy + dy
+                                if nx < 0 or ny < 0 or nx >= width or ny >= height:
+                                    continue
+                                if graph_data[nx][ny] == 1:
+                                    stack.append((nx, ny))
+                    if len(component) < min_cluster_size:
+                        for cx, cy in component:
+                            _replace_tile(cx, cy, 0)
 
-                # Soft-round remaining mountains by iteratively filling concave corners.
-                for _ in range(3):
-                    rounded_to_land: list[tuple[int, int]] = []
-                    rounded_to_stone: list[tuple[int, int]] = []
-                    for gx in range(1, width - 1):
-                        for gy in range(1, height - 1):
-                            stone_neighbors = 0
-                            for dx in (-1, 0, 1):
-                                for dy in (-1, 0, 1):
-                                    if dx == 0 and dy == 0:
-                                        continue
-                                    nx = gx + dx
-                                    ny = gy + dy
-                                    if graph_data[nx][ny] == 1:
-                                        stone_neighbors += 1
-                            if graph_data[gx][gy] == 1 and stone_neighbors <= 2:
-                                rounded_to_land.append((gx, gy))
-                            elif graph_data[gx][gy] == 0 and stone_neighbors >= 6:
-                                rounded_to_stone.append((gx, gy))
-                    if not rounded_to_land and not rounded_to_stone:
-                        break
-                    for cx, cy in rounded_to_land:
-                        _replace_tile(cx, cy, 0)
-                    for cx, cy in rounded_to_stone:
-                        _replace_tile(cx, cy, 1)
+            # Soft-round remaining mountains by iteratively filling concave corners.
+            for _ in range(3):
+                rounded_to_land: list[tuple[int, int]] = []
+                rounded_to_stone: list[tuple[int, int]] = []
+                for gx in range(1, width - 1):
+                    for gy in range(1, height - 1):
+                        stone_neighbors = 0
+                        for dx in (-1, 0, 1):
+                            for dy in (-1, 0, 1):
+                                if dx == 0 and dy == 0:
+                                    continue
+                                nx = gx + dx
+                                ny = gy + dy
+                                if graph_data[nx][ny] == 1:
+                                    stone_neighbors += 1
+                        if graph_data[gx][gy] == 1 and stone_neighbors <= 2:
+                            rounded_to_land.append((gx, gy))
+                        elif graph_data[gx][gy] == 0 and stone_neighbors >= 6:
+                            rounded_to_stone.append((gx, gy))
+                if not rounded_to_land and not rounded_to_stone:
+                    break
+                for cx, cy in rounded_to_land:
+                    _replace_tile(cx, cy, 0)
+                for cx, cy in rounded_to_stone:
+                    _replace_tile(cx, cy, 1)
 
-                # Round coastlines by trimming sharp land spikes while preserving coves,
-                # but gently fill tiny slivers of water almost entirely surrounded by land.
-                for _ in range(4):
-                    land_to_sea: list[tuple[int, int]] = []
-                    sea_to_land: list[tuple[int, int]] = []
-                    for gx in range(1, width - 1):
-                        for gy in range(1, height - 1):
-                            land_neighbors = 0
-                            sea_neighbors = 0
-                            for dx in (-1, 0, 1):
-                                for dy in (-1, 0, 1):
-                                    if dx == 0 and dy == 0:
-                                        continue
-                                    nx = gx + dx
-                                    ny = gy + dy
-                                    val = graph_data[nx][ny]
-                                    if val == 0:
-                                        land_neighbors += 1
-                                    elif val == 2:
-                                        sea_neighbors += 1
-                            if graph_data[gx][gy] == 0:
-                                if sea_neighbors >= 4 and land_neighbors <= 2:
-                                    land_to_sea.append((gx, gy))
-                            elif graph_data[gx][gy] == 2:
-                                if land_neighbors >= 7 and sea_neighbors == 0:
-                                    sea_to_land.append((gx, gy))
-                    if not land_to_sea and not sea_to_land:
-                        break
-                    for cx, cy in land_to_sea:
-                        _replace_tile(cx, cy, 2)
-                    for cx, cy in sea_to_land:
-                        _replace_tile(cx, cy, 0)
-
-                # Expand continents outward so land masses don't collapse into thin strips.
-                for _ in range(3):
-                    sea_to_land: list[tuple[int, int]] = []
-                    for gx in range(1, width - 1):
-                        for gy in range(1, height - 1):
-                            if graph_data[gx][gy] != 2:
-                                continue
-                            land_neighbors = 0
-                            sea_neighbors = 0
-                            for dx in (-1, 0, 1):
-                                for dy in (-1, 0, 1):
-                                    if dx == 0 and dy == 0:
-                                        continue
-                                    nx = gx + dx
-                                    ny = gy + dy
-                                    val = graph_data[nx][ny]
-                                    if val == 0 or val == 1:
-                                        land_neighbors += 1
-                                    elif val == 2:
-                                        sea_neighbors += 1
-                            if land_neighbors >= 5 and sea_neighbors <= 2:
+            # Round coastlines by trimming sharp land spikes while preserving coves,
+            # but gently fill tiny slivers of water almost entirely surrounded by land.
+            for _ in range(4):
+                land_to_sea: list[tuple[int, int]] = []
+                sea_to_land: list[tuple[int, int]] = []
+                for gx in range(1, width - 1):
+                    for gy in range(1, height - 1):
+                        land_neighbors = 0
+                        sea_neighbors = 0
+                        for dx in (-1, 0, 1):
+                            for dy in (-1, 0, 1):
+                                if dx == 0 and dy == 0:
+                                    continue
+                                nx = gx + dx
+                                ny = gy + dy
+                                val = graph_data[nx][ny]
+                                if val == 0:
+                                    land_neighbors += 1
+                                elif val == 2:
+                                    sea_neighbors += 1
+                        if graph_data[gx][gy] == 0:
+                            if sea_neighbors >= 4 and land_neighbors <= 2:
+                                land_to_sea.append((gx, gy))
+                        elif graph_data[gx][gy] == 2:
+                            if land_neighbors >= 7 and sea_neighbors == 0:
                                 sea_to_land.append((gx, gy))
-                    if not sea_to_land:
-                        break
-                    for cx, cy in sea_to_land:
-                        _replace_tile(cx, cy, 0)
+                if not land_to_sea and not sea_to_land:
+                    break
+                for cx, cy in land_to_sea:
+                    _replace_tile(cx, cy, 2)
+                for cx, cy in sea_to_land:
+                    _replace_tile(cx, cy, 0)
+
+            # Expand continents outward so land masses don't collapse into thin strips.
+            for _ in range(3):
+                sea_to_land: list[tuple[int, int]] = []
+                for gx in range(1, width - 1):
+                    for gy in range(1, height - 1):
+                        if graph_data[gx][gy] != 2:
+                            continue
+                        land_neighbors = 0
+                        sea_neighbors = 0
+                        for dx in (-1, 0, 1):
+                            for dy in (-1, 0, 1):
+                                if dx == 0 and dy == 0:
+                                    continue
+                                nx = gx + dx
+                                ny = gy + dy
+                                val = graph_data[nx][ny]
+                                if val == 0 or val == 1:
+                                    land_neighbors += 1
+                                elif val == 2:
+                                    sea_neighbors += 1
+                        if land_neighbors >= 5 and sea_neighbors <= 2:
+                            sea_to_land.append((gx, gy))
+                if not sea_to_land:
+                    break
+                for cx, cy in sea_to_land:
+                    _replace_tile(cx, cy, 0)
+
+        for gx in range(x_line):
+            for gy in range(y_line):
+                world_x = gx * 50
+                world_y = gy * 50
+                tile_value = graph_data[gx][gy]
+                if tile_value == 0:
+                    self.addLand(world_x, world_y)
+                elif tile_value == 1:
+                    self.addStone(world_x, world_y)
+                elif tile_value == 2:
+                    self.addSea(world_x, world_y)
 
         for land in self.Lands:
             if not 0 < land.center_x < 4950 or not 0 < land.center_y < 4950:
@@ -3150,6 +3137,16 @@ class MyGame(arcade.View):
         bias_radius = min(x_line, y_line) * 0.30
         max_attempts = 6000
         attempts = 0
+        def _has_nearby_stone(tile_x: int, tile_y: int, radius: int = 8) -> bool:
+            for dx in range(-radius, radius + 1):
+                for dy in range(-radius, radius + 1):
+                    nx = tile_x + dx
+                    ny = tile_y + dy
+                    if nx < 0 or ny < 0 or nx >= x_line or ny >= y_line:
+                        continue
+                    if self.graph[nx][ny] == 1:
+                        return True
+            return False
         while attempts < max_attempts:
             attempts += 1
             # Sample within a bias radius around the map center, falling back to full range occasionally.
@@ -3159,10 +3156,10 @@ class MyGame(arcade.View):
                 x = int(center_x + math.cos(angle) * radius)
                 y = int(center_y + math.sin(angle) * radius)
             else:
-                x = random.randrange(20, x_line - 20)
-                y = random.randrange(20, y_line - 20)
-            x = max(20, min(x_line - 20, x))
-            y = max(20, min(y_line - 20, y))
+                x = random.randrange(24, x_line - 24)
+                y = random.randrange(24, y_line - 24)
+            x = max(24, min(x_line - 24, x))
+            y = max(24, min(y_line - 24, y))
 
             if self.graph[x][y] != 0:
                 continue
@@ -3172,31 +3169,37 @@ class MyGame(arcade.View):
                     i += 1
             if i < 4:
                 continue
+            tile_x = x
+            tile_y = y
             x *= 50
             y *= 50
 
             NumTilesAround = SearchTilesAround(
                 self.graph, (x, y), allow_diagonal_movement=False, movelist=[0])
-            if NumTilesAround >= 100:
+            if NumTilesAround >= 100 and _has_nearby_stone(tile_x, tile_y):
                 break
         else:
             # Fallback: search entire map if bias search failed.
             while True:
-                x = random.randrange(20, x_line - 20)
-                y = random.randrange(20, y_line - 20)
-                if self.graph[x][y] != 0:
+                tile_x = random.randrange(24, x_line - 24)
+                tile_y = random.randrange(24, y_line - 24)
+                if self.graph[tile_x][tile_y] != 0:
                     continue
                 i = 0
                 for point in ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)):
-                    if self.graph[x + point[0]][y + point[1]] == 0:
+                    if self.graph[tile_x + point[0]][tile_y + point[1]] == 0:
                         i += 1
                 if i < 4:
                     continue
-                x *= 50
-                y *= 50
+                x = tile_x * 50
+                y = tile_y * 50
                 NumTilesAround = SearchTilesAround(
                     self.graph, (x, y), allow_diagonal_movement=False, movelist=[0])
-                if NumTilesAround >= 100:
+                if NumTilesAround >= 125 and _has_nearby_stone(tile_x, tile_y):
+                    break
+                NumTilesAround2 = SearchTilesAround(
+                    self.graph, (x, y), allow_diagonal_movement=True, movelist=[0])
+                if NumTilesAround2 >= 150 and _has_nearby_stone(tile_x, tile_y):
                     break
         self.player = Player(center_x=x, center_y=y)
 
