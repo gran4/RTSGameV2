@@ -42,14 +42,16 @@ def create_grid(width, height):
     return [[0 for _x in range(width)] for _y in range(height)]
 
 
-def initialize_grid(grid):
+def initialize_grid(grid, chance=None):
     """ Randomly set grid locations to on/off based on chance. """
+    if chance is None:
+        chance = CHANCE_TO_START_ALIVE
     height = len(grid)
     width = len(grid[0])
     for row in range(height):
         for column in range(width):
             rand = random.random()
-            if rand <= CHANCE_TO_START_ALIVE:
+            if rand <= chance:
                 grid[row][column] = 1
 
 
@@ -72,8 +74,12 @@ def count_alive_neighbors(grid, x, y):
     return alive_count
 
 
-def do_simulation_step(old_grid, new_grid):
+def do_simulation_step(old_grid, new_grid, death_limit=None, birth_limit=None):
     """ Run a step of the cellular automaton. """
+    if death_limit is None:
+        death_limit = DEATH_LIMIT
+    if birth_limit is None:
+        birth_limit = BIRTH_LIMIT
     height = len(old_grid)
     width = len(old_grid[0])
     # new_grid = create_grid(width, height)
@@ -81,12 +87,12 @@ def do_simulation_step(old_grid, new_grid):
         for y in range(height):
             alive_neighbors = count_alive_neighbors(old_grid, x, y)
             if old_grid[y][x] == 1:
-                if alive_neighbors < DEATH_LIMIT:
+                if alive_neighbors < death_limit:
                     new_grid[y][x] = 0
                 else:
                     new_grid[y][x] = 1
             else:
-                if alive_neighbors > BIRTH_LIMIT:
+                if alive_neighbors > birth_limit:
                     new_grid[y][x] = 1
                 else:
                     new_grid[y][x] = 0

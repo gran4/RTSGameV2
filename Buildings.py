@@ -102,8 +102,9 @@ class BaseBuilding(arcade.Sprite):
         self.remove_from_sprite_lists()
         self.health_bar.remove_from_sprite_lists()
 
-        if self.fire:
-            self.fire.destroy(game)
+        fire_obj = getattr(self, "fire", None)
+        if fire_obj:
+            fire_obj.destroy(game)
 
         self.health = -100
 
@@ -237,6 +238,8 @@ class BaseBuilding(arcade.Sprite):
             self.max_health if self.max_health else 1
         self._pending_occupants = state.get("occupants", [])
         self._state_id = state.get("id")
+        if not hasattr(self, "fire"):
+            self.fire = None
 
 
 class UNbuiltBuilding(BaseBuilding):

@@ -1134,7 +1134,7 @@ class MyGame(arcade.View):
         world_max_x = self.x_line * tile_size
         world_max_y = self.y_line * tile_size
 
-        edge_padding = 750
+        edge_padding = 900
         pad_tiles = max(0, int(edge_padding // tile_size))
         allowed_min_x = max(world_min_x, pad_tiles * tile_size)
         allowed_min_y = max(world_min_y, pad_tiles * tile_size)
@@ -1222,7 +1222,7 @@ class MyGame(arcade.View):
         if world_width <= 0 or world_height <= 0:
             return
         texture_size = 192
-        fog_color = (190, 195, 205, 30)
+        fog_color = (150, 155, 165, 30)
         texture = arcade.make_soft_square_texture(texture_size, fog_color, outer_alpha=0)
         world_area = max(1.0, world_width * world_height)
         density_factor = min(16, max(6, int(world_area / 2_000_000)))
@@ -1230,7 +1230,8 @@ class MyGame(arcade.View):
             sprite = arcade.Sprite(center_x=random.uniform(0, world_width), center_y=random.uniform(0, world_height))
             sprite.texture = texture
             sprite.scale = random.uniform(2.7, 3.4)
-            sprite.alpha = random.randint(50, 90)
+            base_alpha = random.randint(50, 90)
+            sprite.alpha = min(255, int(base_alpha * 1.1))
             sprite.change_x = random.uniform(2.2, 6.5)
             sprite.change_y = random.uniform(-1.8, 1.8)
             sprite._drift_speed = random.uniform(0.45, 1.0)
@@ -1817,7 +1818,8 @@ class MyGame(arcade.View):
 
     def can_move(self, pos):
         x, y = self.camera.viewport_width/2-50, self.camera.viewport_height/2
-        if 750 < pos[0] < self.x_line*50-750 and 750 < pos[1] < self.y_line*50-750:
+        boundary = 900
+        if boundary < pos[0] < self.x_line*50-boundary and boundary < pos[1] < self.y_line*50-boundary:
 
             pass
         else:
@@ -1981,6 +1983,9 @@ class MyGame(arcade.View):
 
     def _force_preview_refresh(self) -> None:
         if self._mouse_position and self.object:
+            # Force the next update to recompute validity even if the cursor hasn't moved.
+            self._preview_grid = None
+            self._preview_last_check = 0.0
             self._update_preview_state(*self._mouse_position)
 
     def _clear_preview_state(self) -> None:
@@ -2131,7 +2136,8 @@ class MyGame(arcade.View):
         if source is None or source.health <= 0:
             self.move = False
             return True
-        if not 750 < world_x < self.x_line * 50 - 750 or not 750 < world_y < self.y_line * 50 - 750:
+        boundary = 900
+        if not boundary < world_x < self.x_line * 50 - boundary or not boundary < world_y < self.y_line * 50 - boundary:
             if isinstance(source, BaseBoat):
                 self._show_info_popup("Out of Bounds", screen_x, screen_y)
             self.move = False
@@ -2504,36 +2510,41 @@ class MyGame(arcade.View):
         if distance3 > 1500:
             bias3 = float("inf")
 
-        if bias1 == float("inf") and bias2 == float("inf") and bias3 == float("inf"):
-            return
-
-        num = min(bias1, bias2, bias3)
-        if num == bias1:
-            obj2 = building
-        elif num == bias2:
-            obj2 = person
-        elif num == bias3:
-            obj2 = boat
-
-        path = _AStarSearch(
-            self.graph,
-            enemy.position,
-            obj2.position,
-            allow_diagonal_movement=True,
-            movelist=enemy.movelist,
-            min_dist=enemy.range,
-        )
-        if not path:
+        attempts = [
+            ("building", building, bias1),
+            ("person", person, bias2),
+            ("boat", boat, bias3),
+        ]
+        path = None
+        target = None
+        while attempts:
+            attempts.sort(key=lambda item: item[2])
+            name, obj2, bias = attempts.pop(0)
+            if bias == float("inf") or obj2 is None:
+                continue
+            path = _AStarSearch(
+                self.graph,
+                enemy.position,
+                obj2.position,
+                allow_diagonal_movement=True,
+                movelist=enemy.movelist,
+                min_dist=enemy.range,
+            )
+            if path:
+                target = (name, obj2)
+                break
+        if not path or not target:
             enemy.check = True
             enemy.path = []
             return
+        name, obj2 = target
         if arcade.get_distance_between_sprites(enemy, obj2) > enemy.range:
             enemy.check = True
-        if num == bias1:
+        if name == "building":
             enemy.focused_on = building
-        elif num == bias2:
+        elif name == "person":
             enemy.focused_on = person
-        elif num == bias3:
+        elif name == "boat":
             enemy.focused_on = boat
 
         if len(path) > 1:
@@ -2835,22 +2846,58 @@ class MyGame(arcade.View):
         for resource in ["wood", "stone", "metal"]:
             variables[resource] *= scale
 
+    def _run_cellular_phases(self, grid, phases):
+        """Apply multiple CA passes with varying rules to shape the grid."""
+        if not grid or not grid[0]:
+            return grid
+        width = len(grid[0])
+        height = len(grid)
+        template = create_grid(width, height)
+        for steps, death_limit, birth_limit in phases:
+            steps = max(0, int(steps))
+            for _ in range(steps):
+                grid, template = do_simulation_step(
+                    grid,
+                    template,
+                    death_limit=death_limit,
+                    birth_limit=birth_limit,
+                )
+        return grid
+
     def generateWorld(self, x_line, y_line, world_gen):
 
         self.x_line = x_line
         self.y_line = y_line
         grid = create_grid(x_line, y_line)
-        initialize_grid(grid)
-
-        template_grid = create_grid(x_line, y_line)
-
-        for step in range(100):
-            grid, template_grid = do_simulation_step(grid, template_grid)
+        initialize_grid(grid, chance=0.5)
+        grid = self._run_cellular_phases(
+            grid,
+            [
+                (6, 4, 5),
+                (4, 3, 4),
+                (3, 3, 3),
+            ],
+        )
 
         grid2 = create_grid(x_line, y_line)
-        initialize_grid(grid2)
-        for step in range(4):
-            grid2, template_grid = do_simulation_step(grid2, template_grid)
+        initialize_grid(grid2, chance=0.48)
+        grid2 = self._run_cellular_phases(
+            grid2,
+            [
+                (5, 4, 5),
+                (4, 3, 4),
+            ],
+        )
+
+        mountain_mask = create_grid(x_line, y_line)
+        initialize_grid(mountain_mask, chance=0.5)
+        mountain_mask = self._run_cellular_phases(
+            mountain_mask,
+            [
+                (4, 3, 4),
+                (3, 3, 3),
+            ],
+        )
 
         if world_gen == "Normal":
             stone_factor = .7
@@ -2874,13 +2921,18 @@ class MyGame(arcade.View):
             for column in range(x_line):
                 world_x = row * 50
                 world_y = column * 50
-                is_core = grid[row][column] == 1 and grid2[row][column] == 1
+                mountain_seed = mountain_mask[row][column] == 1
+                is_core = (
+                    grid[row][column] == 1
+                    and grid2[row][column] == 1
+                    and mountain_seed
+                )
                 if is_core:
                     self.addStone(world_x, world_y)
                 elif grid[row][column] == 0:
                     self.addSea(world_x, world_y)
                 else:
-                    if random.random() < transition_stone_factor:
+                    if mountain_seed and random.random() < transition_stone_factor:
                         self.addStone(world_x, world_y)
                     else:
                         self.addLand(world_x, world_y)
@@ -3035,6 +3087,34 @@ class MyGame(arcade.View):
                         _replace_tile(cx, cy, 2)
                     for cx, cy in sea_to_land:
                         _replace_tile(cx, cy, 0)
+
+                # Expand continents outward so land masses don't collapse into thin strips.
+                for _ in range(3):
+                    sea_to_land: list[tuple[int, int]] = []
+                    for gx in range(1, width - 1):
+                        for gy in range(1, height - 1):
+                            if graph_data[gx][gy] != 2:
+                                continue
+                            land_neighbors = 0
+                            sea_neighbors = 0
+                            for dx in (-1, 0, 1):
+                                for dy in (-1, 0, 1):
+                                    if dx == 0 and dy == 0:
+                                        continue
+                                    nx = gx + dx
+                                    ny = gy + dy
+                                    val = graph_data[nx][ny]
+                                    if val == 0 or val == 1:
+                                        land_neighbors += 1
+                                    elif val == 2:
+                                        sea_neighbors += 1
+                            if land_neighbors >= 5 and sea_neighbors <= 2:
+                                sea_to_land.append((gx, gy))
+                    if not sea_to_land:
+                        break
+                    for cx, cy in sea_to_land:
+                        _replace_tile(cx, cy, 0)
+
         for land in self.Lands:
             if not 0 < land.center_x < 4950 or not 0 < land.center_y < 4950:
                 continue
@@ -3065,9 +3145,24 @@ class MyGame(arcade.View):
     def place_player(self, x_line, y_line):
         self.player = Player(center_x=0, center_y=0)
         t = time.time()
-        while True:
-            x = random.randrange(20, x_line-20)
-            y = random.randrange(20, y_line-20)
+        center_x = x_line / 2
+        center_y = y_line / 2
+        bias_radius = min(x_line, y_line) * 0.30
+        max_attempts = 6000
+        attempts = 0
+        while attempts < max_attempts:
+            attempts += 1
+            # Sample within a bias radius around the map center, falling back to full range occasionally.
+            if attempts % 4 != 0:
+                angle = random.random() * 2 * math.pi
+                radius = bias_radius * math.sqrt(random.random())
+                x = int(center_x + math.cos(angle) * radius)
+                y = int(center_y + math.sin(angle) * radius)
+            else:
+                x = random.randrange(20, x_line - 20)
+                y = random.randrange(20, y_line - 20)
+            x = max(20, min(x_line - 20, x))
+            y = max(20, min(y_line - 20, y))
 
             if self.graph[x][y] != 0:
                 continue
@@ -3084,6 +3179,25 @@ class MyGame(arcade.View):
                 self.graph, (x, y), allow_diagonal_movement=False, movelist=[0])
             if NumTilesAround >= 100:
                 break
+        else:
+            # Fallback: search entire map if bias search failed.
+            while True:
+                x = random.randrange(20, x_line - 20)
+                y = random.randrange(20, y_line - 20)
+                if self.graph[x][y] != 0:
+                    continue
+                i = 0
+                for point in ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)):
+                    if self.graph[x + point[0]][y + point[1]] == 0:
+                        i += 1
+                if i < 4:
+                    continue
+                x *= 50
+                y *= 50
+                NumTilesAround = SearchTilesAround(
+                    self.graph, (x, y), allow_diagonal_movement=False, movelist=[0])
+                if NumTilesAround >= 100:
+                    break
         self.player = Player(center_x=x, center_y=y)
 
         num = 0
@@ -3224,13 +3338,10 @@ class MyGame(arcade.View):
             passenger = random.choice(boat_passengers)
             anchors.append((passenger.center_x, passenger.center_y))
 
-        if len(self.Boats) > 0:
-            boat = self.Boats[random.randrange(0, len(self.Boats))]
-            anchors.append((boat.center_x, boat.center_y))
-
-        player = getattr(self, "player", None)
-        if player is not None:
-            anchors.append((player.center_x, player.center_y))
+        if self.Boats:
+            boat = random.choice(self.Boats)
+            if getattr(boat, "list", []):
+                anchors.append((boat.center_x, boat.center_y))
 
         random.shuffle(anchors)
         for anchor_x, anchor_y in anchors:
@@ -3238,6 +3349,12 @@ class MyGame(arcade.View):
                 anchor_x, anchor_y, allowed_tiles)
             if candidate:
                 return candidate
+
+        for _ in range(200):
+            rand_x = random.randrange(20, self.x_line - 20) * 50
+            rand_y = random.randrange(20, self.y_line - 20) * 50
+            if self.graph[int(rand_x / 50)][int(rand_y / 50)] in allowed_tiles:
+                return rand_x, rand_y
 
         if self.population == 0:
             self.End()
