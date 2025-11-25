@@ -181,6 +181,14 @@ def SearchTilesAround(Map: LivingMap, start: tuple, allow_diagonal_movement: boo
     start = (int(start[0]/tilesize), int(start[1]/tilesize))
 
     graph = Map.graph
+    width = len(graph)
+    height = len(graph[0]) if width else 0
+    if width == 0 or height == 0:
+        return 0
+    if not (0 <= start[0] < width and 0 <= start[1] < height):
+        return 0
+    if graph[start[0]][start[1]] not in movelist:
+        return 0
 
     closed_vertices = set()
     open_vertices = set([start])
@@ -192,14 +200,18 @@ def SearchTilesAround(Map: LivingMap, start: tuple, allow_diagonal_movement: boo
                             (-1, -1), (-1, 1), (1, -1), (1, 1),)
 
     count = 0
-    while len(open_vertices) > 0:
-        count += 1
-        if count > 100:
-            break
-        for current in open_vertices:
-            break
-        open_vertices.remove(current)
+    while open_vertices:
+        current = open_vertices.pop()
+        if current in closed_vertices:
+            continue
+        if not (0 <= current[0] < width and 0 <= current[1] < height):
+            continue
+        if graph[current[0]][current[1]] not in movelist:
+            continue
         closed_vertices.add(current)
+        count += 1
+        if count >= 100:
+            break
 
         neighbours = []
         for new_position in adjacent_squares:  # Adjacent squares
@@ -208,7 +220,7 @@ def SearchTilesAround(Map: LivingMap, start: tuple, allow_diagonal_movement: boo
 
         # Update scores for vertices near the current position
         for neighbour in neighbours:
-            if neighbour[0] < 0 or neighbour[1] < 0 or neighbour[0] >= len(graph) or neighbour[1] >= len(graph[0]):
+            if not (0 <= neighbour[0] < width and 0 <= neighbour[1] < height):
                 continue
 
             if graph[neighbour[0]][neighbour[1]] not in movelist:
