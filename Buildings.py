@@ -723,6 +723,8 @@ class Housing(BaseBuilding):
 
         self.max_length = people_amount
         game.max_pop += self.people_amount
+        # Housing only increases population cap; finished buildings shouldn't accept occupants
+        self.allows_people = False
 # Igloo?
 
 

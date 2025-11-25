@@ -546,7 +546,25 @@ class Person(arcade.Sprite):
 
     def _blocking_buildings_at(self, game, target):
         buildings = arcade.get_sprites_at_point(target, game.Buildings)
-        return [building for building in buildings if not getattr(building, "allows_people", True)]
+        if not buildings:
+            return []
+
+        # Allow a person to stand on top of a building they just constructed so they can walk off of it
+        same_tile = False
+        if target is not None:
+            try:
+                same_tile = abs(target[0] - self.center_x) < 0.5 and abs(target[1] - self.center_y) < 0.5
+            except (TypeError, IndexError):
+                same_tile = False
+
+        blocking = []
+        for building in buildings:
+            if getattr(building, "allows_people", True):
+                continue
+            if same_tile:
+                continue
+            blocking.append(building)
+        return blocking
 
     def _cancel_move(self, game, prev_pos, destination, message):
         self.position = prev_pos

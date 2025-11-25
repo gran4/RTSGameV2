@@ -49231,3 +49231,5 @@ Traceback (most recent call last):
     texture = arcade.load_texture(spec["path"], **load_kwargs)
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 TypeError: load_texture() got an unexpected keyword argument 'width'
+2025-11-25 10:40:41,718 INFO Save slot 1 not found; generating new world
+2025-11-25 11:05:41,844 INFO Save slot 1 not found; generating new world
