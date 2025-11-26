@@ -505,8 +505,17 @@ class MyGame(arcade.View):
         self.lack_popup = None
         self.lack_popup_timer = 0.0
         self.text_visible = True
-        self.under_sprite = arcade.Sprite(
-            "resources/gui/Medium Bulletin.png", scale=2.2, center_x=200, center_y=280)
+        self.hud_panel_modes: tuple[str, ...] = ("summary", "detail")
+        self.active_hud_mode_index: int = 0
+        self.summary_under_sprite = arcade.Sprite(
+            "resources/gui/Large Bulletin.png", scale=1.55, center_x=275, center_y=260)
+        self.detail_under_sprite = arcade.Sprite(
+            "resources/gui/Long Bulletin.png", scale=0.58, center_x=275, center_y=520)
+        self.hud_background_offsets = {
+            "summary": {"x": 0, "y": -50},
+            "detail": {"x": 0, "y": -70},
+        }
+        self.under_sprite = self.summary_under_sprite
         self.update_text(1)
 
         self.selection_panel_position = (200, 110)
@@ -1786,6 +1795,24 @@ class MyGame(arcade.View):
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
 
+        if key == arcade.key.H:
+            modes = getattr(self, "hud_panel_modes", ("summary", "detail"))
+            current_index = getattr(self, "active_hud_mode_index", 0)
+            if not modes:
+                return
+            self.active_hud_mode_index = (current_index + 1) % len(modes)
+            self.update_text(1)
+            info_sprite = UpdatingText(
+                f"HUD: {modes[self.active_hud_mode_index].title()}",
+                self.Alphabet_Textures,
+                .5,
+                width=300,
+                center_x=self.camera.viewport_width / 2,
+                center_y=self.camera.viewport_height - 120,
+            )
+            self.PopUps.append(info_sprite)
+            return
+
         center_x = 0
         center_y = 0
         if key == arcade.key.LEFT or key == arcade.key.A:
@@ -2737,59 +2764,108 @@ class MyGame(arcade.View):
         self.text_sprites.clear()
         y = self.camera.viewport_height-20
 
-        output = f"Wood Count: {floor(self.wood)}"
-        self.text_sprites.append(CustomTextSprite(
-            output, self.Alphabet_Textures, center_x=145, center_y=y, width=500, text_margin=14))
-        y -= 30
+        modes = getattr(self, "hud_panel_modes", ("summary", "detail"))
+        mode_index = getattr(self, "active_hud_mode_index", 0)
+        if not modes:
+            modes = ("summary",)
+            self.hud_panel_modes = modes
+            self.active_hud_mode_index = 0
+        active_mode = modes[min(mode_index, len(modes) - 1)]
+        target_sprite = None
+        if active_mode == "summary":
+            panel_width = 360
+            target_sprite = getattr(self, "summary_under_sprite", None)
+        else:
+            panel_width = 440
+            target_sprite = getattr(self, "detail_under_sprite", None)
+        if target_sprite is not None:
+            self.under_sprite = target_sprite
 
-        output = f"Stone Count: {floor(self.stone)}"
-        self.text_sprites.append(CustomTextSprite(
-            output, self.Alphabet_Textures, center_x=145, center_y=y, width=500, text_margin=14))
-        y -= 30
+        panel_center_x = getattr(getattr(self, "under_sprite", None),
+                                 "center_x", 180)
+        offsets = getattr(self, "hud_background_offsets", {})
+        offset = offsets.get(active_mode, {"x": 0, "y": 0})
+        if isinstance(offset, tuple):
+            offset = {"x": offset[0], "y": offset[1]}
+        if self.under_sprite:
+            panel_center_x = self.under_sprite.center_x
+            if active_mode == "detail":
+                y = self.under_sprite.center_y + 285
+            else:
+                y = self.under_sprite.center_y + 190
+            panel_center_x += offset.get("x", 0)
+            y += offset.get("y", 0)
 
-        output = f"Presents Count: {floor(self.presents)}"
-        self.text_sprites.append(CustomTextSprite(
-            output, self.Alphabet_Textures, center_x=155, center_y=y, width=500, text_margin=14))
-        y -= 30
+        header_gap = 34 if active_mode == "detail" else 39
+        line_gap = 26 if active_mode == "detail" else 31
 
-        output = f"Science Count: {floor(self.science*10)/10}"
-        self.text_sprites.append(CustomTextSprite(
-            output, self.Alphabet_Textures, center_x=175, center_y=y, width=500, text_margin=14))
-        y -= 30
+        def add_header(text: str) -> None:
+            nonlocal y
+            self.text_sprites.append(CustomTextSprite(
+                text, self.Alphabet_Textures, center_x=panel_center_x, center_y=y, width=panel_width, text_margin=12))
+            y -= header_gap
 
-        output = f"Time Alive: {floor(self.time_alive*100)/100}"
-        self.text_sprites.append(CustomTextSprite(
-            output, self.Alphabet_Textures, center_x=160, center_y=y, width=500, text_margin=14))
-        y -= 30
+        def add_line(text: str) -> None:
+            nonlocal y
+            self.text_sprites.append(CustomTextSprite(
+                text, self.Alphabet_Textures, center_x=panel_center_x, center_y=y, width=panel_width, text_margin=12))
+            y -= line_gap
 
-        spawntime = -self.spawnEnemy
-        output = f"Next Wave: {floor(spawntime*100)/100}"
-        self.text_sprites.append(CustomTextSprite(
-            output, self.Alphabet_Textures, center_x=155, center_y=y, width=500, text_margin=14))
-        y -= 30
+        def add_gap(amount: int = 12) -> None:
+            nonlocal y
+            y -= amount
 
-        output = f"Resource Storage:{floor(self.mcsStoragePercent*100)}% full"
-        self.text_sprites.append(CustomTextSprite(
-            output, self.Alphabet_Textures, center_x=200, center_y=y, width=500, text_margin=13))
-        y -= 30
-
-        percent = 0
+        wood = floor(self.wood)
+        stone = floor(self.stone)
+        presents = floor(self.presents)
+        science = round(self.science, 1)
+        storage_ratio = getattr(self, "mcsStoragePercent", 0.0)
+        storage_percent = floor(storage_ratio * 100)
+        presents_percent = 0
         if self.present_quota:
-            percent = floor((self.presents / self.present_quota) * 100)
-        output = f"{percent}% of Presents Made"
-        self.text_sprites.append(CustomTextSprite(
-            output, self.Alphabet_Textures, center_x=190, center_y=y, width=500, text_margin=13))
-        y -= 30
-
+            presents_percent = floor((self.presents / self.present_quota) * 100)
+        alive_time = floor(self.time_alive*100)/100
+        spawntime = -self.spawnEnemy
+        next_wave = floor(spawntime*100)/100
         remaining = max(0.0, CHRISTMAS_TRIGGER_TIME - self.Christmas_timer)
-        output = f"Christmas in {round(remaining*100)/100}"
-        self.text_sprites.append(CustomTextSprite(
-            output, self.Alphabet_Textures, center_x=165, center_y=y, width=500, text_margin=13))
-        y -= 30
+        christmas_time = round(remaining*100)/100
+        housing = f"{self.population}/{self.max_pop}"
+        housing_full = self.population >= self.max_pop
 
-        output = "Present Storage: Unlimited"
-        self.text_sprites.append(CustomTextSprite(
-            output, self.Alphabet_Textures, center_x=180, center_y=y, width=500, text_margin=13))
+        if active_mode == "summary":
+            add_header("SUMMARY (H)")
+            add_line(f"W:{wood}  S:{stone}")
+            add_line(f"P:{presents}  Sci:{science}")
+            add_line(f"Storage:{storage_percent}%  Quota:{presents_percent}%")
+            add_line(f"Wave:{next_wave:.1f}s  Xmas:{christmas_time:.1f}s")
+            add_line(f"Housing: {housing}{' FULL' if housing_full else ''}")
+            add_line("Press H for details")
+            return
+
+        add_header("RESOURCES")
+        add_line(f"Wood: {wood}")
+        add_line(f"Stone: {stone}")
+        add_line(f"Presents: {presents}")
+        add_line(f"Science: {science}")
+
+        add_gap()
+        add_header("PRODUCTION")
+        add_line(f"Storage: {storage_percent}% full")
+        add_line(f"Gift Quota: {presents_percent}%")
+
+        add_gap()
+        add_header("TIMERS")
+        add_line(f"Alive: {alive_time:.2f}s")
+        add_line(f"Next Wave: {next_wave:.2f}s")
+        add_line(f"Christmas: {christmas_time:.2f}s")
+
+        add_gap()
+        add_header("POPULATION")
+        if housing_full:
+            add_line(f"Housing: {housing} FULL")
+        else:
+            add_line(f"Housing: {housing}")
+        add_line("Press H for summary")
 
     def updateStorage(self):
         variables = vars(self)

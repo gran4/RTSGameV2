@@ -622,7 +622,6 @@ class CustomTextSprite(object):
         available_width = self.width if self.width > 0 else float("inf")
         glyph_advance = max(14 * self.scale * 0.8, 1)
         kerning_adjustments = {
-            "/": -glyph_advance * 0.75,
             "+": glyph_advance * 0.55,
             "%": glyph_advance * 0.45,
         }

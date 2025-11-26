@@ -436,13 +436,14 @@
     },
     {
       "name": "Stockpile Planning",
-      "description": "Start each run with extra presents, wood, stone and metal.",
+      "description": "Start each run with extra presents, science, wood, stone, and metal.",
       "effect": {
         "presents": 150,
-        "wood": 20,
-        "stone": 5,
-        "metal": 2,
-        "mcsStorage": 50
+        "science":5,
+        "wood": 10,
+        "stone": 2,
+        "metal": 1,
+        "mcsStorage": 20
       },
       "base_cost": 5,
       "cost_growth": 1.7
