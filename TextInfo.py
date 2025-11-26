@@ -10,8 +10,8 @@ unlocked = {None: False, "Factory": False, "StoneWall": True, "Dormatory": False
             "Research Shop": False, "Person": True, "Cannoe": False, 'Hospital': False, 'Lumbermill': False, 'Quary': False, "Farm": False, "Lab": False, "Snow Tower": False, "Pasture": False, "Pass": True, "Pebble Site": True, "Basic Enemy": True, "Privateer": True, "Enemy Swordsman": False, "Enemy Archer": False, "Enemy Arsonist": False, "Enemy Wizard": False}
 objects = {"Factory": Factory, "StoneWall": StoneWall, "Dormatory": Dormatory, "Metal Wall": MetalWall, "Raindeer Farm": RaindeerFarm, "Work Shop": WorkShop, "BlackSmith": BlackSmith, "Cannoe": Cannoe, "Viking Long Ship": VikingLongShip, "Fire Station": FireStation, "Material Depot": MaterialDepot, "Food Depot": FoodDepot,
            "Igloo": Igloo, "Bad Gifter": BadGifter, "Encampment": Encampment, 'Hospital': Hospital, "Bad Reporter": BadReporter, 'Lumbermill': Lumbermill, 'Quary': Quary, "Research Shop": ResearchShop, "Person": Person, "Farm": Farm, "Bad_Cannoe": Bad_Cannoe, "Lab": Lab, "Snow Tower": SnowTower, "Pass": Pass, "Pebble Site": PebbleSite}
-requirements = {"Factory": {"metal": 5}, "StoneWall": {"stone": 1}, "Dormatory": {"wood": 10, "stone": 2}, "Metal Wall": {"metal": 1}, "Raindeer Farm": {"food": 50, "wood": 5}, "Work Shop": {"wood": 5, "stone": 5}, "BlackSmith": {"wood": 10, "stone": 25}, "Cannoe": {"wood": 5}, "Viking Long Ship": {"wood": 10}, "Fire Station": {}, "Material Depot": {"wood": 5}, "Food Depot": {"wood": 5}, "Igloo": {
-    "wood": 3}, "Encampment": {}, "Bad Gifter": {"toys": 10}, "Bad Reporter": {}, "Research Shop": {"wood": 5, "stone": 2}, 'Hospital': {"wood": 25}, 'Lumbermill': {"wood": 10}, 'Quary': {"wood": 15}, "Person": {"food": 100}, "Farm": {"wood": 15}, "Bad_Cannoe": {}, "Lab": {"wood": 10, "stone": 5}, "Snow Tower": {}, "Pasture": {"wood": 3, "stone": 1}, "Pass": {"wood": 5}, "Pebble Site": {"wood": 5}}
+requirements = {"Factory": {"metal": 5}, "StoneWall": {"stone": 1}, "Dormatory": {"wood": 10, "stone": 2}, "Metal Wall": {"metal": 1}, "Raindeer Farm": {"presents": 50, "wood": 5}, "Work Shop": {"wood": 5, "stone": 5}, "BlackSmith": {"wood": 10, "stone": 25}, "Cannoe": {"wood": 5}, "Viking Long Ship": {"wood": 10}, "Fire Station": {}, "Material Depot": {"wood": 5}, "Food Depot": {"wood": 5}, "Igloo": {
+    "wood": 3}, "Encampment": {}, "Bad Gifter": {"presents": 10}, "Bad Reporter": {}, "Research Shop": {"wood": 5, "stone": 2}, 'Hospital': {"wood": 25}, 'Lumbermill': {"wood": 10}, 'Quary': {"wood": 15}, "Person": {"presents": 100}, "Farm": {"wood": 15}, "Bad_Cannoe": {}, "Lab": {"wood": 10, "stone": 5}, "Snow Tower": {}, "Pasture": {"wood": 3, "stone": 1}, "Pass": {"wood": 5}, "Pebble Site": {"wood": 5}}
 tiles = {"Factory": Land, "StoneWall": Land, "Dormatory": Land, "Metal Wall": Land, "Raindeer Farm": Land, "Work Shop": Land, "BlackSmith": Land, "Cannoe": Sea, "Viking Long Ship": Sea, "Fire Station": Land, "Material Depot": Land, "Food Depot": Land,
          "Igloo": Land, "Encampment": Land, "Research Shop": Land, 'Hospital': Land, 'Lumbermill': Tree, 'Quary': Stone, "Person": Land, "Farm": Land, "Bad_Cannoe": Sea, "Lab": Land, "Snow Tower": Land, "Pasture": Land, "Pass": Stone, "Pebble Site": Stone}
 times = {"Factory": 20, "StoneWall": 2, "Dormatory": 10, "Metal Wall": 5, "Raindeer Farm": 0, "Work Shop": 10, "BlackSmith": 25, "Cannoe": 5, "Viking Long Ship": .2, "Fire Station": .2, "Material Depot": 10, "Food Depot": 5,
@@ -70,11 +70,11 @@ preview_textures = {
     "Pebble Site": {"path": "resources/Sprites/buildings/Pebble Site.png"},
 }
 
-items_to_show = ["food", "wood", "stone", "metal", "science"]
-item_weight = {"food": 1, "wood": 1, "stone": 2, "metal": 4}
+items_to_show = ["presents", "wood", "stone", "metal", "science"]
+item_weight = {"presents": 1, "wood": 1, "stone": 2, "metal": 4}
 
 # make each have alot so you can defualt to creative mode
-prev_frame = {"food": 1000, "wood": 0, "stone": 0, "metal": 0}
+prev_frame = {"presents": 1000, "wood": 0, "stone": 0, "metal": 0}
 descriptions = {
     "Bad Gifter": "Gives bad gifts      ",
     "Bad Reporter": "Gives bad reports      "

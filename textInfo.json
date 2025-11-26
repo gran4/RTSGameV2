@@ -7,7 +7,7 @@
     ["Observation", -200, 200, [], "Increase science by 25%", {"Observatory":""}, 25],
     ["Boat", 400, -100, [1, 2, 3, 7], "Unlock boat", {"Carrier":""}, 50],
 
-    ["fire", -200, 0, [], "Increase wood and food by 15%", {"wood_multiplier":15, "food_multiplier":15}, 10],
+    ["fire", -200, 0, [], "Increase wood and presents by 15%", {"wood_multiplier":15, "presents_multiplier":15}, 10],
 
     ["Grunt Grunt", 100, 100, [4, 6], "Increase wood by 50%", {"wood_multiplier":50}, 25]
 ],
@@ -15,7 +15,7 @@
 
 
 
-    "Selectables":[[-300, 200, "Person", "", {"food":100}, "People"],
+    "Selectables":[[-300, 200, "Person", "", {"presents":100}, "People"],
     [-170, 200, "CavingSite", "", {"wood":10}, "Buildings"],
     [0, 200, "LumberingSite", "", {"wood":10}, "Buildings"],
     [150, 200, "Observatory", "", {"wood":10}, "Buildings"],

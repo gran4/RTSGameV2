@@ -346,14 +346,14 @@ class Lab(BaseBuilding):
 
 
 class WorkShop(BaseBuilding):
-    produces = {"toys": 1}
+    produces = {"presents": 1}
 
     def __init__(self, game, x: float, y: float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/WorkShop.png")
 
 
 class Factory(BaseBuilding):
-    produces = {"toys": 2}
+    produces = {"presents": 2}
 
     def __init__(self, game, x: float, y: float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/Factory.png")
@@ -609,7 +609,7 @@ class SnowTower(BaseBuilding):
 
 
 class RaindeerFarm(BaseBuilding):
-    produces = {"food": 1.4}
+    produces = {"presents": 1.4}
 
     def __init__(self, game, x: float, y: float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/Pasture.png")
@@ -617,7 +617,7 @@ class RaindeerFarm(BaseBuilding):
 
 
 class Farm(BaseBuilding):
-    produces = {"food": 1.6}
+    produces = {"presents": 1.6}
 
     def __init__(self, game, x: float, y: float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/tree_farm.png")
@@ -743,12 +743,12 @@ class FoodDepot(BaseBuilding):
 
     def __init__(self, game, x: float, y: float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/FoodDepot.png")
-        self.food_storage = 75
+        self.presents_storage = 75
 
-        game.food_storage += self.food_storage
+        game.presents_storage += self.presents_storage
 
     def destroy(self, game, menu_destroy=False):
-        game.food_storage -= self.food_storage
+        game.presents_storage -= self.presents_storage
         super().destroy(game, menu_destroy)
 
 

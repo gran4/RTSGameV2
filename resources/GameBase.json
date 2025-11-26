@@ -1,0 +1,75 @@
+{
+  "ScienceMenu": [
+    ["Material Depot", -200, 200, [], "Unlock Material Depots to store materials (but not for presents)", {"Material Depot": "MaterialDepot"}, 3, 5, 1],
+    ["Work Shop", -200, 75, [], "Unlock Work Shops to craft presents", {"Work Shop": ""}, 3, 5, 1],
+    ["Bad Gifters", -200, -50, [], "Unlock Bad Gifters to drive away children", {"Bad Gifter": ""}, 3, 5, 1],
+    ["Raindeer Farming", -200, -175, [], "Unlock Raindeer Farms for presents", {"Raindeer Farm": ""}, 3, 5, 1],
+    ["Lumbermill", 100, 200, ["Material Depot"], "Unlock Lumbermills to get wood more efficiently", {"Lumbermill": ""}, 6, 5, 0],
+    ["Quary", 100, 100, ["Material Depot"], "Unlock Quaries to get stone more efficiently", {"Quary": ""}, 6, 5, 0],
+    ["Research Shop", 100, 0, ["Bad Gifters", "Work Shop"], "Unlock Research Shops to research new techniques", {"Research Shop": ""}, 6, 5, 0],
+    ["Snow Tower", 100, -125, ["Bad Gifters"], "Unlock Snow Towers to attack enemies from buildings", {"Snow Tower": ""}, 6, 6, 0],
+    ["Food Stores", 100, -225, ["Raindeer Farming"], "Unlock Food Stores to store presents better", {"Food Depot": ""}, 6, 10, 0],
+    ["Long Ship", 400, 200, ["Lumbermill"], "Unlock Long Ships", {"Viking Long Ship": ""}, 10, 10, 0],
+    ["Black Smith", 400, 100, ["Lumbermill", "Quary"], "Unlock Black Smiths", {"BlackSmith": ""}, 10, 10, 0],
+    ["Bad Reporters", 400, 0, ["Research Shop"], "Unlock Bad Reporters", {"Bad Reporter": ""}, 10, 10, 0],
+    ["Hospital", 400, -100, ["Research Shop", "Food Stores"], "Unlock Hospitals to heal wounded units", {"Hospital": ""}, 10, 10, 0],
+    ["Farm", 400, -200, ["Food Stores"], "Unlock Farms to farm for presents", {"Farm": ""}, 10, 10, 0],
+    ["Lab", 700, 200, ["Black Smith"], "Unlock Labs to more efficiently research", {"Lab": ""}, 15, 15, 0],
+    ["Factory", 700, 100, ["Black Smith"], "Unlock Factorys to more efficiently make presents", {"Factory": ""}, 15, 15, 0],
+    ["Efficiency Boost", 700, 0, ["Farm"], "Get 20% more efficient", {"overall": 20}, 15, 15, 0],
+    ["Dorms", 700, -100, ["Farm"], "Unlock Dormatories", {"Dormatory": ""}, 15, 15, 0],
+    ["Metal Walls", 1000, 225, ["Factory"], "Unlock Metal Walls", {"Metal Wall": ""}, 20, 20, 0]
+  ],
+  "ProgressUpgradeMenu": [
+    ["science", "Material Depot", -200, 200],
+    ["science", "Work Shop", -200, 75],
+    ["science", "Bad Gifters", -200, -50],
+    ["science", "Raindeer Farming", -200, -175],
+    ["science", "Lumbermill", 100, 200],
+    ["science", "Quary", 100, 100],
+    ["science", "Research Shop", 100, 0],
+    ["science", "Snow Tower", 100, -125],
+    ["science", "Food Stores", 100, -225],
+    ["science", "Long Ship", 400, 200],
+    ["science", "Black Smith", 400, 100],
+    ["science", "Bad Reporters", 400, 0],
+    ["science", "Hospital", 400, -100],
+    ["science", "Farm", 400, -200],
+    ["science", "Lab", 700, 200],
+    ["science", "Factory", 700, 100],
+    ["science", "Efficiency Boost", 700, 0],
+    ["science", "Dorms", 700, -100],
+    ["science", "Metal Walls", 1000, 225]
+  ],
+  "RepeatableUpgrades": [
+    {
+      "name": "Present Production",
+      "description": "Increase present production by 15% per level.",
+      "effect": {"presents_multiplier": 5},
+      "base_cost": 1,
+      "cost_growth": 1.3
+    },
+    {
+      "name": "Present Storage",
+      "description": "Increase present storage by 250 per level.",
+      "effect": {"presents_storage": 250},
+      "base_cost": 1,
+      "cost_growth": 1.25
+    },
+    {
+      "name": "Science Training",
+      "description": "Increase science gain by 10% per level.",
+      "effect": {"science_multiplier": 5},
+      "base_cost": 1,
+      "cost_growth": 1.35
+    },
+    {
+      "name": "History Lessons",
+      "description": "Earn 10% more History at the end of each run per level.",
+      "effect": {"history_gain_multiplier": 5},
+      "base_cost": 1,
+      "cost_growth": 1.4
+    }
+  ],
+  "History": 10000
+}

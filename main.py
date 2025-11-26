@@ -355,23 +355,25 @@ class MyGame(arcade.View):
         self.damage_multiplier = 1
         self.growth_multiplier = 1
         self.science_multiplier = 1
-        self.food_multiplier = 1
+        self.presents_multiplier = 1
+        self.history_gain_multiplier = 1
         self.wood_multiplier = 1
         self.stone_multiplier = 1
         self.metal_multiplier = 1
-        self.toys_multiplier = 1
         self.building_multiplier = 1
 
-        self.food = 2000
-        self.food_storage = 3000
+        self.presents = 2000
+        self.presents_storage = 3000
+        self.presentStoragePercent = self.presents / self.presents_storage if self.presents_storage else 0
         self.population = 2
         self.stone = 10
         self.metal = 0
         self.wood = 50
-        self.toys = 100
-        self.toy_amount = 100
-        self.failed_toys = 0
-        self.max_toy_failures = 3
+        self.present_quota = 100
+        self.failed_presents = 0
+        self.max_present_failures = 3
+
+        self.apply_repeatable_upgrades()
 
         self.mcsStorage = 500
         self.max_pop = 5
@@ -687,27 +689,29 @@ class MyGame(arcade.View):
             history = 2*1.5**(num/60)
         else:
             history = 0
+        history *= getattr(self, "history_gain_multiplier", 1)
         with open("resources/game.json", "r") as read_file:
             try:
                 p = json.load(read_file)
-                p["Money"] += history
+                p["History"] += history
             except:
                 p = {}
-                science_unlocked = []
-                with open("GameBase.json", "r") as read_file:
+                science_unlocked = {}
+                with open("resources/GameBase.json", "r") as read_file:
                     menu_config = json.load(read_file)
 
-                for node in menu_config["ScienceMenu"]:
-                    science_unlocked.append(bool(node[8]))
+                for idx, node in enumerate(menu_config["ScienceMenu"]):
+                    name = node[0] or f"science_{idx}"
+                    science_unlocked[name] = bool(node[8])
                 p["science_menu"] = science_unlocked
-                p["Money"] = history
+                p["History"] = history
 
                 self.graph = None
 
         with open("resources/game.json", "w") as write_file:
             json.dump(p, write_file)
         global prev_frame
-        prev_frame = {"food": 1000, "wood": 0, "stone": 0, "metal": 0}
+        prev_frame = {"presents": 1000, "wood": 0, "stone": 0, "metal": 0}
 
         if self.Christmas_music:
             if self.Christmas_music.player:
@@ -726,7 +730,7 @@ class MyGame(arcade.View):
     def return_to_menu(self, event):
         self._returning_to_menu = True
         global prev_frame
-        prev_frame = {"food": 1000, "wood": 0, "stone": 0, "metal": 0}
+        prev_frame = {"presents": 1000, "wood": 0, "stone": 0, "metal": 0}
 
         if self.Christmas_music:
             if self.Christmas_music.player:
@@ -969,7 +973,7 @@ class MyGame(arcade.View):
     def activate_Christmas(self):
         if self._returning_to_menu:
             return
-        if self.toys < self.toy_amount:
+        if self.presents < self.present_quota:
             self.End("The workshop could not meet the children's demands.")
             return
 
@@ -982,10 +986,10 @@ class MyGame(arcade.View):
         self.window.show_view(TrainingMenu(self, event.source.building))
 
     def apply_christmas_success(self):
-        self.toys -= self.toy_amount
-        if self.toys < 0:
-            self.toys = 0
-        self.toy_amount = ceil(self.toy_amount * 1.08)
+        self.presents -= self.present_quota
+        if self.presents < 0:
+            self.presents = 0
+        self.present_quota = ceil(self.present_quota * 1.08)
         self.Completed_Christmas = False
         self.Christmas_timer = 0
 
@@ -2662,12 +2666,8 @@ class MyGame(arcade.View):
         self.timer += delta_time
         if self.timer > 1:
             self.timer -= 1
-            self.food -= self.population*(sqrt(self.difficulty))
             self.science += .01/(sqrt(self.difficulty))*self.population
             self.science += .03/(sqrt(self.difficulty))
-        if self.food <= 0:
-            self.food = 0
-            self._add_lack("food")
 
         if self.population <= 1:
             self.End("All your elves have fallen. The workshop stands empty.")
@@ -2750,7 +2750,7 @@ class MyGame(arcade.View):
             output, self.Alphabet_Textures, center_x=145, center_y=y, width=500, text_margin=14))
         y -= 30
 
-        output = f"Food Count: {floor(self.food)}"
+        output = f"Presents Count: {floor(self.presents)}"
         self.text_sprites.append(CustomTextSprite(
             output, self.Alphabet_Textures, center_x=155, center_y=y, width=500, text_margin=14))
         y -= 30
@@ -2771,7 +2771,7 @@ class MyGame(arcade.View):
             output, self.Alphabet_Textures, center_x=155, center_y=y, width=500, text_margin=14))
         y -= 30
 
-        output = f"Food Storage:{floor(self.foodStoragePercent*100)}% full"
+        output = f"Present Storage:{floor(self.presentStoragePercent*100)}% full"
         self.text_sprites.append(CustomTextSprite(
             output, self.Alphabet_Textures, center_x=180, center_y=y, width=500, text_margin=13))
         y -= 30
@@ -2782,9 +2782,9 @@ class MyGame(arcade.View):
         y -= 30
 
         percent = 0
-        if self.toy_amount:
-            percent = floor((self.toys / self.toy_amount) * 100)
-        output = f"{floor(self.toys)} Toys, {percent}% of Toys Made"
+        if self.present_quota:
+            percent = floor((self.presents / self.present_quota) * 100)
+        output = f"{floor(self.presents)} Presents, {percent}% of Presents Made"
         self.text_sprites.append(CustomTextSprite(
             output, self.Alphabet_Textures, center_x=190, center_y=y, width=500, text_margin=13))
         y -= 30
@@ -2796,13 +2796,13 @@ class MyGame(arcade.View):
 
     def updateStorage(self):
         variables = vars(self)
-        weight = variables["food"]*item_weight["food"]
-        if weight > self.food_storage and prev_frame["food"] < weight:
-            self._add_lack("food storage")
-            variables["food"] = prev_frame["food"]
-        elif weight > self.food_storage:
-            self._add_lack("food storage")
-        self.foodStoragePercent = weight / self.food_storage
+        weight = variables["presents"]*item_weight["presents"]
+        if weight > self.presents_storage and prev_frame["presents"] < weight:
+            self._add_lack("present storage")
+            variables["presents"] = prev_frame["presents"]
+        elif weight > self.presents_storage:
+            self._add_lack("present storage")
+        self.presentStoragePercent = weight / self.presents_storage
 
         weight = sum(
             variables[resource] * item_weight[resource]
@@ -2828,6 +2828,40 @@ class MyGame(arcade.View):
         variables = vars(self)
         for resource in item_weight.keys():
             prev_frame[resource] = variables[resource]
+
+    def apply_repeatable_upgrades(self):
+        try:
+            with open("resources/game.json", "r") as read_file:
+                data = json.load(read_file)
+        except:
+            data = {}
+        stored_levels = data.get("repeatable_upgrades", {})
+        self.meta_upgrade_levels = {
+            name: int(level) for name, level in stored_levels.items()}
+        for definition in load_repeatable_upgrade_defs():
+            name = definition.get("name", "")
+            level = int(self.meta_upgrade_levels.get(name, 0))
+            if level <= 0:
+                continue
+            for attr, amount in definition.get("effect", {}).items():
+                self._apply_repeatable_upgrade_effect(attr, amount, level)
+        if self.presents_storage:
+            self.presentStoragePercent = min(
+                1, self.presents / self.presents_storage)
+
+    def _apply_repeatable_upgrade_effect(self, attr: str, amount: float, level: int):
+        if attr.endswith("_multiplier") or attr == "history_gain_multiplier":
+            current = getattr(self, attr, 1)
+            factor = (1 + amount/100.0) ** level
+            setattr(self, attr, current * factor)
+        elif attr.endswith("_storage"):
+            current = getattr(self, attr, 0)
+            current += amount * level
+            setattr(self, attr, current)
+        else:
+            current = getattr(self, attr, 0)
+            current += amount * level
+            setattr(self, attr, current)
 
     def _cap_resources_to_storage(self, variables):
         """Scale resources down to fit inside the current storage capacity."""
@@ -4416,15 +4450,15 @@ class ChristmasMenu(arcade.View):
         self.texts: list[CustomTextSprite] = []
         self._text_offsets: list[tuple[float, float]] = []
 
-        quota = self.game_view.toy_amount
-        toys_made = floor(self.game_view.toys)
-        diff = toys_made - quota
+        quota = self.game_view.present_quota
+        presents_made = floor(self.game_view.presents)
+        diff = presents_made - quota
         next_quota = ceil(quota * 1.08)
 
-        summary = f"We crafted {toys_made} toys. Quota was {quota}."
+        summary = f"We crafted {presents_made} presents. Quota was {quota}."
         details = "We met the children's expectations exactly."
         if diff > 0:
-            details = f"We exceeded the quota by {diff} toy(s)!"
+            details = f"We exceeded the quota by {diff} present(s)!"
 
         future = f"Next year's quota will be {next_quota}."
 
@@ -4484,6 +4518,31 @@ class ChristmasMenu(arcade.View):
         for sprite, (_, offset_y) in zip(self.texts, self._text_offsets):
             sprite.set_position(width / 2, height / 2 + offset_y)
         return super().on_resize(width, height)
+
+
+def state_list_from_save(saved_state, names, defaults, coerce=bool):
+    values = []
+    is_dict = isinstance(saved_state, dict)
+    is_list = isinstance(saved_state, list)
+    for idx, name in enumerate(names):
+        default = defaults[idx]
+        if is_dict:
+            values.append(coerce(saved_state.get(name, default)))
+        elif is_list and idx < len(saved_state):
+            values.append(coerce(saved_state[idx]))
+        else:
+            values.append(default)
+    return values
+
+
+def state_dict_from_list(names, values, coerce=bool):
+    return {name: coerce(values[idx]) for idx, name in enumerate(names)}
+
+
+def load_repeatable_upgrade_defs():
+    with open("resources/GameBase.json", "r") as read_file:
+        menu_config = json.load(read_file)
+    return menu_config.get("RepeatableUpgrades", [])
 
 
 class startMenu(arcade.View):
@@ -4598,10 +4657,18 @@ class startMenu(arcade.View):
         self.uimanager.add(wrapper)
 
         start_button = CustomUIFlatButton(
+            self.Alphabet_Textures, click_sound=self.click_sound, text="Upgrades", width=220, height=54)
+        start_button.on_click = self.on_repeatable_upgrade_click
+        wrapper = UIAnchorWidget(
+            anchor_x="left", anchor_y="top", child=start_button, align_x=20, align_y=-80)
+        start_button.wrapper = wrapper
+        self.uimanager.add(wrapper)
+
+        start_button = CustomUIFlatButton(
             self.Alphabet_Textures, click_sound=self.click_sound, text="Volume", width=220, height=54)
         start_button.on_click = self.VolumeMenu
         wrapper = UIAnchorWidget(
-            anchor_x="left", anchor_y="top", child=start_button, align_x=20, align_y=-80)
+            anchor_x="left", anchor_y="top", child=start_button, align_x=20, align_y=-140)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
@@ -4609,7 +4676,7 @@ class startMenu(arcade.View):
             self.Alphabet_Textures, click_sound=self.click_sound, text="Credits", width=220, height=54)
         start_button.on_click = self.CreditsMenu
         wrapper = UIAnchorWidget(
-            anchor_x="left", anchor_y="top", child=start_button, align_x=20, align_y=-140)
+            anchor_x="left", anchor_y="top", child=start_button, align_x=20, align_y=-200)
         start_button.wrapper = wrapper
         self.uimanager.add(wrapper)
 
@@ -4622,21 +4689,71 @@ class startMenu(arcade.View):
         try:
             with open("resources/game.json", "r") as read_file:
                 p = json.load(read_file)
-            return
         except:
-            pass
+            p = {"History": 0}
 
-        with open("resources/game.json", "w") as write_file:
-            p = {}
-            p["Money"] = 0
-            p["science_menu"] = self.load_sciences()
-            json.dump(p, write_file)
+        changed = False
+
+        science_names, science_defaults = self.load_sciences()
+        science_state = state_list_from_save(
+            p.get("science_menu"), science_names, science_defaults)
+        science_map = state_dict_from_list(science_names, science_state)
+        if p.get("science_menu") != science_map:
+            changed = True
+        p["science_menu"] = science_map
+
+        progress_names, progress_defaults = self.load_progress_upgrades()
+        progress_state = state_list_from_save(
+            p.get("progress_menu"), progress_names, progress_defaults)
+        progress_map = state_dict_from_list(progress_names, progress_state)
+        if p.get("progress_menu") != progress_map:
+            changed = True
+        p["progress_menu"] = progress_map
+
+        repeatable_defs = load_repeatable_upgrade_defs()
+        repeatable_names = [entry.get("name", f"upgrade_{idx}")
+                            for idx, entry in enumerate(repeatable_defs)]
+        repeatable_defaults = [0] * len(repeatable_names)
+        repeatable_state = state_list_from_save(
+            p.get("repeatable_upgrades"), repeatable_names, repeatable_defaults, int)
+        repeatable_map = state_dict_from_list(
+            repeatable_names, repeatable_state, int)
+        if p.get("repeatable_upgrades") != repeatable_map:
+            changed = True
+        p["repeatable_upgrades"] = repeatable_map
+
+        if changed:
+            with open("resources/game.json", "w") as write_file:
+                json.dump(p, write_file)
 
     def load_sciences(self):
-        with open("resources/GameBase copy.json", "r") as read_file:
-            ScienceMenuInfo = json.load(read_file)["ScienceMenu"]
+        with open("resources/GameBase.json", "r") as read_file:
+            science_nodes = json.load(read_file)["ScienceMenu"]
 
-        return [bool(node[8]) for node in ScienceMenuInfo]
+        names = []
+        defaults = []
+        for idx, node in enumerate(science_nodes):
+            name = node[0] or f"science_{idx}"
+            names.append(name)
+            defaults.append(bool(node[8]))
+        return names, defaults
+
+    def load_progress_upgrades(self):
+        with open("resources/GameBase.json", "r") as read_file:
+            menu_config = json.load(read_file)
+        upgrade_menu = menu_config.get("ProgressUpgradeMenu", [])
+        names = []
+        defaults = []
+        for idx, entry in enumerate(upgrade_menu):
+            if not isinstance(entry, list) or not entry:
+                continue
+            if entry[0] != "progress":
+                continue
+            name = entry[1] or f"progress_{idx}"
+            names.append(name)
+            default_value = entry[9] if len(entry) > 9 else 0
+            defaults.append(bool(default_value))
+        return names, defaults
 
     def on_resize(self, width: int, height: int):
         base_width, base_height = 1440, 900
@@ -4724,6 +4841,21 @@ class startMenu(arcade.View):
         scienceMenu = UpgradeScienceMenu(self)
         self.uimanager.disable()
         self.window.show_view(scienceMenu)
+
+    def on_repeatable_upgrade_click(self, event):
+        if self.button == 4:
+            window = arcade.get_window()
+            width, height = window.width, window.height
+            x = event.source.wrapper.align_x
+            y = height+event.source.wrapper.align_y
+            text = UpdatingText("Invest History into repeatable bonuses.", self.Alphabet_Textures, 10,
+                                center_x=x, center_y=y, width=320, Background_Texture="resources/gui/Small Text Background.png")
+            self.texts.append(text)
+            return
+
+        upgrades = RepeatableUpgradeMenu(self)
+        self.uimanager.disable()
+        self.window.show_view(upgrades)
 
     def on_show_view(self):
         super().on_show_view()
@@ -5153,22 +5285,119 @@ class UpgradeScienceMenu(arcade.View):
         try:
             with open("resources/game.json", "r") as read_file:
                 p = json.load(read_file)
-                self.Money = p["Money"]
+                self.history_points = p.get("History", 0)
         except:
             saved = False
-            self.Money = 0
+            self.history_points = 0
+            p = {}
 
         window = arcade.get_window()
         self.texts = []
-        self.text = UpdatingText(f"{floor(self.Money)} History", self.Alphabet_Textures, float(
+        self.text = UpdatingText(f"{floor(self.history_points)} History", self.Alphabet_Textures, float(
             "inf"), scale=4, text_margin=50, center_x=-400+window.width/2, center_y=200+window.height/2)
 
-        with open("resources/GameBase copy.json", "r") as read_file:
+        with open("resources/GameBase.json", "r") as read_file:
             menu_config = json.load(read_file)
-            ScienceMenuInfo = menu_config["ScienceMenu"]
-        id = 0
-        for node in ScienceMenuInfo:
-            label = node[0] or "Unnamed Research"
+        science_nodes = menu_config.get("ScienceMenu", [])
+        upgrade_layout = menu_config.get("ProgressUpgradeMenu", [])
+        if not upgrade_layout:
+            upgrade_layout = [["science", node[0], node[1], node[2]]
+                              for node in science_nodes]
+
+        self._science_defaults = []
+        self._science_names = []
+        self._progress_defaults = []
+        self._progress_names = []
+
+        science_lookup = {}
+        for idx, node in enumerate(science_nodes):
+            node_name = node[0] or f"science_{idx}"
+            science_lookup[node_name] = (node, idx)
+            self._science_names.append(node_name)
+            self._science_defaults.append(bool(node[8]))
+
+        if saved:
+            science_state = state_list_from_save(
+                p.get("science_menu"), self._science_names, self._science_defaults)
+        else:
+            science_state = list(self._science_defaults)
+
+        combined_nodes = []
+
+        for entry in upgrade_layout:
+            if not isinstance(entry, list) or not entry:
+                continue
+            entry_type = entry[0]
+            if entry_type == "science":
+                if len(entry) < 4:
+                    continue
+                name = entry[1]
+                layout_x = entry[2]
+                layout_y = entry[3]
+                node_info = science_lookup.get(name)
+                if not node_info:
+                    continue
+                node, idx = node_info
+                combined_nodes.append({
+                    "node": node,
+                    "type": "science",
+                    "save_index": idx,
+                    "display_x": layout_x,
+                    "display_y": layout_y,
+                })
+            elif entry_type == "progress":
+                if len(entry) < 4:
+                    continue
+                name = entry[1]
+                layout_x = entry[2]
+                layout_y = entry[3]
+                connections = entry[4] if len(entry) > 4 else []
+                description = entry[5] if len(entry) > 5 else ""
+                affect = entry[6] if len(entry) > 6 else {}
+                base_cost = entry[7] if len(entry) > 7 else 0
+                history_cost = entry[8] if len(entry) > 8 else 0
+                default_unlocked = entry[9] if len(entry) > 9 else 0
+
+                progress_index = len(self._progress_defaults)
+                self._progress_names.append(name)
+                self._progress_defaults.append(bool(default_unlocked))
+
+                node = [
+                    name,
+                    layout_x,
+                    layout_y,
+                    connections,
+                    description,
+                    affect,
+                    base_cost,
+                    history_cost,
+                    default_unlocked,
+                ]
+                combined_nodes.append({
+                    "node": node,
+                    "type": "progress",
+                    "save_index": progress_index,
+                    "display_x": layout_x,
+                    "display_y": layout_y,
+                })
+
+        if saved:
+            progress_state = state_list_from_save(
+                p.get("progress_menu"), self._progress_names, self._progress_defaults)
+        else:
+            progress_state = list(self._progress_defaults)
+
+        name_to_index = {}
+        for combined_idx, entry in enumerate(combined_nodes):
+            node = entry["node"]
+            name = node[0] or f"upgrade_{entry['type']}_{entry['save_index']}"
+            name_to_index[name] = combined_idx
+
+        for global_id, entry in enumerate(combined_nodes):
+            node = entry["node"]
+            node_label = node[0] or "Unnamed Research"
+            display_x = entry["display_x"]
+            display_y = entry["display_y"]
             badge_cfg = BadgeConfig(
                 text=str(node[7]),
                 texture="resources/gui/wood_circle.png",
@@ -5182,61 +5411,64 @@ class UpgradeScienceMenu(arcade.View):
                 text_margin=8,
             )
             start_button = CustomUIFlatButton(
-                self.Alphabet_Textures, click_sound=self.click_sound,
-                text=label, width=160, height=54, text_margin=12,
+                self.Alphabet_Textures,
+                click_sound=self.click_sound,
+                text=node_label,
+                width=160,
+                height=54,
+                text_margin=12,
                 badge=badge_cfg,
             )
             start_button.on_click = self.on_buttonclick
             wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
-                                     child=start_button, align_x=node[1], align_y=node[2])
-            wrapper.true_x = node[1]
+                                     child=start_button, align_x=display_x, align_y=display_y)
+            wrapper.true_x = display_x
             self.science_buttons.append(wrapper)
 
             wrapper.description = node[4]
-            wrapper.identity = id
-            wrapper.unlocked = False
+            wrapper.identity = global_id
 
             start_button.affect = node[5]
-            start_button.connections = node[3]
             start_button.cost = node[7]
             start_button.wrapper = wrapper
-            connection_names = node[3]
+            start_button.save_type = entry["type"]
+            start_button.save_index = entry["save_index"]
 
-            start_button.connections = [
-                ScienceMenuInfo.index(entry)
-                for entry in ScienceMenuInfo
-                if entry[0] in connection_names
-            ]
+            connections = []
+            for connection_name in node[3]:
+                idx = name_to_index.get(connection_name)
+                if idx is not None:
+                    connections.append(idx)
+            start_button.connections = connections
 
             self.uimanager.add(wrapper)
 
-            if node[8] == 1:
-                start_button.unlocked = True
-            elif saved:
-                start_button.unlocked = p["science_menu"][id]
+            if entry["type"] == "science":
+                state_list = science_state
             else:
-                start_button.unlocked = False
-                convert_button(start_button, self.silver_button_texture)
-                start_button.cost = node[7]
+                state_list = progress_state
+            start_button.unlocked = bool(
+                state_list[start_button.save_index] if start_button.save_index < len(state_list) else False)
 
             if start_button.unlocked:
                 start_button.cost = float("inf")
                 wrapper.identity = float("inf")
-
                 convert_button(start_button, self.gold_button_texture)
                 start_button.set_badge_text(None)
             else:
+                convert_button(start_button, self.silver_button_texture)
                 start_button.set_badge_text(str(node[7]))
 
-            for i in start_button.connections:
-                endx = ScienceMenuInfo[i][1]+370
-                endy = ScienceMenuInfo[i][2]+250
-                line = create_line(
-                    node[1]+370, node[2]+250, endx, endy, (0, 0, 0, 255), line_width=5)
-                line.identity = id
-                self.lineList.append(line)
+            wrapper.unlocked = start_button.unlocked
 
-            id += 1
+            for i in start_button.connections:
+                target_entry = combined_nodes[i]
+                endx = target_entry.get("display_x", target_entry["node"][1]) + 370
+                endy = target_entry.get("display_y", target_entry["node"][2]) + 250
+                line = create_line(
+                    display_x+370, display_y+250, endx, endy, (0, 0, 0, 255), line_width=5)
+                line.identity = global_id
+                self.lineList.append(line)
 
     def on_resize(self, width: int, height: int):
         scale1, scale2 = width/218, height/140
@@ -5268,12 +5500,32 @@ class UpgradeScienceMenu(arcade.View):
             with open("resources/game.json", "r") as read_file:
                 p = json.load(read_file)
         except:
-            p = {"science_menu": []}
+            p = {}
+
+        science_defaults = getattr(self, "_science_defaults", [])
+        progress_defaults = getattr(self, "_progress_defaults", [])
+        science_unlocks = [False] * len(science_defaults)
+        progress_unlocks = [False] * len(progress_defaults)
+
+        for wrapper in self.science_buttons:
+            child = getattr(wrapper, "child", None)
+            if not child:
+                continue
+            save_index = getattr(child, "save_index", None)
+            save_type = getattr(child, "save_type", None)
+            if save_index is None or save_type not in ("science", "progress"):
+                continue
+            if save_type == "science" and save_index < len(science_unlocks):
+                science_unlocks[save_index] = bool(child.unlocked)
+            elif save_type == "progress" and save_index < len(progress_unlocks):
+                progress_unlocks[save_index] = bool(child.unlocked)
+
         with open("resources/game.json", "w") as write_file:
-            p["Money"] = self.Money
-            p["science_menu"] = []
-            for button in self.science_buttons:
-                p["science_menu"].append(button.child.unlocked)
+            p["History"] = self.history_points
+            p["science_menu"] = state_dict_from_list(
+                getattr(self, "_science_names", []), science_unlocks)
+            p["progress_menu"] = state_dict_from_list(
+                getattr(self, "_progress_names", []), progress_unlocks)
             json.dump(p, write_file)
 
         self.uimanager.disable()
@@ -5315,13 +5567,13 @@ class UpgradeScienceMenu(arcade.View):
             return
 
         cost = self.check_backwards(source)
-        if cost <= self.Money:
-            self.Money -= cost
+        if cost <= self.history_points:
+            self.history_points -= cost
             self.unlock_backwards(source)
-            self.text.update_text(f"{floor(self.Money)} History", self.Alphabet_Textures, scale=4,
+            self.text.update_text(f"{floor(self.history_points)} History", self.Alphabet_Textures, scale=4,
                                   text_margin=50, center_x=-400+window.width/2, center_y=200+window.height/2)
         else:
-            text = UpdatingText(f"You need {cost-self.Money} History", self.Alphabet_Textures, .5, scale=1,
+            text = UpdatingText(f"You need {cost-self.history_points} History", self.Alphabet_Textures, .5, scale=1,
                                 center_x=wrapper.align_x+window.width/2, center_y=wrapper.align_y+window.height/2)
             self.texts.append(text)
             return
@@ -5334,6 +5586,8 @@ class UpgradeScienceMenu(arcade.View):
         source.cost = float("inf")
         source.unlocked = True
         source.set_badge_text(None)
+        if hasattr(source, "wrapper") and source.wrapper:
+            source.wrapper.unlocked = True
 
     def check_backwards(self, source):
         if not source or source.unlocked:
@@ -5442,6 +5696,249 @@ class UpgradeScienceMenu(arcade.View):
         return super().on_mouse_press(x, y, button, modifiers)
 
 
+class RepeatableUpgradeMenu(arcade.View):
+    def __init__(self, menu):
+        super().__init__()
+        self.menu = menu
+        self.click_sound = menu.click_sound
+        self.background = arcade.Sprite(
+            "resources/gui/Large Bulletin.png", scale=3.6, center_x=370, center_y=180)
+        self.christmas_background = arcade.Sprite(
+            "resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
+
+        self.Alphabet_Textures = menu.Alphabet_Textures
+        self.uimanager = arcade.gui.UIManager()
+        self.uimanager.enable()
+
+        self.upgrade_defs = load_repeatable_upgrade_defs()
+        try:
+            with open("resources/game.json", "r") as read_file:
+                save_state = json.load(read_file)
+        except:
+            save_state = {"History": 0, "repeatable_upgrades": {}}
+
+        stored_levels = save_state.get("repeatable_upgrades", {})
+        self.history = save_state.get("History", 0)
+        self.upgrade_levels: dict[str, int] = {}
+        for definition in self.upgrade_defs:
+            name = definition.get("name", "Upgrade")
+            self.upgrade_levels[name] = int(stored_levels.get(name, 0))
+        for definition in self.upgrade_defs:
+            name = definition.get("name", "Upgrade")
+            self.upgrade_levels.setdefault(name, 0)
+
+        self.texts: list[CustomTextSprite] = []
+        self._build_texts()
+        self._build_buttons()
+        if not self.upgrade_defs:
+            self._set_status("No repeatable upgrades available yet.")
+
+        menu_button = CustomUIFlatButton(
+            self.Alphabet_Textures, click_sound=self.click_sound, text="Back", width=220, height=54)
+        menu_button.on_click = self._exit
+        wrapper = UIAnchorWidget(anchor_x="left", anchor_y="top",
+                                 child=menu_button, align_x=20, align_y=-20)
+        self.uimanager.add(wrapper)
+
+        window = arcade.get_window()
+        self.on_resize(window.width, window.height)
+
+    def _build_texts(self):
+        window = arcade.get_window()
+        self.history_text = CustomTextSprite(
+            "",
+            self.Alphabet_Textures,
+            center_x=window.width/2,
+            center_y=window.height/2+220,
+            width=800,
+            text_margin=18,
+        )
+        self.history_text.org_x = 0
+        self.history_text.org_y = 220
+        self.texts.append(self.history_text)
+
+        self.status_text = CustomTextSprite(
+            "",
+            self.Alphabet_Textures,
+            center_x=window.width/2,
+            center_y=window.height/2-260,
+            width=800,
+            text_margin=18,
+        )
+        self.status_text.org_x = 0
+        self.status_text.org_y = -260
+        self.texts.append(self.status_text)
+        self._set_status("")
+
+        self.upgrade_texts: dict[str, CustomTextSprite] = {}
+        base_offset = 140
+        for idx, definition in enumerate(self.upgrade_defs):
+            y_offset = base_offset - idx * 90
+            text = CustomTextSprite(
+                "",
+                self.Alphabet_Textures,
+                center_x=window.width/2-100,
+                center_y=window.height/2+y_offset,
+                width=600,
+                text_margin=16,
+            )
+            text.org_x = -100
+            text.org_y = y_offset
+            self.texts.append(text)
+            self.upgrade_texts[definition.get("name", f"Upgrade {idx}")] = text
+
+        self._refresh_history_text()
+
+    def _build_buttons(self):
+        self.upgrade_buttons: dict[str, CustomUIFlatButton] = {}
+        base_offset = 140
+        for idx, definition in enumerate(self.upgrade_defs):
+            y_offset = base_offset - idx * 90
+            button = CustomUIFlatButton(
+                self.Alphabet_Textures,
+                click_sound=self.click_sound,
+                text="Upgrade",
+                width=200,
+                height=70,
+                scale=1.05
+            )
+            button.upgrade_name = definition.get("name", f"Upgrade {idx}")
+            button.definition = definition
+            button.on_click = self._on_upgrade_click
+            wrapper = UIAnchorWidget(anchor_x="center_x", anchor_y="center_y",
+                                     child=button, align_x=380, align_y=y_offset)
+            button.wrapper = wrapper
+            self.uimanager.add(wrapper)
+            self.upgrade_buttons[button.upgrade_name] = button
+
+        self._refresh_upgrade_rows()
+
+    def _calculate_cost(self, definition, level):
+        base_cost = definition.get("base_cost", 10)
+        growth = definition.get("cost_growth", 1.2)
+        return ceil(base_cost * (growth ** level))
+
+    def _format_effect_summary(self, effect: dict[str, float]):
+        parts = []
+        for key, value in effect.items():
+            label = key.replace("_", " ")
+            if key.endswith("_multiplier"):
+                label = label.replace(" multiplier", "")
+                parts.append(f"+{value}% {label} / level")
+            elif key.endswith("_storage"):
+                label = label.replace(" storage", "")
+                parts.append(f"+{value} {label} storage / level")
+            else:
+                parts.append(f"+{value} {label} / level")
+        return "; ".join(parts)
+
+    def _refresh_upgrade_rows(self):
+        for definition in self.upgrade_defs:
+            name = definition.get("name", "Upgrade")
+            level = self.upgrade_levels.get(name, 0)
+            cost = self._calculate_cost(definition, level)
+            description = definition.get("description", "")
+            effect_text = self._format_effect_summary(
+                definition.get("effect", {}))
+            if effect_text:
+                effect_line = f"Effect: {effect_text}"
+            else:
+                effect_line = "Effect: —"
+            label = self.upgrade_texts.get(name)
+            if label:
+                label.update_text(
+                    f"{name} - Level {level}\n{effect_line}\n{description}",
+                    self.Alphabet_Textures,
+                    center_x=label.center_x,
+                    center_y=label.center_y,
+                    width=600,
+                )
+            button = self.upgrade_buttons.get(name)
+            if button:
+                button.set_text(f"Upgrade ({cost} History)",
+                                self.Alphabet_Textures)
+                button.enabled = self.history >= cost
+
+    def _refresh_history_text(self):
+        self.history_text.update_text(
+            f"History: {floor(self.history)}",
+            self.Alphabet_Textures,
+            center_x=self.history_text.center_x,
+            center_y=self.history_text.center_y,
+        )
+
+    def _set_status(self, text: str):
+        self.status_text.update_text(
+            text,
+            self.Alphabet_Textures,
+            center_x=self.status_text.center_x,
+            center_y=self.status_text.center_y,
+        )
+
+    def _on_upgrade_click(self, event):
+        name = getattr(event.source, "upgrade_name", None)
+        definition = getattr(event.source, "definition", None)
+        if not name or not definition:
+            return
+        level = self.upgrade_levels.get(name, 0)
+        cost = self._calculate_cost(definition, level)
+        if self.history < cost:
+            missing = ceil(cost - self.history)
+            self._set_status(f"Need {missing} more History.")
+            return
+        self.history -= cost
+        self.upgrade_levels[name] = level + 1
+        self._set_status(f"{name} upgraded to level {level+1}!")
+        self._refresh_history_text()
+        self._refresh_upgrade_rows()
+
+    def _exit(self, event):
+        self._save_upgrades()
+        self.uimanager.disable()
+        self.menu.uimanager.enable()
+        self.window.show_view(self.menu)
+
+    def _save_upgrades(self):
+        try:
+            with open("resources/game.json", "r") as read_file:
+                data = json.load(read_file)
+        except:
+            data = {}
+        data["History"] = self.history
+        data["repeatable_upgrades"] = self.upgrade_levels
+        with open("resources/game.json", "w") as write_file:
+            json.dump(data, write_file)
+
+    def on_resize(self, width: int, height: int):
+        scale1, scale2 = width/218, height/140
+        larger = max(scale1, scale2)
+        self.background.center_x = width/2-7*larger/3.6
+        self.background.center_y = height/2-75*larger/3.6
+        self.background.scale = larger
+
+        self.christmas_background.position = width/2, height/2
+        self.christmas_background.scale = .25*max(width/1240, height/900)
+
+        for text in self.texts:
+            text.center_x = width/2 + getattr(text, "org_x", 0)
+            text.center_y = height/2 + getattr(text, "org_y", 0)
+        self._refresh_history_text()
+        self._refresh_upgrade_rows()
+        return super().on_resize(width, height)
+
+    def on_draw(self):
+        self.clear()
+        self.background.draw()
+        self.christmas_background.draw()
+        for text in self.texts:
+            text.draw()
+        self.uimanager.draw()
+
+    def on_show_view(self):
+        super().on_show_view()
+        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
+        reset_window_viewport(self.window)
+
 class ScienceMenu(arcade.View):
     def __init__(self, game_view):
 
@@ -5546,11 +6043,20 @@ class ScienceMenu(arcade.View):
         saved = self.game_view.science_list != None
 
         with open("resources/game.json", "r") as read_file:
-            game = json.load(read_file)['science_menu']
+            saved_science = json.load(read_file)['science_menu']
 
-        with open("resources/GameBase copy.json", "r") as read_file:
+        with open("resources/GameBase.json", "r") as read_file:
             buttons = json.load(read_file)
         ScienceMenuInfo = buttons["ScienceMenu"]
+
+        science_names = []
+        science_defaults = []
+        for idx, button in enumerate(ScienceMenuInfo):
+            science_names.append(button[0] or f"science_{idx}")
+            science_defaults.append(bool(button[8]))
+
+        persistent_unlocks = state_list_from_save(
+            saved_science, science_names, science_defaults)
 
         id = 0
         for button in ScienceMenuInfo:
@@ -5612,7 +6118,7 @@ class ScienceMenu(arcade.View):
             self.science_buttons.append(wrapper)
 
             start_button.locked = False
-            if not game[id]:
+            if not persistent_unlocks[id]:
                 start_button._style = {
                     "bg_color": arcade.color.DIM_GRAY, "font_color": arcade.color.BLACK}
                 convert_button(start_button, self.silver_button_texture)
@@ -6395,7 +6901,7 @@ def retrieve_from_Science(world):
         infile = open(f"{world}", 'rb')
         return pickle.load(infile)['science_list']
     except:
-        with open("resources/GameBase copy.json", "r") as read_file:
+        with open("resources/GameBase.json", "r") as read_file:
             menu_config = json.load(read_file)
 
         return [bool(node[8]) for node in menu_config["ScienceMenu"]]
