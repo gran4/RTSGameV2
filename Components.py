@@ -603,7 +603,7 @@ class CustomTextSprite(object):
         self.Sprite_List.clear()
         if not text:
             return
-        words = text.split(' ')
+        words = text.replace('\n', ' \n ').split(' ')
         if scale is not None:
             self.scale = scale
         if center_x is not None:
@@ -621,15 +621,32 @@ class CustomTextSprite(object):
 
         available_width = self.width if self.width > 0 else float("inf")
         glyph_advance = max(14 * self.scale * 0.8, 1)
+        kerning_adjustments = {
+            "/": -glyph_advance * 0.75,
+            "+": glyph_advance * 0.55,
+            "%": glyph_advance * 0.45,
+        }
         line_height = glyph_advance * 2.2
         space_width = glyph_advance
+
+        def _word_width(word: str) -> float:
+            width = 0.0
+            for ch in word:
+                width += glyph_advance + kerning_adjustments.get(ch, 0)
+            return width
 
         lines: list[tuple[list[str], float]] = []
         current_words: list[str] = []
         current_width = 0.0
 
         for index, word in enumerate(words):
-            word_width = len(word) * glyph_advance
+            if word == '\n':
+                if current_words:
+                    lines.append((current_words, current_width))
+                    current_words = []
+                    current_width = 0.0
+                continue
+            word_width = _word_width(word)
             additional_space = space_width if current_words else 0
 
             if current_words and (current_width + additional_space + word_width) > available_width:
@@ -681,6 +698,7 @@ class CustomTextSprite(object):
                     sprite.texture = texture
                     self.Sprite_List.append(sprite)
                     current_x += glyph_advance
+                    current_x += kerning_adjustments.get(character, 0)
 
                 if word_index != len(words_in_line) - 1:
                     current_x += space_width

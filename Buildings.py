@@ -738,18 +738,11 @@ class Dormatory(Housing):
         super().__init__(game, x, y, 10, "resources/Sprites/buildings/Hut.png", 4)
 
 
-class FoodDepot(BaseBuilding):
-    produces = {}
+class CandyShop(BaseBuilding):
+    produces = {"presents": 0.6}
 
     def __init__(self, game, x: float, y: float):
         super().__init__(game, x, y, 10, 0, 0, 1, "resources/Sprites/buildings/FoodDepot.png")
-        self.presents_storage = 75
-
-        game.presents_storage += self.presents_storage
-
-    def destroy(self, game, menu_destroy=False):
-        game.presents_storage -= self.presents_storage
-        super().destroy(game, menu_destroy)
 
 
 class StoneWall(BaseBuilding):

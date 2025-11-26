@@ -363,8 +363,6 @@ class MyGame(arcade.View):
         self.building_multiplier = 1
 
         self.presents = 2000
-        self.presents_storage = 3000
-        self.presentStoragePercent = self.presents / self.presents_storage if self.presents_storage else 0
         self.population = 2
         self.stone = 10
         self.metal = 0
@@ -373,10 +371,9 @@ class MyGame(arcade.View):
         self.failed_presents = 0
         self.max_present_failures = 3
 
-        self.apply_repeatable_upgrades()
-
         self.mcsStorage = 500
         self.max_pop = 5
+        self.apply_repeatable_upgrades()
 
         self.timer = 0
 
@@ -2771,11 +2768,6 @@ class MyGame(arcade.View):
             output, self.Alphabet_Textures, center_x=155, center_y=y, width=500, text_margin=14))
         y -= 30
 
-        output = f"Present Storage:{floor(self.presentStoragePercent*100)}% full"
-        self.text_sprites.append(CustomTextSprite(
-            output, self.Alphabet_Textures, center_x=180, center_y=y, width=500, text_margin=13))
-        y -= 30
-
         output = f"Resource Storage:{floor(self.mcsStoragePercent*100)}% full"
         self.text_sprites.append(CustomTextSprite(
             output, self.Alphabet_Textures, center_x=200, center_y=y, width=500, text_margin=13))
@@ -2784,7 +2776,7 @@ class MyGame(arcade.View):
         percent = 0
         if self.present_quota:
             percent = floor((self.presents / self.present_quota) * 100)
-        output = f"{floor(self.presents)} Presents, {percent}% of Presents Made"
+        output = f"{percent}% of Presents Made"
         self.text_sprites.append(CustomTextSprite(
             output, self.Alphabet_Textures, center_x=190, center_y=y, width=500, text_margin=13))
         y -= 30
@@ -2793,17 +2785,14 @@ class MyGame(arcade.View):
         output = f"Christmas in {round(remaining*100)/100}"
         self.text_sprites.append(CustomTextSprite(
             output, self.Alphabet_Textures, center_x=165, center_y=y, width=500, text_margin=13))
+        y -= 30
+
+        output = "Present Storage: Unlimited"
+        self.text_sprites.append(CustomTextSprite(
+            output, self.Alphabet_Textures, center_x=180, center_y=y, width=500, text_margin=13))
 
     def updateStorage(self):
         variables = vars(self)
-        weight = variables["presents"]*item_weight["presents"]
-        if weight > self.presents_storage and prev_frame["presents"] < weight:
-            self._add_lack("present storage")
-            variables["presents"] = prev_frame["presents"]
-        elif weight > self.presents_storage:
-            self._add_lack("present storage")
-        self.presentStoragePercent = weight / self.presents_storage
-
         weight = sum(
             variables[resource] * item_weight[resource]
             for resource in ["wood", "stone", "metal"]
@@ -2845,10 +2834,6 @@ class MyGame(arcade.View):
                 continue
             for attr, amount in definition.get("effect", {}).items():
                 self._apply_repeatable_upgrade_effect(attr, amount, level)
-        if self.presents_storage:
-            self.presentStoragePercent = min(
-                1, self.presents / self.presents_storage)
-
     def _apply_repeatable_upgrade_effect(self, attr: str, amount: float, level: int):
         if attr.endswith("_multiplier") or attr == "history_gain_multiplier":
             current = getattr(self, attr, 1)
@@ -3229,11 +3214,11 @@ class MyGame(arcade.View):
                 y = tile_y * 50
                 NumTilesAround = SearchTilesAround(
                     self.graph, (x, y), allow_diagonal_movement=False, movelist=[0])
-                if NumTilesAround >= 125 and _has_nearby_stone(tile_x, tile_y):
+                if NumTilesAround >= 100 and _has_nearby_stone(tile_x, tile_y):
                     break
                 NumTilesAround2 = SearchTilesAround(
                     self.graph, (x, y), allow_diagonal_movement=True, movelist=[0])
-                if NumTilesAround2 >= 150 and _has_nearby_stone(tile_x, tile_y):
+                if NumTilesAround2 >= 125 and _has_nearby_stone(tile_x, tile_y):
                     break
         self.player = Player(center_x=x, center_y=y)
 
@@ -5707,6 +5692,7 @@ class RepeatableUpgradeMenu(arcade.View):
             "resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
 
         self.Alphabet_Textures = menu.Alphabet_Textures
+
         self.uimanager = arcade.gui.UIManager()
         self.uimanager.enable()
 
@@ -5840,14 +5826,15 @@ class RepeatableUpgradeMenu(arcade.View):
             description = definition.get("description", "")
             effect_text = self._format_effect_summary(
                 definition.get("effect", {}))
-            if effect_text:
-                effect_line = f"Effect: {effect_text}"
-            else:
-                effect_line = "Effect: —"
+            effect_line = f"Effect: {effect_text}" if effect_text and not description else None
             label = self.upgrade_texts.get(name)
             if label:
+                text_lines = [f"{name} - Level {level}"]
+                detail_line = description if description else effect_line
+                if detail_line and detail_line not in text_lines:
+                    text_lines.append(detail_line)
                 label.update_text(
-                    f"{name} - Level {level}\n{effect_line}\n{description}",
+                    "\n".join(text_lines),
                     self.Alphabet_Textures,
                     center_x=label.center_x,
                     center_y=label.center_y,
