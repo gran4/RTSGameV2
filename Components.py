@@ -65,6 +65,19 @@ def reset_window_viewport(
 
     win.viewport = (left, bottom, viewport_width, viewport_height)
 
+    ctx = getattr(win, "ctx", None)
+    if ctx is not None:
+        viewport_tuple = (int(left), int(bottom),
+                          int(viewport_width), int(viewport_height))
+        try:
+            ctx.viewport = viewport_tuple
+        except Exception:
+            pass
+        try:
+            ctx.scissor = viewport_tuple
+        except Exception:
+            pass
+
 
 def set_scroll_viewport(
     left: float,
@@ -770,6 +783,22 @@ class CustomTextSprite(object):
         for sprite in self.Sprite_List:
             sprite.center_x += dx
             sprite.center_y += dy
+        if self.Background_Sprite:
+            self.Background_Sprite.center_x += dx
+            self.Background_Sprite.center_y += dy
+
+    def translate(self, dx: float, dy: float) -> None:
+        """Move all glyphs and optional background by the specified offset."""
+        if not dx and not dy:
+            return
+        self.center_x += dx
+        self.center_y += dy
+        try:
+            self.Sprite_List.move(dx, dy)
+        except AttributeError:
+            for sprite in self.Sprite_List:
+                sprite.center_x += dx
+                sprite.center_y += dy
         if self.Background_Sprite:
             self.Background_Sprite.center_x += dx
             self.Background_Sprite.center_y += dy

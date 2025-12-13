@@ -12,6 +12,7 @@ import time
 from math import ceil, floor, sqrt
 import math
 from pathlib import Path
+from typing import Any, Optional
 
 import arcade
 from arcade import XYWH
@@ -19,7 +20,7 @@ from arcade import math as arcade_math
 from arcade.draw import draw_rect_filled, draw_rect_outline
 from arcade.shape_list import ShapeElementList, create_line, create_rectangle_filled
 from arcade.gl import geometry
-from arcade.gui import UIFlatButton, UILabel
+from arcade.gui import UIFlatButton, UILabel, UITextureButton
 
 from BackGround import *
 from Buildings import *
@@ -157,7 +158,73 @@ def apply_audio_volume(audio, volume_map):
         source.volume = volume
 
 
+def stretch_background(sprite: arcade.Sprite | None,
+                       width: float,
+                       height: float,
+                       *,
+                       padding: float = 0.15,
+                       min_scale: float = 16.5) -> None:
+    """Ensure a parchment-style background fills the current window."""
+    if sprite is None:
+        return
+    texture = getattr(sprite, "texture", None)
+    tex_w = getattr(texture, "width", 0) or 1
+    tex_h = getattr(texture, "height", 0) or 1
+    base_scale = getattr(sprite, "_base_scale", None)
+    if base_scale is None:
+        raw_scale = getattr(sprite, "scale", 1.0)
+        if isinstance(raw_scale, (tuple, list)):
+            raw_scale = max(raw_scale) if raw_scale else 1.0
+        base_scale = float(raw_scale or 1.0)
+        sprite._base_scale = base_scale
+    try:
+        numeric_min_scale = float(min_scale)
+    except (TypeError, ValueError):
+        if isinstance(min_scale, (tuple, list)):
+            numeric_min_scale = max(min_scale) if min_scale else base_scale
+        else:
+            numeric_min_scale = base_scale
+    min_scale = max(numeric_min_scale, base_scale)
+    sprite.center_x = width / 2
+    sprite.center_y = height / 2
+    width_scale = ((width * (1 + padding)) / tex_w)
+    height_scale = ((height * (1 + padding)) / tex_h)
+    target_scale = max(min_scale, width_scale, height_scale)
+    sprite.scale = target_scale
+
+
+def resize_ui_manager(owner: Any, width: int, height: int) -> None:
+    """Resize the active UIManager if the current view owns one."""
+    manager = getattr(owner, "uimanager", None)
+    if not manager or not hasattr(manager, "on_resize"):
+        return
+    try:
+        manager.on_resize(width, height)
+        surfaces = getattr(manager, "_surfaces", None)
+        if isinstance(surfaces, dict):
+            surfaces.clear()
+    except Exception:
+        logging.exception("Failed to resize UI manager for %s", type(owner).__name__)
+
+
+def show_view_resized(window: arcade.Window, view: arcade.View) -> None:
+    """Switch to a view and immediately apply the current window size."""
+    window.show_view(view)
+    width = getattr(window, "width", 0) or getattr(window, "size", (0, 0))[0]
+    height = getattr(window, "height", 0) or getattr(window, "size", (0, 0))[1]
+    if not width or not height:
+        return
+    if hasattr(view, "on_resize"):
+        try:
+            view.on_resize(width, height)
+        except TypeError:
+            # Some views might not follow the (width, height) signature; ignore them.
+            pass
+    resize_ui_manager(view, width, height)
+
+
 Font = "Wooden Font(1).png"
+PARCHMENT_COLOR = (244, 229, 207)
 
 
 class SnowAmbience:
@@ -320,6 +387,8 @@ class MyGame(arcade.View):
         expand_button.buttons = [slider, label_wrapper]
         self.expand_button = expand_button
         self.speed_bar = expand_button
+        self._configure_toggle_button_icon(
+            expand_button, collapsed_texture="resources/gui/contract.png", expanded_texture="resources/gui/expand.png")
         wrapper = UIAnchorWidget(anchor_x="left", anchor_y="bottom",
                                  child=expand_button, align_x=0, align_y=0)
         expand_button.wrapper = wrapper
@@ -512,10 +581,29 @@ class MyGame(arcade.View):
         self.detail_under_sprite = arcade.Sprite(
             "resources/gui/Long Bulletin.png", scale=0.58, center_x=275, center_y=520)
         self.hud_background_offsets = {
-            "summary": {"x": 0, "y": -50},
-            "detail": {"x": 0, "y": -70},
+            "summary": {"x": 0, "y": 50},
+            "detail": {"x": 0, "y": 0},
         }
+        self._active_hud_mode: str = self.hud_panel_modes[0]
+        self._hud_background_draw_offset: dict[str, float] = {"x": 0.0, "y": 0.0}
         self.under_sprite = self.summary_under_sprite
+        window = arcade.get_window()
+        window_height = getattr(window, "height", 0) or getattr(
+            window, "size", (0, 0))[1]
+        if not window_height:
+            window_height = getattr(getattr(self, "camera", None),
+                                    "viewport_height", 0) or 0
+        if window_height <= 0:
+            window_height = 900
+        self._hud_panel_top_offset = 220.0
+        self._hud_detail_extra_offset = 70.0
+        panel_center_y = window_height - self._hud_panel_top_offset
+        self.summary_under_sprite.center_y = panel_center_y
+        self.detail_under_sprite.center_y = panel_center_y - self._hud_detail_extra_offset
+        self._hud_anchor_center: Optional[tuple[float, float]] = (
+            float(self.under_sprite.center_x),
+            float(self.under_sprite.center_y),
+        )
         self.update_text(1)
 
         self.selection_panel_position = (200, 110)
@@ -534,14 +622,22 @@ class MyGame(arcade.View):
 
         self._active_lack_popup_type: Optional[str] = None
 
-        expand_button = CustomUIFlatButton({}, click_sound=self.click_sound, text=None, width=64, height=64, offset_x=16, offset_y=16,
-                                           Texture="resources/gui/contract.png", Hovered_Texture="resources/gui/contract.png", Pressed_Texture="resources/gui/expand.png")
-        expand_button.on_click = self.expand_button_click
-        expand_button.expand = False
-        self.expand_button = expand_button
+        summary_contract_texture = arcade.load_texture(
+            "resources/gui/contract.png")
+        summary_toggle = UITextureButton(
+            texture=summary_contract_texture,
+            texture_hovered=summary_contract_texture,
+            texture_pressed=summary_contract_texture,
+            scale=2,
+        )
+        summary_toggle.on_click = self.expand_button_click
+        summary_toggle.expand = False
+        self.expand_button = summary_toggle
+        self._configure_toggle_button_icon(
+            summary_toggle, collapsed_texture="resources/gui/contract.png", expanded_texture="resources/gui/expand.png")
         wrapper = UIAnchorWidget(anchor_x="left", anchor_y="top",
-                                 child=expand_button, align_x=0, align_y=-30)
-        expand_button.wrapper = wrapper
+                                 child=summary_toggle, align_x=0, align_y=-30)
+        summary_toggle.wrapper = wrapper
         self.uimanager.add(wrapper)
 
         self.secondary_wrappers = []
@@ -666,16 +762,37 @@ class MyGame(arcade.View):
             sprite.center_x = move_x
             sprite.center_y = y
 
-        self.under_sprite.center_y = height-220
-        y = height-20
-        for text_sprite in self.text_sprites:
-            for sprite in text_sprite.Sprite_List:
-                sprite.center_y = y
-
-            y -= 30
+        panel_offset = getattr(self, "_hud_panel_top_offset", 220.0)
+        detail_extra = getattr(self, "_hud_detail_extra_offset", 50.0)
+        summary_sprite = getattr(self, "summary_under_sprite", None)
+        detail_sprite = getattr(self, "detail_under_sprite", None)
+        panels = [
+            (summary_sprite, 0.0),
+            (detail_sprite, detail_extra),
+        ]
+        anchor_sprite = getattr(self, "under_sprite", None)
+        prev_anchor = getattr(self, "_hud_anchor_center", None)
+        new_anchor = None
+        for sprite, extra in panels:
+            if not sprite:
+                continue
+            sprite.center_y = height - (panel_offset + extra)
+            if sprite is anchor_sprite:
+                new_anchor = (float(sprite.center_x), float(sprite.center_y))
+        if new_anchor and prev_anchor is not None:
+            dx = new_anchor[0] - prev_anchor[0]
+            dy = new_anchor[1] - prev_anchor[1]
+            if dx or dy:
+                for text_sprite in self.text_sprites:
+                    text_sprite.translate(dx, dy)
+        if new_anchor:
+            self._hud_anchor_center = new_anchor
+        if getattr(self, "text_sprites", None):
+            self.update_text(0, force=True)
         self.christmas_background.position = self.player.center_x, self.player.center_y
         self.christmas_background.scale = .25*max(width/1240, height/900)
 
+        resize_ui_manager(self, width, height)
         self._update_water_framebuffer(width, height)
         return super().on_resize(width, height)
 
@@ -727,11 +844,11 @@ class MyGame(arcade.View):
         if force_menu:
             message = reason or "The workshop could not meet the children's demands."
             game_over = GameOverView(self.menu, message)
-            self.window.show_view(game_over)
+            show_view_resized(self.window, game_over)
         else:
             Endmenu = EndMenu(history, self, self.menu,
                               reason, extra_lines=extra_lines)
-            self.window.show_view(Endmenu)
+            show_view_resized(self.window, Endmenu)
 
     def return_to_menu(self, event):
         self._returning_to_menu = True
@@ -746,7 +863,12 @@ class MyGame(arcade.View):
         self.uimanager.disable()
         self.menu.uimanager.enable()
         self.science_list = None
-        self.window.show_view(self.menu)
+        window = arcade.get_window()
+        width = getattr(window, "width", 0) or getattr(window, "size", (0, 0))[0]
+        height = getattr(window, "height", 0) or getattr(window, "size", (0, 0))[1]
+        show_view_resized(self.window, self.menu)
+        if hasattr(self.menu, "on_resize") and width and height:
+            self.menu.on_resize(width, height)
 
     def main_button_click(self, event):
         if event.source.open:
@@ -824,14 +946,14 @@ class MyGame(arcade.View):
         event.source.open = not event.source.open
 
     def expand_button_click(self, event):
-        self.text_visible = event.source.expand
-        event.source.sprite, event.source.hovered_sprite, event.source.pressed_sprite = event.source.pressed_sprite, event.source.pressed_sprite, event.source.sprite
-        event.source.expand = not event.source.expand
+        event.source.expand = not getattr(event.source, "expand", False)
+        self._apply_toggle_button_icon(event.source, event.source.expand)
+        self.text_visible = not event.source.expand
         self.update_text(1)
 
     def speed_bar_change(self, event):
-        event.source.sprite, event.source.hovered_sprite, event.source.pressed_sprite = event.source.pressed_sprite, event.source.pressed_sprite, event.source.sprite
-        event.source.expand = not event.source.expand
+        event.source.expand = not getattr(event.source, "expand", False)
+        self._apply_toggle_button_icon(event.source, event.source.expand)
         if event.source.expand:
             for wrapper in event.source.buttons:
                 wrapper.org_x = wrapper.align_x
@@ -839,6 +961,34 @@ class MyGame(arcade.View):
         else:
             for wrapper in event.source.buttons:
                 wrapper.align_x = wrapper.org_x
+
+    def _configure_toggle_button_icon(self, button, collapsed_texture: str, expanded_texture: str) -> None:
+        textures = {
+            False: arcade.load_texture(collapsed_texture),
+            True: arcade.load_texture(expanded_texture),
+        }
+        button._toggle_icon_textures = textures
+        self._apply_toggle_button_icon(button, getattr(button, "expand", False))
+
+    @staticmethod
+    def _apply_toggle_button_icon(button, expanded: bool) -> None:
+        textures = getattr(button, "_toggle_icon_textures", None)
+        if not textures:
+            return
+        texture = textures.get(expanded)
+        if texture is None:
+            return
+        if hasattr(button, "sprite"):
+            for sprite in (getattr(button, "sprite", None), getattr(button, "hovered_sprite", None), getattr(button, "pressed_sprite", None)):
+                if sprite:
+                    sprite.texture = texture
+        else:
+            if hasattr(button, "texture"):
+                button.texture = texture
+            if hasattr(button, "texture_hovered"):
+                button.texture_hovered = texture
+            if hasattr(button, "texture_pressed"):
+                button.texture_pressed = texture
 
     def switch_val(self, event):
         self.main_button.wrapper.align_x = -400
@@ -960,7 +1110,7 @@ class MyGame(arcade.View):
         self.hide_selection_panel()
 
         self.uimanager.disable()
-        self.window.show_view(ScienceMenu(self))
+        show_view_resized(self.window, ScienceMenu(self))
 
     def on_VolumeMenuclick(self, event):
         self.ui_sprites = arcade.SpriteList()
@@ -970,11 +1120,11 @@ class MyGame(arcade.View):
         self.hide_selection_panel()
 
         self.uimanager.disable()
-        self.window.show_view(VolumeMenu(self))
+        show_view_resized(self.window, VolumeMenu(self))
 
     def on_SelectionMenuclick(self, event):
         self.uimanager.disable()
-        self.window.show_view(BuildingMenu(self))
+        show_view_resized(self.window, BuildingMenu(self))
 
     def activate_Christmas(self):
         if self._returning_to_menu:
@@ -985,11 +1135,11 @@ class MyGame(arcade.View):
 
         self.update_text(1)
         self.uimanager.disable()
-        self.window.show_view(ChristmasMenu(self))
+        show_view_resized(self.window, ChristmasMenu(self))
 
     def training_menu(self, event):
         self.uimanager.disable()
-        self.window.show_view(TrainingMenu(self, event.source.building))
+        show_view_resized(self.window, TrainingMenu(self, event.source.building))
 
     def apply_christmas_success(self):
         self.presents -= self.present_quota
@@ -1003,7 +1153,7 @@ class MyGame(arcade.View):
         self.apply_christmas_success()
         self.uimanager.enable()
         self.center_camera()
-        self.window.show_view(self)
+        show_view_resized(self.window, self)
 
     def person_switch(self, event):
         person = event.source.obj
@@ -1065,7 +1215,15 @@ class MyGame(arcade.View):
         self.ui_sprites.draw()
 
         if self.text_visible:
-            self.under_sprite.draw()
+            offset = getattr(self, "_hud_background_draw_offset", {"x": 0.0, "y": 0.0})
+            sprite = getattr(self, "under_sprite", None)
+            if sprite:
+                original_x, original_y = sprite.center_x, sprite.center_y
+                sprite.center_x = original_x + offset.get("x", 0.0)
+                sprite.center_y = original_y + offset.get("y", 0.0)
+                sprite.draw()
+                sprite.center_x = original_x
+                sprite.center_y = original_y
             for text in self.text_sprites:
                 text.draw()
             if self.lack_text:
@@ -1802,15 +1960,6 @@ class MyGame(arcade.View):
                 return
             self.active_hud_mode_index = (current_index + 1) % len(modes)
             self.update_text(1)
-            info_sprite = UpdatingText(
-                f"HUD: {modes[self.active_hud_mode_index].title()}",
-                self.Alphabet_Textures,
-                .5,
-                width=300,
-                center_x=self.camera.viewport_width / 2,
-                center_y=self.camera.viewport_height - 120,
-            )
-            self.PopUps.append(info_sprite)
             return
 
         center_x = 0
@@ -2755,11 +2904,11 @@ class MyGame(arcade.View):
         self.lack_text = CustomTextSprite(
             string, self.Alphabet_Textures, center_x=x-200, center_y=y, width=200, text_margin=14)
 
-    def update_text(self, delta_time):
-        self.text_timer += delta_time
-
-        if self.text_timer < 1:
-            return
+    def update_text(self, delta_time: float, *, force: bool = False):
+        if not force:
+            self.text_timer += delta_time
+            if self.text_timer < 1:
+                return
         self.text_timer = 0
         self.text_sprites.clear()
         y = self.camera.viewport_height-20
@@ -2781,20 +2930,24 @@ class MyGame(arcade.View):
         if target_sprite is not None:
             self.under_sprite = target_sprite
 
-        panel_center_x = getattr(getattr(self, "under_sprite", None),
-                                 "center_x", 180)
+        self._active_hud_mode = active_mode
         offsets = getattr(self, "hud_background_offsets", {})
         offset = offsets.get(active_mode, {"x": 0, "y": 0})
         if isinstance(offset, tuple):
             offset = {"x": offset[0], "y": offset[1]}
+        self._hud_background_draw_offset = {
+            "x": float(offset.get("x", 0)),
+            "y": float(offset.get("y", 0)),
+        }
+
+        panel_center_x = getattr(getattr(self, "under_sprite", None),
+                                 "center_x", 180)
         if self.under_sprite:
             panel_center_x = self.under_sprite.center_x
             if active_mode == "detail":
-                y = self.under_sprite.center_y + 285
+                y = self.under_sprite.center_y + 255
             else:
                 y = self.under_sprite.center_y + 190
-            panel_center_x += offset.get("x", 0)
-            y += offset.get("y", 0)
 
         header_gap = 34 if active_mode == "detail" else 39
         line_gap = 26 if active_mode == "detail" else 31
@@ -2840,6 +2993,7 @@ class MyGame(arcade.View):
             add_line(f"Wave:{next_wave:.1f}s  Xmas:{christmas_time:.1f}s")
             add_line(f"Housing: {housing}{' FULL' if housing_full else ''}")
             add_line("Press H for details")
+            self._store_hud_anchor_center()
             return
 
         add_header("RESOURCES")
@@ -2866,6 +3020,17 @@ class MyGame(arcade.View):
         else:
             add_line(f"Housing: {housing}")
         add_line("Press H for summary")
+        self._store_hud_anchor_center()
+
+    def _store_hud_anchor_center(self) -> None:
+        sprite = getattr(self, "under_sprite", None)
+        if sprite is None:
+            self._hud_anchor_center = None
+            return
+        self._hud_anchor_center = (
+            float(sprite.center_x),
+            float(sprite.center_y),
+        )
 
     def updateStorage(self):
         variables = vars(self)
@@ -2960,7 +3125,42 @@ class MyGame(arcade.View):
                 )
         return grid
 
+    def _reset_world_generation_lists(self) -> None:
+        """Prepare sprite lists for a fresh world generation attempt."""
+        self.Lands = arcade.SpriteList(use_spatial_hash=True)
+        self.Stones = arcade.SpriteList(use_spatial_hash=True)
+        self.Seas = arcade.SpriteList(use_spatial_hash=True)
+        self.Trees = arcade.SpriteList(use_spatial_hash=True)
+        self.BerryBushes = arcade.SpriteList(use_spatial_hash=True)
+        self.Buildings = arcade.SpriteList(use_spatial_hash=True)
+        self.People = arcade.SpriteList()
+        self.health_bars = arcade.SpriteList()
+        self.Fires = arcade.SpriteList(use_spatial_hash=True)
+        self.overParticles = arcade.SpriteList()
+        self.underParticals = arcade.SpriteList()
+        self.Enemies = arcade.SpriteList()
+        self.EnemyBoats = arcade.SpriteList()
+        self.shoreline_overlay = ShapeElementList()
+        self.graph = None
+
     def generateWorld(self, x_line, y_line, world_gen):
+        max_attempts = getattr(self, "max_worldgen_attempts", 3)
+        for attempt in range(1, max_attempts + 1):
+            self._reset_world_generation_lists()
+            if self._generate_world_attempt(x_line, y_line, world_gen):
+                if attempt > 1:
+                    logging.info(
+                        "World generation succeeded after %s attempts", attempt)
+                return
+            logging.warning(
+                "World generation attempt %s/%s failed to place the player. Retrying...",
+                attempt,
+                max_attempts,
+            )
+        raise RuntimeError(
+            "Unable to generate a playable world after multiple attempts.")
+
+    def _generate_world_attempt(self, x_line, y_line, world_gen):
 
         self.x_line = x_line
         self.y_line = y_line
@@ -3221,17 +3421,25 @@ class MyGame(arcade.View):
                     self.addTree(land.center_x, land.center_y)
             land.prev_texture = land.texture
 
-        self.place_player(x_line, y_line)
+        if not self.place_player(x_line, y_line):
+            return False
         self.test_enemies(x_line, y_line)
+        return True
 
     def place_player(self, x_line, y_line):
+        """Choose a spawn spot with enough open land; regenerate map if it fails."""
         self.player = Player(center_x=0, center_y=0)
-        t = time.time()
         center_x = x_line / 2
         center_y = y_line / 2
-        bias_radius = min(x_line, y_line) * 0.30
-        max_attempts = 6000
+        bias_ratio = getattr(self, "spawn_bias_radius_ratio", 0.35)
+        bias_radius = min(x_line, y_line) * bias_ratio
+        max_attempts = getattr(self, "max_spawn_search_attempts", 8000)
         attempts = 0
+        required_area = getattr(self, "min_spawn_area_tiles", 80)
+        relaxed_area = getattr(
+            self, "min_spawn_area_tiles_relaxed", required_area + 40)
+        require_stone = getattr(self, "spawn_requires_nearby_stone", True)
+
         def _has_nearby_stone(tile_x: int, tile_y: int, radius: int = 8) -> bool:
             for dx in range(-radius, radius + 1):
                 for dy in range(-radius, radius + 1):
@@ -3242,73 +3450,92 @@ class MyGame(arcade.View):
                     if self.graph[nx][ny] == 1:
                         return True
             return False
-        while attempts < max_attempts:
+
+        def _tile_is_open(tile_x: int, tile_y: int) -> bool:
+            if self.graph[tile_x][tile_y] != 0:
+                return False
+            open_neighbors = 0
+            for point in ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)):
+                nx = tile_x + point[0]
+                ny = tile_y + point[1]
+                if 0 <= nx < x_line and 0 <= ny < y_line and self.graph[nx][ny] == 0:
+                    open_neighbors += 1
+            return open_neighbors >= 4
+
+        def _is_viable(tile_x: int, tile_y: int) -> bool:
+            if not _tile_is_open(tile_x, tile_y):
+                return False
+            has_stone = _has_nearby_stone(tile_x, tile_y) if require_stone else True
+            if not has_stone:
+                return False
+            world_x = tile_x * 50
+            world_y = tile_y * 50
+            try:
+                contiguous = SearchTilesAround(
+                    self.graph, (world_x, world_y), allow_diagonal_movement=False, movelist=[0])
+            except Exception:
+                contiguous = 0
+            if contiguous >= required_area:
+                return True
+            try:
+                diagonal = SearchTilesAround(
+                    self.graph, (world_x, world_y), allow_diagonal_movement=True, movelist=[0])
+            except Exception:
+                diagonal = 0
+            return diagonal >= relaxed_area
+
+        spawn_tile: tuple[int, int] | None = None
+        while attempts < max_attempts and spawn_tile is None:
             attempts += 1
-            # Sample within a bias radius around the map center, falling back to full range occasionally.
             if attempts % 4 != 0:
                 angle = random.random() * 2 * math.pi
                 radius = bias_radius * math.sqrt(random.random())
-                x = int(center_x + math.cos(angle) * radius)
-                y = int(center_y + math.sin(angle) * radius)
+                tile_x = int(center_x + math.cos(angle) * radius)
+                tile_y = int(center_y + math.sin(angle) * radius)
             else:
-                x = random.randrange(24, x_line - 24)
-                y = random.randrange(24, y_line - 24)
-            x = max(24, min(x_line - 24, x))
-            y = max(24, min(y_line - 24, y))
-
-            if self.graph[x][y] != 0:
-                continue
-            i = 0
-            for point in ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)):
-                if self.graph[x+point[0]][y+point[1]] == 0:
-                    i += 1
-            if i < 4:
-                continue
-            tile_x = x
-            tile_y = y
-            x *= 50
-            y *= 50
-
-            NumTilesAround = SearchTilesAround(
-                self.graph, (x, y), allow_diagonal_movement=False, movelist=[0])
-            if NumTilesAround >= 100 and _has_nearby_stone(tile_x, tile_y):
-                break
-        else:
-            # Fallback: search entire map if bias search failed.
-            while True:
                 tile_x = random.randrange(24, x_line - 24)
                 tile_y = random.randrange(24, y_line - 24)
-                if self.graph[tile_x][tile_y] != 0:
-                    continue
-                i = 0
-                for point in ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)):
-                    if self.graph[tile_x + point[0]][tile_y + point[1]] == 0:
-                        i += 1
-                if i < 4:
-                    continue
-                x = tile_x * 50
-                y = tile_y * 50
-                NumTilesAround = SearchTilesAround(
-                    self.graph, (x, y), allow_diagonal_movement=False, movelist=[0])
-                if NumTilesAround >= 100 and _has_nearby_stone(tile_x, tile_y):
-                    break
-                NumTilesAround2 = SearchTilesAround(
-                    self.graph, (x, y), allow_diagonal_movement=True, movelist=[0])
-                if NumTilesAround2 >= 125 and _has_nearby_stone(tile_x, tile_y):
-                    break
+            tile_x = max(24, min(x_line - 24, tile_x))
+            tile_y = max(24, min(y_line - 24, tile_y))
+            if _is_viable(tile_x, tile_y):
+                spawn_tile = (tile_x, tile_y)
+                break
+
+        fallback_attempts = 0
+        fallback_limit = max_attempts * 2
+        while spawn_tile is None and fallback_attempts < fallback_limit:
+            fallback_attempts += 1
+            tile_x = random.randrange(24, x_line - 24)
+            tile_y = random.randrange(24, y_line - 24)
+            if _is_viable(tile_x, tile_y):
+                spawn_tile = (tile_x, tile_y)
+                break
+            if fallback_attempts % 2000 == 0 and relaxed_area > 60:
+                # Gradually relax the requirement so we eventually succeed.
+                relaxed_area = max(60, relaxed_area - 10)
+                required_area = max(50, required_area - 10)
+
+        if spawn_tile is None:
+            logging.warning("Unable to find a suitable spawn tile.")
+            return False
+
+        tile_x, tile_y = spawn_tile
+        x = tile_x * 50
+        y = tile_y * 50
         self.player = Player(center_x=x, center_y=y)
 
         num = 0
         for point in ((0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)):
-            x2 = x/50+point[0]
-            y2 = y/50+point[1]
+            x2 = tile_x+point[0]
+            y2 = tile_y+point[1]
             if self.graph[x2][y2] != 0:
                 continue
             person = Person(self, x2*50, y2*50)
             self.People.append(person)
             num += 1
             if num == 2:
-                return
+                break
+        return True
 
     def test_enemies(self, x_line, y_line):
         t = time.time()
@@ -4326,11 +4553,11 @@ class GameOverView(arcade.View):
             self.menu.uimanager.enable()
         if hasattr(self.menu, "update_audio"):
             self.menu.update_audio()
-        self.window.show_view(self.menu)
+        show_view_resized(self.window, self.menu)
 
     def on_exit(self, _event):
         self.uimanager.disable()
-        self.window.show_view(startMenu())
+        show_view_resized(self.window, startMenu())
 
 
 class EndMenu(arcade.View):
@@ -4435,13 +4662,16 @@ class EndMenu(arcade.View):
 
     def on_resize(self, width: int, height: int):
         scale1, scale2 = width/218, height/140
-        larger = max(scale1, scale2)
-        self.background.center_x = width/2-7*larger/3.6
-        self.background.center_y = height/2-75*larger/3.6
-        self.background.scale = larger
+        scale = min(scale1, scale2)
+        scale = max(scale, 0.1)
+        self.background.center_x = width/2-7*scale/3.6
+        self.background.center_y = height/2-75*scale/3.6
+        self.background.scale = scale
 
         self.christmas_background.position = width/2, height/2
         self.christmas_background.scale = .25*max(width/1240, height/900)
+
+        resize_ui_manager(self, width, height)
 
         y = height/2-35
         for text in self.texts:
@@ -4468,11 +4698,16 @@ class EndMenu(arcade.View):
     def on_return(self, event):
         self.uimanager.disable()
         self.menu.uimanager.enable()
-        self.window.show_view(self.menu)
+        window = arcade.get_window()
+        width = getattr(window, "width", 0) or getattr(window, "size", (0, 0))[0]
+        height = getattr(window, "height", 0) or getattr(window, "size", (0, 0))[1]
+        show_view_resized(self.window, self.menu)
+        if hasattr(self.menu, "on_resize") and width and height:
+            self.menu.on_resize(width, height)
 
     def on_exit(self, _event):
         self.uimanager.disable()
-        self.window.show_view(startMenu())
+        show_view_resized(self.window, startMenu())
 
     def on_show_view(self):
         """Called when this view becomes active."""
@@ -4578,6 +4813,7 @@ class ChristmasMenu(arcade.View):
         self.background.center_y = height / 2
         for sprite, (_, offset_y) in zip(self.texts, self._text_offsets):
             sprite.set_position(width / 2, height / 2 + offset_y)
+        resize_ui_manager(self, width, height)
         return super().on_resize(width, height)
 
 
@@ -4648,7 +4884,7 @@ class startMenu(arcade.View):
         self.Christmas_music.true_volume = self.Christmas_music.volume
 
         self.background = arcade.Sprite(
-            "resources/gui/Large Bulletin.png", scale=3.6, center_x=370, center_y=180)
+            "resources/gui/Large Bulletin.png", scale=12.0, center_x=370, center_y=180)
         self.christmas_background = arcade.Sprite(
             "resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
 
@@ -4834,18 +5070,17 @@ class startMenu(arcade.View):
             center_y=height - 140,
             width=title_width,
         )
-
         return super().on_resize(width, height)
 
     def VolumeMenu(self, event):
         self.uimanager.disable()
         Menu = VolumeMenu(self)
-        self.window.show_view(Menu)
+        show_view_resized(self.window, Menu)
 
     def CreditsMenu(self, event):
         self.uimanager.disable()
         Menu = CreditsMenu(self)
-        self.window.show_view(Menu)
+        show_view_resized(self.window, Menu)
 
     def update_audio(self):
         for audio in self.audios:
@@ -4869,7 +5104,7 @@ class startMenu(arcade.View):
                           world_gen="Normal", difficulty=1)
         else:
             Game = CreateWorld(self, slot)
-        self.window.show_view(Game)
+        show_view_resized(self.window, Game)
 
     def ClearSlot(self, event):
         slot = getattr(event.source, "world_num", 1)
@@ -4886,7 +5121,7 @@ class startMenu(arcade.View):
         self.uimanager.disable()
         Game = MyTutorial(self, file_num=None,
                           world_gen="Normal", difficulty=1)
-        self.window.show_view(Game)
+        show_view_resized(self.window, Game)
 
     def on_scienceMenuclick(self, event):
         if self.button == 4:
@@ -4901,7 +5136,7 @@ class startMenu(arcade.View):
 
         scienceMenu = UpgradeScienceMenu(self)
         self.uimanager.disable()
-        self.window.show_view(scienceMenu)
+        show_view_resized(self.window, scienceMenu)
 
     def on_repeatable_upgrade_click(self, event):
         if self.button == 4:
@@ -4916,11 +5151,11 @@ class startMenu(arcade.View):
 
         upgrades = RepeatableUpgradeMenu(self)
         self.uimanager.disable()
-        self.window.show_view(upgrades)
+        show_view_resized(self.window, upgrades)
 
     def on_show_view(self):
         super().on_show_view()
-        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
+        arcade.set_background_color(PARCHMENT_COLOR)
         reset_window_viewport(self.window)
         self._refresh_world_buttons()
 
@@ -4967,7 +5202,8 @@ class CreateWorld(arcade.View):
     def __init__(self, menu, file_num):
         super().__init__()
         """ This is run once when we switch to this view """
-        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
+        arcade.set_background_color(PARCHMENT_COLOR)
+        self.window.background_color = PARCHMENT_COLOR
         reset_window_viewport(self.window)
         self.click_sound = menu.click_sound
         self.Background_music = menu.Background_music
@@ -4977,7 +5213,7 @@ class CreateWorld(arcade.View):
         self.audio_type_vols = menu.audio_type_vols
 
         self.background = arcade.Sprite(
-            "resources/gui/Large Bulletin.png", scale=3.6, center_x=370, center_y=180)
+            "resources/gui/Large Bulletin.png", scale=16.5, center_x=370, center_y=180)
         self.christmas_background = arcade.Sprite(
             "resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
 
@@ -5101,11 +5337,7 @@ class CreateWorld(arcade.View):
         self.on_resize(window.width, window.height)
 
     def on_resize(self, width: int, height: int):
-        scale1, scale2 = width/218, height/140
-        larger = max(scale1, scale2)
-        self.background.center_x = width/2-7*larger/3.6
-        self.background.center_y = height/2-75*larger/3.6
-        self.background.scale = larger
+        stretch_background(self.background, width, height, padding=0.2)
 
         self.christmas_background.position = width/2, height/2
         self.christmas_background.scale = .25*max(width/1240, height/900)
@@ -5115,6 +5347,7 @@ class CreateWorld(arcade.View):
             text.center_y = height/2+text.org_y
             text.update_text(text.text, self.Alphabet_Textures,
                              center_x=text.center_x, center_y=text.center_y)
+        resize_ui_manager(self, width, height)
         return super().on_resize(width, height)
 
     def Generation_change(self, event):
@@ -5137,17 +5370,17 @@ class CreateWorld(arcade.View):
         self.uimanager.disable()
         Game = MyGame(self.menu, file_num=self.file_num,
                       world_gen=self.gen_list[self.gen_list_index], difficulty=self.difficulty_list_index+1)
-        self.window.show_view(Game)
+        show_view_resized(self.window, Game)
 
     def Return(self, event):
         self.uimanager.disable()
         self.menu.uimanager.enable()
-        self.window.show_view(self.menu)
+        show_view_resized(self.window, self.menu)
 
     def VolumeMenu(self, event):
         self.uimanager.disable()
         Game = VolumeMenu(self)
-        self.window.show_view(Game)
+        show_view_resized(self.window, Game)
 
     def update_audio(self):
         for audio in self.audios:
@@ -5188,7 +5421,7 @@ class CreditsMenu(arcade.View):
         super().__init__(self.window)
 
         self.background = arcade.Sprite(
-            "resources/gui/Large Bulletin.png", scale=3.6, center_x=370, center_y=180)
+            "resources/gui/Large Bulletin.png", scale=16.5, center_x=370, center_y=180)
         self.christmas_background = arcade.Sprite(
             "resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
 
@@ -5230,7 +5463,10 @@ class CreditsMenu(arcade.View):
         self.on_resize(window.width, window.height)
 
     def on_draw(self):
-        self.clear()
+        self.clear(PARCHMENT_COLOR)
+        width = getattr(arcade.get_window(), "width", 0) or self.window.width
+        height = getattr(arcade.get_window(), "height", 0) or self.window.height
+        draw_rect_filled(XYWH(width / 2, height / 2, width, height), PARCHMENT_COLOR)
         self.background.draw()
         self.christmas_background.draw()
 
@@ -5240,21 +5476,18 @@ class CreditsMenu(arcade.View):
         return super().on_draw()
 
     def on_resize(self, width: int, height: int):
-        scale1, scale2 = width/218, height/140
-        larger = max(scale1, scale2)
-        self.background.center_x = width/2-7*larger/3.6
-        self.background.center_y = height/2-75*larger/3.6
-        self.background.scale = larger
+        stretch_background(self.background, width, height, padding=0.18)
 
         self.christmas_background.scale = max(width / 5001, height / 3334)
         self.christmas_background.position = width / 2, height / 2
+        resize_ui_manager(self, width, height)
         return super().on_resize(width, height)
 
     def exit(self, event):
         self.uimanager.disable()
         self.menu.uimanager.enable()
 
-        self.window.show_view(self.menu)
+        show_view_resized(self.window, self.menu)
 
 
 class UpgradeScienceMenu(arcade.View):
@@ -5264,7 +5497,7 @@ class UpgradeScienceMenu(arcade.View):
         self.click_sound = menu.click_sound
         self.menu_view = menu
         self.background = arcade.Sprite(
-            "resources/gui/Large Bulletin.png", scale=3.6, center_x=370, center_y=180)
+            "resources/gui/Large Bulletin.png", scale=16.5, center_x=370, center_y=180)
         self.christmas_background = arcade.Sprite(
             "resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
 
@@ -5310,7 +5543,8 @@ class UpgradeScienceMenu(arcade.View):
         self.x = 0
 
         """ This is run once when we switch to this view """
-        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
+        arcade.set_background_color(PARCHMENT_COLOR)
+        self.window.background_color = PARCHMENT_COLOR
         reset_window_viewport(self.window)
 
         self.uimanager = arcade.gui.UIManager()
@@ -5532,17 +5766,15 @@ class UpgradeScienceMenu(arcade.View):
                 self.lineList.append(line)
 
     def on_resize(self, width: int, height: int):
-        scale1, scale2 = width/218, height/140
-        larger = max(scale1, scale2)
-        self.background.center_x = width/2-7*larger/3.6
-        self.background.center_y = height/2-75*larger/3.6
-        self.background.scale = larger
+        stretch_background(self.background, width, height, padding=0.18)
 
         self.christmas_background.position = width/2, height/2
         self.christmas_background.scale = .25*max(width/1240, height/900)
 
         self.lineList.center_x = width/2 - 400 + self.x
         self.lineList.center_y = height/2 - 250
+        resize_ui_manager(self, width, height)
+        reset_window_viewport(self.window)
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.A or key == arcade.key.LEFT:
@@ -5591,7 +5823,7 @@ class UpgradeScienceMenu(arcade.View):
 
         self.uimanager.disable()
         self.menu_view.uimanager.enable()
-        self.window.show_view(self.menu_view)
+        show_view_resized(self.window, self.menu_view)
 
     def on_question_click(self, event):
         window = arcade.get_window()
@@ -5674,8 +5906,10 @@ class UpgradeScienceMenu(arcade.View):
 
     def on_draw(self):
         """ Draw this view """
-        self.clear()
-
+        width = getattr(arcade.get_window(), "width", 0) or self.window.width
+        height = getattr(arcade.get_window(), "height", 0) or self.window.height
+        self.clear(PARCHMENT_COLOR)
+        draw_rect_filled(XYWH(width / 2, height / 2, width, height), PARCHMENT_COLOR)
         self.background.draw()
         self.christmas_background.draw()
 
@@ -5763,7 +5997,7 @@ class RepeatableUpgradeMenu(arcade.View):
         self.menu = menu
         self.click_sound = menu.click_sound
         self.background = arcade.Sprite(
-            "resources/gui/Large Bulletin.png", scale=3.6, center_x=370, center_y=180)
+            "resources/gui/Large Bulletin.png", scale=16.5, center_x=370, center_y=180)
         self.christmas_background = arcade.Sprite(
             "resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
 
@@ -5959,7 +6193,7 @@ class RepeatableUpgradeMenu(arcade.View):
         self._save_upgrades()
         self.uimanager.disable()
         self.menu.uimanager.enable()
-        self.window.show_view(self.menu)
+        show_view_resized(self.window, self.menu)
 
     def _save_upgrades(self):
         try:
@@ -5973,11 +6207,7 @@ class RepeatableUpgradeMenu(arcade.View):
             json.dump(data, write_file)
 
     def on_resize(self, width: int, height: int):
-        scale1, scale2 = width/218, height/140
-        larger = max(scale1, scale2)
-        self.background.center_x = width/2-7*larger/3.6
-        self.background.center_y = height/2-75*larger/3.6
-        self.background.scale = larger
+        stretch_background(self.background, width, height, padding=0.18)
 
         self.christmas_background.position = width/2, height/2
         self.christmas_background.scale = .25*max(width/1240, height/900)
@@ -5987,6 +6217,7 @@ class RepeatableUpgradeMenu(arcade.View):
             text.center_y = height/2 + getattr(text, "org_y", 0)
         self._refresh_history_text()
         self._refresh_upgrade_rows()
+        resize_ui_manager(self, width, height)
         return super().on_resize(width, height)
 
     def on_draw(self):
@@ -6011,7 +6242,7 @@ class ScienceMenu(arcade.View):
         self.set_up(game_view)
 
         self.background = arcade.Sprite(
-            "resources/gui/Large Bulletin.png", scale=3.6, center_x=370, center_y=180)
+            "resources/gui/Large Bulletin.png", scale=16.5, center_x=370, center_y=180)
         self.christmas_background = arcade.Sprite(
             "resources/gui/ChristmasOverlay.png", scale=.25, center_x=370, center_y=180)
 
@@ -6065,7 +6296,8 @@ class ScienceMenu(arcade.View):
         self.x = 0
 
         """ This is run once when we switch to this view """
-        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
+        arcade.set_background_color(PARCHMENT_COLOR)
+        self.window.background_color = PARCHMENT_COLOR
         reset_window_viewport(self.window)
 
         self.uimanager = arcade.gui.UIManager()
@@ -6075,17 +6307,14 @@ class ScienceMenu(arcade.View):
         self.science_buttons = []
 
     def on_resize(self, width: int, height: int):
-        scale1, scale2 = width/218, height/140
-        larger = max(scale1, scale2)
-        self.background.center_x = width/2-7*larger/3.6
-        self.background.center_y = height/2-75*larger/3.6
-        self.background.scale = larger
+        stretch_background(self.background, width, height, padding=0.18)
 
         self.christmas_background.position = width/2, height/2
         self.christmas_background.scale = .25*max(width/1240, height/900)
 
         self.lineList.center_x = width/2 - 400 + self.x
         self.lineList.center_y = height/2 - 250
+        resize_ui_manager(self, width, height)
 
     def pre_load(self):
         self.load()
@@ -6218,7 +6447,7 @@ class ScienceMenu(arcade.View):
         self.game_view.uimanager.enable()
         arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
         self.uimanager.disable()
-        self.window.show_view(self.game_view)
+        show_view_resized(self.window, self.game_view)
 
     def on_buttonclick(self, event):
         if self.button == 4:
@@ -6295,14 +6524,16 @@ class ScienceMenu(arcade.View):
 
     def on_show_view(self):
         super().on_show_view()
-        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
+        arcade.set_background_color(PARCHMENT_COLOR)
 
         reset_window_viewport(self.window)
 
     def on_draw(self):
         """ Draw this view """
-        self.clear()
-
+        width = getattr(arcade.get_window(), "width", 0) or self.window.width
+        height = getattr(arcade.get_window(), "height", 0) or self.window.height
+        self.clear(PARCHMENT_COLOR)
+        draw_rect_filled(XYWH(width / 2, height / 2, width, height), PARCHMENT_COLOR)
         self.background.draw()
         self.christmas_background.draw()
         self.lineList.draw()
@@ -6577,7 +6808,7 @@ class VolumeMenu(arcade.View):
         self.game_view.uimanager.enable()
         if hasattr(self, "_previous_background_color"):
             self._set_background(self._previous_background_color)
-        self.window.show_view(self.game_view)
+        show_view_resized(self.window, self.game_view)
 
 
 class ShowMenu(arcade.View):
@@ -6623,7 +6854,7 @@ class ShowMenu(arcade.View):
         arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
         self.uimanager.disable()
         self.game_view.uimanager.enable()
-        self.window.show_view(self.game_view)
+        show_view_resized(self.window, self.game_view)
 
 
 class Selection(arcade.Sprite):
@@ -6703,7 +6934,7 @@ class BuildingMenu(arcade.View):
         arcade.set_background_color(arcade.csscolor.CORNFLOWER_BLUE)
         self.game_view.uimanager.enable()
         self.uimanager.disable()
-        self.window.show_view(self.game_view)
+        show_view_resized(self.window, self.game_view)
 
     def on_buttonclick(self, event):
         source = event.source
@@ -6721,7 +6952,7 @@ class BuildingMenu(arcade.View):
 
     def on_show_view(self):
         super().on_show_view()
-        arcade.set_background_color(arcade.csscolor.DARK_SLATE_BLUE)
+        arcade.set_background_color(PARCHMENT_COLOR)
 
         reset_window_viewport(self.window)
 
@@ -6805,6 +7036,7 @@ class TrainingMenu(arcade.View):
             y -= 75
 
     def on_resize(self, width: int, height: int):
+        resize_ui_manager(self, width, height)
         return super().on_resize(width, height)
 
     def on_key_press(self, key: int, modifiers: int):
@@ -6831,7 +7063,7 @@ class TrainingMenu(arcade.View):
         self.uimanager.disable()
         del self.image
         del self.lineList
-        self.window.show_view(self.game_view)
+        show_view_resized(self.window, self.game_view)
 
     def on_selectionclick(self, event):
 
@@ -6974,7 +7206,7 @@ def main():
     """Main method"""
     window = arcade.Window(1440, 900, "SantaFest Destiny", resizable=True)
     StartMenu = startMenu()
-    window.show_view(StartMenu)
+    show_view_resized(window, StartMenu)
     arcade.run()
 
 
