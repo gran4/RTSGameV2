@@ -111,6 +111,10 @@ The repo keeps a `venv/` directory that you can reactivate (`source venv/bin/act
 
 Game data (resources, science unlocks, bonuses) is summarized at the bottom of the HUD, while alerts and informational popups appear near the minimap area.
 
+### Video walkthrough
+
+Want to see the loop in action before diving in? Watch a full gameplay walkthrough: https://youtu.be/TdQgsZO4Dkc
+
 ### Gameplay loop & progression
 
 1. **Gather → Build → Operate** – people are your universal workers. March them onto tree, stone, or berry sprites to harvest; park them on top of a ghosted building footprint to help construct; then send them *into* finished structures to activate their production bonuses (`Buildings.BaseBuilding.add/remove` manage occupancy).
