@@ -5,6 +5,7 @@ from arcade import math as arcade_math
 
 from Components import *
 from effects import ProjectileEffect
+from balance import ENEMY_DAMAGE_MULTIPLIER
 
 """
 OBJECT x
@@ -24,7 +25,8 @@ class BaseEnemy(arcade.Sprite):
         self.center_x = x
         self.center_y = y
 
-        self.damage = damage
+        self.base_damage = damage
+        self.damage = damage * ENEMY_DAMAGE_MULTIPLIER
         self.health = health
         self.range = range
         self.state = "Idle"
@@ -89,7 +91,6 @@ class BaseEnemy(arcade.Sprite):
     # NOTE: Always call on_update in update
 
     def on_update(self, game, delta_time):
-
         if self.state == "Attack":
             self.state = "Idle"
         if self.focused_on:
@@ -144,6 +145,7 @@ class BaseEnemy(arcade.Sprite):
             "health": self.health,
             "max_health": getattr(self, "max_health", self.health),
             "damage": self.damage,
+            "base_damage": getattr(self, "base_damage", self.damage),
             "range": self.range,
             "state": getattr(self, "state", "Idle"),
             "path": [list(pos) for pos in self.path],
@@ -163,7 +165,11 @@ class BaseEnemy(arcade.Sprite):
         self.health = state.get("health", self.health)
         self.max_health = state.get(
             "max_health", getattr(self, "max_health", self.health))
-        self.damage = state.get("damage", self.damage)
+        base_damage = state.get("base_damage")
+        if base_damage is None:
+            base_damage = state.get("damage", getattr(self, "base_damage", self.damage))
+        self.base_damage = base_damage
+        self.damage = self.base_damage * ENEMY_DAMAGE_MULTIPLIER
         self.range = state.get("range", self.range)
         self.state = state.get("state", getattr(self, "state", "Idle"))
         self.spawn_kwargs = state.get(

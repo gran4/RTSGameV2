@@ -6,8 +6,7 @@ from arcade import math as arcade_math
 
 from Components import *
 from gui_compat import UIAnchorWidget
-
-"""16, 15, 10, """
+from balance import DEFAULT_PERSON_HEALTH, PLAYER_ATTACK_DAMAGE_MULTIPLIER
 
 
 class BaseBoat(arcade.Sprite):
@@ -278,9 +277,6 @@ class Player(arcade.Sprite):
                     self.texture = self.D_Texture[self.index]
         self.update_animation(delta_time)
         super().update(delta_time)
-
-DEFAULT_PERSON_HEALTH = 30
-
 
 class Person(arcade.Sprite):
     def __init__(self, game, x: float, y: float, scale=1):
@@ -580,7 +576,8 @@ class People_that_attack(Person):
     def __init__(self, game, filename, x, y, damage, range, health, scale=1):
         super().__init__(game, x, y, scale=scale)
         self.texture = arcade.load_texture(filename)
-        self.damage = damage
+        self.base_damage = damage
+        self.damage = damage * PLAYER_ATTACK_DAMAGE_MULTIPLIER
         self.range = range
         self.max_health = max(1, health)
         self.health = self.max_health
@@ -631,7 +628,16 @@ class People_that_attack(Person):
         game.uimanager.add(wrapper)
 
     def state_update(self, game, state):
-        pass
+        if state == "Work":
+            self._clear_projectiles()
+
+    def _clear_projectiles(self):
+        projectiles = getattr(self, "gifts", None)
+        if not projectiles:
+            return
+        for projectile in list(projectiles):
+            projectile.remove_from_sprite_lists()
+        projectiles.clear()
 
     def serialize_state(self) -> dict:
         state = super().serialize_state()
@@ -649,7 +655,7 @@ class People_that_attack(Person):
 
 class BadGifter(People_that_attack):
     def __init__(self, game, x, y):
-        super().__init__(game, "resources/Sprites/enemies/enemy.png", x, y, 10, 500, 100, scale=1.5)
+        super().__init__(game, "resources/Sprites/enemies/enemy.png", x, y, 40, 500, 100, scale=1.5)
         self.set_up(game, x, y)
 
     def set_up(self, game, x, y):
@@ -832,7 +838,7 @@ class BadGifter(People_that_attack):
         self.timer = 0
 
     def state_update(self, game, state):
-
+        super().state_update(game, state)
         if state == "Work":
             self.coal.remove_from_sprite_lists()
         elif state == "Patrol":
@@ -892,7 +898,7 @@ class BadGifter(People_that_attack):
 
 class BadReporter(People_that_attack):
     def __init__(self, game, x, y):
-        super().__init__(game, "resources/Sprites/enemies/enemy.png", x, y, 25, 500, 100, scale=1.5)
+        super().__init__(game, "resources/Sprites/enemies/enemy.png", x, y, 100, 500, 100, scale=1.5)
         self.set_up(game, x, y)
 
     def set_up(self, game, x, y):
@@ -1075,7 +1081,7 @@ class BadReporter(People_that_attack):
         self.timer = 0
 
     def state_update(self, game, state):
-
+        super().state_update(game, state)
         if state == "Work":
             self.paper.remove_from_sprite_lists()
         elif state == "Patrol":

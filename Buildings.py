@@ -5,6 +5,7 @@ import random
 from Components import *
 from gui_compat import UIAnchorWidget
 from Player import *
+from balance import BUILDING_DAMAGE_MULTIPLIER
 
 things = {"Bad Gifter": BadGifter, "Bad Reporter": BadReporter}
 
@@ -26,7 +27,8 @@ class BaseBuilding(arcade.Sprite):
         self.affects_enemy_spawns = True
         self._spawn_registered = False
 
-        self.dmg = dmg
+        self.base_damage = dmg
+        self.dmg = dmg * BUILDING_DAMAGE_MULTIPLIER
         self.health = health
         self.max_health = self.health
         self.health_bar = HealthBar(
@@ -430,7 +432,7 @@ class SnowTower(BaseBuilding):
     SNOW_PARTICLE_TEXTURE = None
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, 20, .5, 400, 1, "resources/Sprites/buildings/SnowTower.png")
+        super().__init__(game, x, y, 20, 5, 400, 1, "resources/Sprites/buildings/SnowTower.png")
         self.Updates = False
         self.canAttack = True
         self.timer = 0
@@ -652,7 +654,7 @@ class FireStation(BaseBuilding):
     produces = {}
 
     def __init__(self, game, x: float, y: float):
-        super().__init__(game, x, y, .4, 50, 400, 1,
+        super().__init__(game, x, y, 20, 50, 400, 1,
                          "resources/Sprites/buildings/Fire Station.png", scale=1)
         self.timer = 0
 

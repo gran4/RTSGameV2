@@ -4167,6 +4167,17 @@ class MyGame(arcade.View):
         x_line = file.get("x_line", getattr(self, "x_line", 0))
         y_line = file.get("y_line", getattr(self, "y_line", 0))
 
+        graph_rows = file.get("graph")
+        if graph_rows and x_line and y_line:
+            graph = LivingMap(x_line, y_line, x_line * y_line, tilesize=50)
+            for x, column in enumerate(graph_rows):
+                for y, cell in enumerate(column):
+                    if x < len(graph.graph) and y < len(graph.graph[x]):
+                        graph.graph[x][y] = cell
+            self.graph = graph
+            self.x_line = x_line
+            self.y_line = y_line
+
         person_map = self._load_people_from_state(file.get("people_state"))
         boat_states = file.get("boats_state")
         if boat_states:
@@ -4198,16 +4209,7 @@ class MyGame(arcade.View):
                     vars(self)[key] = val
                     continue
                 elif key == "graph":
-                    if x_line and y_line:
-                        graph = LivingMap(
-                            x_line, y_line, x_line * y_line, tilesize=50)
-                        for x, column in enumerate(val):
-                            for y, cell in enumerate(column):
-                                if x < len(graph.graph) and y < len(graph.graph[x]):
-                                    graph.graph[x][y] = cell
-                        self.graph = graph
-                        self.x_line = x_line
-                        self.y_line = y_line
+                    # Processed earlier so buildings had a valid map during load
                     continue
                 elif key in {"buildings_state", "people_state", "boats_state", "terrain_state",
                              "enemies_state", *sprite_list_skip}:
