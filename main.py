@@ -946,6 +946,12 @@ class MyGame(arcade.View):
         event.source.open = not event.source.open
 
     def expand_button_click(self, event):
+        click_sound = getattr(self, "click_sound", None)
+        if click_sound:
+            try:
+                click_sound.play()
+            except Exception:
+                pass
         event.source.expand = not getattr(event.source, "expand", False)
         self._apply_toggle_button_icon(event.source, event.source.expand)
         self.text_visible = not event.source.expand

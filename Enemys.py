@@ -357,6 +357,7 @@ class Enemy_Slinger(BaseEnemy):
 
     def update(self, game, delta_time):
         if self.health <= 0:
+            self._clear_arrows(game)
             self.destroy(game)
             return
         self.on_update(game, delta_time)
@@ -516,12 +517,18 @@ class Enemy_Slinger(BaseEnemy):
         self.bow.remove_from_sprite_lists()
         self.bow = None
 
+        self._clear_arrows(game)
+        return super().destroy(game)
+
+    def _clear_arrows(self, game):
         for arrow in list(self.arrows):
-            if arrow in game.overParticles:
-                game.overParticles.remove(arrow)
+            if arrow in getattr(game, "overParticles", []):
+                try:
+                    game.overParticles.remove(arrow)
+                except ValueError:
+                    pass
             arrow.remove_from_sprite_lists()
         self.arrows = arcade.SpriteList()
-        return super().destroy(game)
 
     def _serialize_extra_state(self) -> dict:
         bow_state = {
