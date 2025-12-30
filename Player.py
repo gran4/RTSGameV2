@@ -32,6 +32,7 @@ class BaseBoat(arcade.Sprite):
 
         self.timer = 0
         self._pending_passengers: list[int] = []
+        self.fire_resistence = 0.5
 
     def add(self, sprite):
         if len(self.list) == self.capacity:

@@ -439,10 +439,20 @@ class Enemy_Slinger(BaseEnemy):
     def on_attack(self, game, delta_time):
         if not self.bow.canAttack:
             return
-        self._sfx_cooldown -= getattr(game, "real_delta_time", delta_time)
-
-        self._sfx_cooldown -= getattr(game, "real_delta_time", delta_time)
-        if getattr(game, "speed", 1) <= 0:
+        real_dt = getattr(game, "real_delta_time", delta_time)
+        self._sfx_cooldown -= real_dt
+        if self._sfx_cooldown < 0:
+            self._sfx_cooldown = 0
+        sim_speed = getattr(game, "speed", 1)
+        if sim_speed <= 0:
+            if self.pull_back_sound:
+                try:
+                    self.pull_back_sound.pause()
+                except Exception:
+                    pass
+                self.pull_back_sound = None
+            return
+        if sim_speed < 0.25:
             if self.pull_back_sound:
                 try:
                     self.pull_back_sound.pause()
@@ -464,7 +474,7 @@ class Enemy_Slinger(BaseEnemy):
             self._sfx_cooldown = 0.15
         if getattr(self.pull_back_sound, "_timer", None):
             self.pull_back_sound._timer.set_time(
-                self.pull_back_sound._timer.get_time()+delta_time*.5)
+                self.pull_back_sound._timer.get_time()+real_dt)
         anim = self.bow.Attack_animation.updateAnim(
             delta_time, len(self.bow.Attack_textures))
         if anim is None:

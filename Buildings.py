@@ -274,14 +274,11 @@ class UNbuiltBuilding(BaseBuilding):
         self.remove_from_sprite_lists()
         self.health_bar.remove_from_sprite_lists()
 
-        if self.fire:
-            self.fire.destroy(game)
-
         build = game.objects[self.building](game, self.center_x, self.center_y)
-        build.fire = self.fire
-        if self.fire:
+        if getattr(self, "fire", None):
+            build.fire = self.fire
             self.fire.obj = build
-        self.fire = None
+            self.fire = None
         # Try to move builders into the completed building
         for person in builders:
             could_not_add = build.add(person)

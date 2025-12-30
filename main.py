@@ -4244,7 +4244,11 @@ class MyTutorial(MyGame):
         self.sprites = arcade.SpriteList()
         self.step = 1
 
-        self.spawnEnemy = -30
+        self.spawnEnemy = -630
+        self.presents += 500
+        self.wood += 200
+        self.stone += 150
+        self.metal += 50
         self.unlocked["Enemy Archer"] = True
         self.unlocked["Enemy Arsonist"] = True
         self.unlocked["Enemy Wizard"] = True
