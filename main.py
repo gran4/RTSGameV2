@@ -4854,7 +4854,8 @@ class startMenu(arcade.View):
         reset_window_viewport(self.window)
 
         self.audios = []
-        self.audio_type_vols = {"Overall": 0, "UI": 1, "Background": 1}
+        # Ensure the game starts with audible output; players can still dial it down in the Volume menu.
+        self.audio_type_vols = {"Overall": 0.7, "UI": 1, "Background": 1}
 
         self.click_sound = Sound("resources/audio/click.wav")
         self.click_sound.start_vol = 5

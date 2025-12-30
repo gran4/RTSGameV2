@@ -279,6 +279,9 @@ class Player(arcade.Sprite):
         self.update_animation(delta_time)
         super().update(delta_time)
 
+DEFAULT_PERSON_HEALTH = 30
+
+
 class Person(arcade.Sprite):
     def __init__(self, game, x: float, y: float, scale=1):
         super().__init__(center_x=x, center_y=y, scale=scale)
@@ -299,8 +302,8 @@ class Person(arcade.Sprite):
         self.center_x = x
         self.center_y = y
 
-        self._health = 100
-        self.max_health = 100
+        self._health = DEFAULT_PERSON_HEALTH
+        self.max_health = DEFAULT_PERSON_HEALTH
         self.health_bar = HealthBar(game, position=self.position)
         self._update_health_bar_fullness()
         self.var = None
@@ -579,7 +582,8 @@ class People_that_attack(Person):
         self.texture = arcade.load_texture(filename)
         self.damage = damage
         self.range = range
-        self.health = health
+        self.max_health = max(1, health)
+        self.health = self.max_health
 
         self.check = True
         self.focused_on = None
